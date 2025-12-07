@@ -19,6 +19,7 @@
         @edit="handleEdit"
         @delete="handleDelete"
         @chat="handleChat"
+        @plan="handlePlan"
       />
 
       <!-- Unclassified Open/Started Todos -->
@@ -35,6 +36,7 @@
             @edit="handleEdit"
             @delete="handleDelete"
             @chat="handleChat"
+            @plan="handlePlan"
           />
         </div>
       </div>
@@ -70,6 +72,12 @@
       :todo="chattingTodo || {}"
       @close="closeChatModal"
     />
+
+    <TaskPlanModal
+      :show="showPlanModal"
+      :todo="planningTodo || {}"
+      @close="closePlanModal"
+    />
   </div>
 </template>
 
@@ -82,6 +90,7 @@ import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 import Modal from '@/components/common/Modal.vue'
 import ChatModal from '@/components/chat/ChatModal.vue'
+import TaskPlanModal from '@/components/todo/TaskPlanModal.vue'
 
 const todoStore = useTodoStore()
 const uiStore = useUiStore()
@@ -92,9 +101,11 @@ const error = computed(() => todoStore.error)
 const showCreateModal = computed(() => uiStore.showCreateModal)
 const showEditModal = computed(() => uiStore.showEditModal)
 const showChatModal = ref(false)
+const showPlanModal = ref(false)
 
 const editingTodo = ref(null)
 const chattingTodo = ref(null)
+const planningTodo = ref(null)
 
 const unclassifiedOpenTodos = computed(() => {
   return todoStore.todos.filter(todo => 
@@ -178,6 +189,16 @@ function handleChat(todo) {
 function closeChatModal() {
   showChatModal.value = false
   chattingTodo.value = null
+}
+
+function handlePlan(todo) {
+  planningTodo.value = todo
+  showPlanModal.value = true
+}
+
+function closePlanModal() {
+  showPlanModal.value = false
+  planningTodo.value = null
 }
 
 defineExpose({

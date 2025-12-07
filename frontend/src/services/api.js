@@ -42,6 +42,19 @@ export const todosApi = {
 
   listByQuadrant(urgency, importance, params = {}) {
     return api.get(`/todos/canvas/${urgency}/${importance}`, { params })
+  },
+
+  // Task Plan methods
+  getTaskPlan(todoId) {
+    return api.get(`/todos/${todoId}/plan`)
+  },
+
+  saveTaskPlan(todoId, content) {
+    return api.put(`/todos/${todoId}/plan`, { content })
+  },
+
+  deleteTaskPlan(todoId) {
+    return api.delete(`/todos/${todoId}/plan`)
   }
 }
 

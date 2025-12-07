@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db import crud
 from app.schemas.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse
+from app.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate, TaskPlanResponse
 
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -121,5 +122,63 @@ async def delete_todo(
     success = await crud.delete_todo(db=db, todo_id=todo_id)
     if not success:
         raise HTTPException(status_code=404, detail="Todo not found")
+    return None
+
+
+# Task Plan endpoints
+
+@router.get("/{todo_id}/plan", response_model=TaskPlanResponse)
+async def get_task_plan(
+    todo_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get the task plan for a specific todo.
+    """
+    # First verify the todo exists
+    todo = await crud.get_todo(db=db, todo_id=todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    task_plan = await crud.get_task_plan_by_todo_id(db=db, todo_id=todo_id)
+    if not task_plan:
+        raise HTTPException(status_code=404, detail="Task plan not found")
+    return task_plan
+
+
+@router.put("/{todo_id}/plan", response_model=TaskPlanResponse)
+async def save_task_plan(
+    todo_id: int,
+    task_plan: TaskPlanUpdate,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create or update the task plan for a specific todo.
+    """
+    # First verify the todo exists
+    todo = await crud.get_todo(db=db, todo_id=todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    result = await crud.upsert_task_plan(db=db, todo_id=todo_id, content=task_plan.content)
+    return result
+
+
+@router.delete("/{todo_id}/plan", status_code=204)
+async def delete_task_plan(
+    todo_id: int,
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Delete the task plan for a specific todo.
+    """
+    # First verify the todo exists
+    todo = await crud.get_todo(db=db, todo_id=todo_id)
+    if not todo:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    
+    success = await crud.delete_task_plan(db=db, todo_id=todo_id)
+    if not success:
+        raise HTTPException(status_code=404, detail="Task plan not found")
     return None
 

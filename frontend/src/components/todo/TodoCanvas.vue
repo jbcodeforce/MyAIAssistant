@@ -30,6 +30,7 @@
               @edit="$emit('edit', todo)"
               @delete="$emit('delete', todo)"
               @chat="$emit('chat', todo)"
+              @plan="$emit('plan', todo)"
             />
             <div v-if="urgentImportantTodos.length === 0" class="empty-state">
               Drop todos here
@@ -56,6 +57,7 @@
               @edit="$emit('edit', todo)"
               @delete="$emit('delete', todo)"
               @chat="$emit('chat', todo)"
+              @plan="$emit('plan', todo)"
             />
             <div v-if="notUrgentImportantTodos.length === 0" class="empty-state">
               Drop todos here
@@ -82,6 +84,7 @@
               @edit="$emit('edit', todo)"
               @delete="$emit('delete', todo)"
               @chat="$emit('chat', todo)"
+              @plan="$emit('plan', todo)"
             />
             <div v-if="urgentNotImportantTodos.length === 0" class="empty-state">
               Drop todos here
@@ -108,6 +111,7 @@
               @edit="$emit('edit', todo)"
               @delete="$emit('delete', todo)"
               @chat="$emit('chat', todo)"
+              @plan="$emit('plan', todo)"
             />
             <div v-if="notUrgentNotImportantTodos.length === 0" class="empty-state">
               Drop todos here
@@ -146,7 +150,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['update', 'edit', 'delete', 'chat'])
+const emit = defineEmits(['update', 'edit', 'delete', 'chat', 'plan'])
 
 const dragOverQuadrant = ref(null)
 

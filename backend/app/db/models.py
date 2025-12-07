@@ -1,9 +1,9 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Integer, func
+from sqlalchemy import String, Text, DateTime, Integer, ForeignKey, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(AsyncAttrs, DeclarativeBase):
@@ -89,6 +89,9 @@ class Knowledge(Base):
     # Timestamp of last content fetch (for refresh tracking)
     last_fetched_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     
+    # Timestamp when document was indexed into the RAG system
+    indexed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    
     # Standard timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime, 
@@ -104,4 +107,31 @@ class Knowledge(Base):
 
     def __repr__(self) -> str:
         return f"Knowledge(id={self.id!r}, title={self.title!r}, category={self.category!r})"
+
+
+class TaskPlan(Base):
+    __tablename__ = "task_plans"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    todo_id: Mapped[int] = mapped_column(Integer, ForeignKey("todos.id", ondelete="CASCADE"), nullable=False, unique=True)
+    content: Mapped[str] = mapped_column(Text, nullable=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, 
+        nullable=False, 
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, 
+        nullable=False, 
+        server_default=func.now(), 
+        onupdate=func.now()
+    )
+
+    # Relationship to Todo
+    todo: Mapped["Todo"] = relationship("Todo", backref="task_plan")
+
+    def __repr__(self) -> str:
+        return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
 

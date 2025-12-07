@@ -37,6 +37,7 @@
           @click="handleEdit(todo)"
           @edit="handleEdit"
           @delete="handleDelete"
+          @plan="handlePlan"
         />
       </div>
 
@@ -71,6 +72,12 @@
         @cancel="closeEditModal"
       />
     </Modal>
+
+    <TaskPlanModal
+      :show="showPlanModal"
+      :todo="planningTodo || {}"
+      @close="closePlanModal"
+    />
   </div>
 </template>
 
@@ -81,6 +88,7 @@ import { useUiStore } from '@/stores/uiStore'
 import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 import Modal from '@/components/common/Modal.vue'
+import TaskPlanModal from '@/components/todo/TaskPlanModal.vue'
 
 const todoStore = useTodoStore()
 const uiStore = useUiStore()
@@ -97,6 +105,8 @@ const showCreateModal = computed(() => uiStore.showCreateModal)
 const showEditModal = computed(() => uiStore.showEditModal)
 
 const editingTodo = ref(null)
+const planningTodo = ref(null)
+const showPlanModal = ref(false)
 
 const sortedTodos = computed(() => {
   return [...unclassifiedTodos.value].sort((a, b) => {
@@ -190,6 +200,16 @@ function closeCreateModal() {
 function closeEditModal() {
   uiStore.closeEditModal()
   editingTodo.value = null
+}
+
+function handlePlan(todo) {
+  planningTodo.value = todo
+  showPlanModal.value = true
+}
+
+function closePlanModal() {
+  showPlanModal.value = false
+  planningTodo.value = null
 }
 </script>
 
