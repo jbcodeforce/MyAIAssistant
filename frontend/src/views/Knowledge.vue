@@ -13,6 +13,16 @@
           <span class="stat-badge website">{{ websiteCount }} website</span>
         </div>
         <button 
+          class="btn-chat" 
+          @click="showChatModal = true"
+          title="Chat with Knowledge Base"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          Ask AI
+        </button>
+        <button 
           class="btn-secondary index-all-btn" 
           @click="handleIndexAll"
           :disabled="indexingAll || items.length === 0"
@@ -357,6 +367,12 @@
         </button>
       </template>
     </Modal>
+
+    <!-- RAG Chat Modal -->
+    <RagChatModal 
+      :show="showChatModal" 
+      @close="showChatModal = false"
+    />
   </div>
 </template>
 
@@ -365,6 +381,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useKnowledgeStore } from '@/stores/knowledgeStore'
 import { ragApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
+import RagChatModal from '@/components/chat/RagChatModal.vue'
 
 const knowledgeStore = useKnowledgeStore()
 
@@ -387,6 +404,7 @@ const filterTag = ref('')
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
+const showChatModal = ref(false)
 const formData = ref({
   title: '',
   description: '',
@@ -734,6 +752,28 @@ function normalizeFilePath() {
 .stat-badge.website {
   background: #fef3c7;
   color: #92400e;
+}
+
+.btn-chat {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-chat:hover {
+  background: #059669;
+}
+
+.btn-chat svg {
+  flex-shrink: 0;
 }
 
 .index-all-btn {

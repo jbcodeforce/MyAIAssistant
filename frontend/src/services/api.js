@@ -108,6 +108,20 @@ export const chatApi = {
     })
   },
 
+  /**
+   * Send a message to chat using RAG knowledge base
+   * @param {string} message - The user's message
+   * @param {Array} conversationHistory - Previous messages [{role, content}]
+   * @param {number} nResults - Number of RAG results to use (1-10)
+   */
+  ragChat(message, conversationHistory = [], nResults = 5) {
+    return api.post('/chat/rag', {
+      message,
+      conversation_history: conversationHistory,
+      n_results: nResults
+    })
+  },
+
   getConfig() {
     return api.get('/chat/config')
   },

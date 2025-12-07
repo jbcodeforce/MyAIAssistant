@@ -8,6 +8,8 @@ MyAIAssistant helps users organize tasks, reference subject-matter knowledge, an
 
 Based on Stephen Covey's "7 Habits of Highly Effective People," the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
 
+![](./images/aia_dashboard.png)
+
 ## Core Features
 
 | Feature | Status | Description |
@@ -15,8 +17,8 @@ Based on Stephen Covey's "7 Habits of Highly Effective People," the system helps
 | Kanban-style Todo Management | Complete | Todos categorized by Importance/Urgency (Eisenhower Matrix) |
 | Knowledge Base | Complete | Metadata storage referencing documents, notes, and website links |
 | Semantic Search (RAG) | Complete | AI-powered search across the knowledge base using embeddings |
+| LLM Chat Support | Complete | AI chat for task planning and knowledge base queries |
 | Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
-| LLM Chat Support | Planned | Automated extraction of action items from meeting notes |
 
 ## Technical Stack
 

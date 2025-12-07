@@ -45,12 +45,13 @@ markdown_extensions:
 
 nav:
   - Home: index.md
+  - User Guide: user_guide/index.md
   - Implementation:
       - Overview: implementation/index.md
       - Todo Management: implementation/todo.md
       - Knowledge Base: implementation/knowledge.md
       - RAG System: implementation/rag.md
-      - Chat (Planned): implementation/chat.md
+      - Chat: implementation/chat.md
   - Deployment:
       - Overview: deployment/index.md
       - Docker: deployment/docker.md

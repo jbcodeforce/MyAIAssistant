@@ -14,7 +14,8 @@ RUN uv sync --frozen
 
 COPY . .
 
-ENV DATABASE_URL=sqlite+aiosqlite:///./myaiassistant.db
+ENV CONFIG_FILE=/app/config.yaml
+
 
 EXPOSE 8000
 

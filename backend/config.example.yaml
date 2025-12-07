@@ -1,0 +1,17 @@
+# User configuration overrides for MyAIAssistant Backend
+# Only include settings you want to change from the defaults.
+# Set CONFIG_FILE environment variable to point to this file:
+#   export CONFIG_FILE=/path/to/myconfig.yaml
+
+# Database path (change to use a different SQLite database)
+database_url: "sqlite+aiosqlite:///./my_custom.db"
+
+# Knowledge base storage (change to use a different ChromaDB location)
+chroma_persist_directory: "/data/my_knowledge_base"
+chroma_collection_name: "my_documents"
+
+# LLM settings (uncomment and modify as needed)
+# llm_provider: "openai"
+# llm_model: "gpt-4"
+# llm_api_key: "sk-your-api-key"
+# llm_base_url: "https://api.openai.com/v1"

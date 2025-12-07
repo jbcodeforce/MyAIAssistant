@@ -90,3 +90,15 @@ All backend APIs follow RESTful conventions with versioned endpoints:
 4. **Semantic Search**: Query embeddings compared against stored vectors for retrieval
 5. **Task Linking**: (Planned) AI matches todos to relevant knowledge items
 
+## Settings
+
+Configuration may be set by user. The app/core/config.py supports a layered configuration:
+
+* Default config (app/config.yaml) - shipped with the app, contains all settings with sensible defaults.
+* User config (via CONFIG_FILE env var) - optional, only needs to include settings the user wants to override.
+* Priority Order (highest wins)
+    * Environment variables
+    * .env file
+    * User config file (CONFIG_FILE)
+    * Default config (app/config.yaml)
+    * Pydantic field defaults
