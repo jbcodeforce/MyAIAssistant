@@ -131,6 +131,66 @@ class ChatService:
             provider=self.provider
         )
 
+    async def chat_with_rag(
+        self,
+        user_message: str,
+        conversation_history: list[ChatMessage] = None,
+        n_results: int = 5
+    ) -> ChatResponse:
+        """
+        Chat using the RAG knowledge base for context.
+        
+        This is a general-purpose chat that uses the knowledge base
+        to answer questions, without being tied to a specific task.
+        
+        Args:
+            user_message: The user's message/question
+            conversation_history: Previous messages in the conversation
+            n_results: Number of RAG results to retrieve
+            
+        Returns:
+            ChatResponse with the assistant's reply and context used
+        """
+        context_used = []
+        context_text = ""
+        
+        # Retrieve relevant context from knowledge base
+        rag_results = await self.rag_service.search(user_message, n_results=n_results)
+        
+        if rag_results:
+            context_parts = []
+            for result in rag_results:
+                context_parts.append(f"[From: {result.title}]\n{result.content}")
+                context_used.append({
+                    "title": result.title,
+                    "uri": result.uri,
+                    "score": result.score,
+                    "snippet": result.content[:200] + "..." if len(result.content) > 200 else result.content
+                })
+            context_text = "\n\n---\n\n".join(context_parts)
+
+        # Build the system prompt
+        system_prompt = self._build_rag_system_prompt(context=context_text)
+        
+        # Build messages
+        messages = [{"role": "system", "content": system_prompt}]
+        
+        if conversation_history:
+            for msg in conversation_history:
+                messages.append({"role": msg.role, "content": msg.content})
+        
+        messages.append({"role": "user", "content": user_message})
+        
+        # Call the LLM
+        response_text = await self._call_llm(messages)
+        
+        return ChatResponse(
+            message=response_text,
+            context_used=context_used,
+            model=self.model,
+            provider=self.provider
+        )
+
     def _build_system_prompt(
         self,
         todo_title: str,
@@ -166,6 +226,42 @@ class ChatService:
             "- Reference the knowledge base context when relevant",
             "- Be concise but thorough",
             "- Ask clarifying questions if needed"
+        ])
+        
+        return "\n".join(prompt_parts)
+
+    def _build_rag_system_prompt(self, context: str) -> str:
+        """Build the system prompt for RAG-based chat."""
+        prompt_parts = [
+            "You are a helpful AI assistant with access to a knowledge base.",
+            "Answer the user's questions using the provided context from the knowledge base.",
+            "If the context doesn't contain relevant information, say so clearly.",
+        ]
+        
+        if context:
+            prompt_parts.extend([
+                "",
+                "## Knowledge Base Context",
+                "Use this context to answer the user's question:",
+                "",
+                context
+            ])
+        else:
+            prompt_parts.extend([
+                "",
+                "## Note",
+                "No relevant context was found in the knowledge base for this query.",
+                "Answer based on your general knowledge, but inform the user that",
+                "the answer is not based on their indexed documents."
+            ])
+        
+        prompt_parts.extend([
+            "",
+            "## Instructions",
+            "- Answer questions based on the provided context",
+            "- Cite the source document when referencing specific information",
+            "- Be concise and accurate",
+            "- If the context is insufficient, acknowledge the limitation"
         ])
         
         return "\n".join(prompt_parts)

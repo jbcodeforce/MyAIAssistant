@@ -22,6 +22,16 @@ class ChatRequest(BaseModel):
     rag_query: Optional[str] = Field(None, description="Custom query for RAG search")
 
 
+class RagChatRequest(BaseModel):
+    """Request to chat using the RAG knowledge base."""
+    message: str = Field(..., min_length=1, max_length=4000, description="User's message")
+    conversation_history: list[ChatMessageInput] = Field(
+        default=[],
+        description="Previous messages in the conversation"
+    )
+    n_results: int = Field(default=5, ge=1, le=10, description="Number of RAG results to use")
+
+
 class ContextItem(BaseModel):
     """A piece of context retrieved from the knowledge base."""
     title: str

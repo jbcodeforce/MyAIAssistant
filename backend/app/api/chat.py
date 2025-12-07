@@ -12,6 +12,7 @@ from app.schemas.chat import (
     ChatResponse,
     ContextItem,
     ChatConfigResponse,
+    RagChatRequest,
 )
 
 
@@ -78,6 +79,56 @@ async def chat_about_todo(
         # Log the error and return a user-friendly message
         import logging
         logging.exception("Chat error")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get response from LLM: {str(e)}"
+        )
+
+
+@router.post("/rag", response_model=ChatResponse)
+async def chat_with_rag(
+    request: RagChatRequest,
+    chat: ChatService = Depends(get_chat)
+):
+    """
+    Chat using the RAG knowledge base for context.
+    
+    This endpoint allows querying the knowledge base without 
+    being tied to a specific todo task. Useful for general 
+    questions about indexed documents.
+    """
+    # Convert conversation history
+    history = [
+        ChatMessage(role=msg.role, content=msg.content)
+        for msg in request.conversation_history
+    ]
+    
+    try:
+        response = await chat.chat_with_rag(
+            user_message=request.message,
+            conversation_history=history,
+            n_results=request.n_results
+        )
+        
+        return ChatResponse(
+            message=response.message,
+            context_used=[
+                ContextItem(
+                    title=ctx["title"],
+                    uri=ctx["uri"],
+                    score=ctx["score"],
+                    snippet=ctx["snippet"]
+                )
+                for ctx in response.context_used
+            ],
+            model=response.model,
+            provider=response.provider
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import logging
+        logging.exception("RAG chat error")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get response from LLM: {str(e)}"

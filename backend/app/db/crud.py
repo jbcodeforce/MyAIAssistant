@@ -221,3 +221,9 @@ async def delete_knowledge(db: AsyncSession, knowledge_id: int) -> bool:
     await db.commit()
     return True
 
+
+async def get_knowledge_by_uri(db: AsyncSession, uri: str) -> Optional[Knowledge]:
+    """Find a knowledge item by its URI."""
+    result = await db.execute(select(Knowledge).where(Knowledge.uri == uri))
+    return result.scalar_one_or_none()
+
