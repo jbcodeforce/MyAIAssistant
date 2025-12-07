@@ -7,6 +7,8 @@ from app.core.config import settings
 from app.db.database import init_db
 from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
+from app.api.rag import router as rag_router
+from app.api.chat import router as chat_router
 
 
 @asynccontextmanager
@@ -35,6 +37,8 @@ app.add_middleware(
 # Include routers
 app.include_router(todos_router, prefix="/api")
 app.include_router(knowledge_router, prefix="/api")
+app.include_router(rag_router, prefix="/api")
+app.include_router(chat_router, prefix="/api")
 
 
 @app.get("/")

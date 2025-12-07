@@ -67,5 +67,55 @@ export const knowledgeApi = {
   }
 }
 
+export const ragApi = {
+  indexItem(knowledgeId) {
+    return api.post(`/rag/index/${knowledgeId}`)
+  },
+
+  indexAll(status = null) {
+    const params = status ? { status } : {}
+    return api.post('/rag/index-all', null, { params })
+  },
+
+  removeIndex(knowledgeId) {
+    return api.delete(`/rag/index/${knowledgeId}`)
+  },
+
+  search(query, nResults = 5, category = null) {
+    const params = { q: query, n: nResults }
+    if (category) params.category = category
+    return api.get('/rag/search', { params })
+  },
+
+  getStats() {
+    return api.get('/rag/stats')
+  }
+}
+
+export const chatApi = {
+  /**
+   * Send a message to chat about a specific todo task
+   * @param {number} todoId - The ID of the todo
+   * @param {string} message - The user's message
+   * @param {Array} conversationHistory - Previous messages [{role, content}]
+   * @param {boolean} useRag - Whether to use RAG for context
+   */
+  sendMessage(todoId, message, conversationHistory = [], useRag = true) {
+    return api.post(`/chat/todo/${todoId}`, {
+      message,
+      conversation_history: conversationHistory,
+      use_rag: useRag
+    })
+  },
+
+  getConfig() {
+    return api.get('/chat/config')
+  },
+
+  healthCheck() {
+    return api.get('/chat/health')
+  }
+}
+
 export default api
 

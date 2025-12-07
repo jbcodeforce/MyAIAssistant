@@ -33,6 +33,8 @@ async def list_knowledge(
     limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
     document_type: Optional[str] = Query(None, description="Filter by document type (markdown, website)"),
     status: Optional[str] = Query(None, description="Filter by status (active, pending, error, archived)"),
+    category: Optional[str] = Query(None, description="Filter by category"),
+    tag: Optional[str] = Query(None, description="Filter by tag (matches items containing this tag)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -43,7 +45,9 @@ async def list_knowledge(
         skip=skip,
         limit=limit,
         document_type=document_type,
-        status=status
+        status=status,
+        category=category,
+        tag=tag
     )
     return KnowledgeListResponse(items=items, total=total, skip=skip, limit=limit)
 

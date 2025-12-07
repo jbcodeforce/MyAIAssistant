@@ -11,6 +11,18 @@
       <StatusIndicator :status="todo.status" />
       <div class="todo-actions">
         <button 
+          class="action-btn chat-btn" 
+          @click.stop="$emit('chat', todo)"
+          title="AI Planning Assistant"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2a10 10 0 0 1 10 10c0 5.52-4.48 10-10 10a10 10 0 0 1-10-10 10 10 0 0 1 10-10Z"/>
+            <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+            <line x1="9" y1="9" x2="9.01" y2="9"/>
+            <line x1="15" y1="9" x2="15.01" y2="9"/>
+          </svg>
+        </button>
+        <button 
           class="action-btn" 
           @click.stop="$emit('edit', todo)"
           title="Edit"
@@ -64,7 +76,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['click', 'edit', 'delete', 'dragstart', 'dragend'])
+const emit = defineEmits(['click', 'edit', 'delete', 'chat', 'dragstart', 'dragend'])
 
 const isDragging = ref(false)
 
@@ -152,6 +164,15 @@ function onDragEnd() {
 }
 
 .action-btn:hover {
+  opacity: 1;
+}
+
+.action-btn.chat-btn {
+  color: #8b5cf6;
+}
+
+.action-btn.chat-btn:hover {
+  color: #7c3aed;
   opacity: 1;
 }
 

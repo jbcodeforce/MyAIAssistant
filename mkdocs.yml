@@ -1,0 +1,64 @@
+site_name: MyAIAssistant Documentation
+site_description: Intelligent Todo and Knowledge Management System
+site_url: https://jeromeboyer.net/myaiassistant
+repo_url: https://github.com/jbcodeforce/myaiassistant
+theme:
+  name: material
+  palette:
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+  font:
+    text: Source Sans Pro
+    code: Fira Code
+  features:
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+    - content.code.annotate
+
+plugins:
+  - search
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - admonition
+  - pymdownx.details
+  - tables
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Implementation:
+      - Overview: implementation/index.md
+      - Todo Management: implementation/todo.md
+      - Knowledge Base: implementation/knowledge.md
+      - RAG System: implementation/rag.md
+      - Chat (Planned): implementation/chat.md
+  - Deployment:
+      - Overview: deployment/index.md
+      - Docker: deployment/docker.md
+      - Cloud Providers: deployment/cloud.md
+      - Configuration: deployment/configuration.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/example/myaiassistant
+

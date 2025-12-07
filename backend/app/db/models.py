@@ -67,6 +67,12 @@ class Knowledge(Base):
     # URI reference (file path or URL)
     uri: Mapped[str] = mapped_column(String(2048), nullable=False)
     
+    # Category for classification
+    category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Tags for flexible querying (stored as comma-separated values)
+    tags: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
     # SHA256 hash of content for change detection (useful for RAG)
     content_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     
@@ -97,5 +103,5 @@ class Knowledge(Base):
     )
 
     def __repr__(self) -> str:
-        return f"Knowledge(id={self.id!r}, title={self.title!r}, document_type={self.document_type!r})"
+        return f"Knowledge(id={self.id!r}, title={self.title!r}, category={self.category!r})"
 

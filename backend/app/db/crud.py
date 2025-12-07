@@ -153,6 +153,8 @@ async def get_knowledges(
     limit: int = 100,
     document_type: Optional[str] = None,
     status: Optional[str] = None,
+    category: Optional[str] = None,
+    tag: Optional[str] = None,
 ) -> tuple[list[Knowledge], int]:
     query = select(Knowledge)
     
@@ -165,6 +167,18 @@ async def get_knowledges(
             query = query.where(Knowledge.status == status_list[0])
         else:
             query = query.where(Knowledge.status.in_(status_list))
+    if category:
+        query = query.where(Knowledge.category == category)
+    if tag:
+        # Search for tag within the comma-separated tags field
+        # This handles cases like: exact match, at start, at end, or in middle
+        tag_lower = tag.strip().lower()
+        query = query.where(
+            (Knowledge.tags == tag_lower) |  # exact single tag
+            (Knowledge.tags.like(f"{tag_lower},%")) |  # tag at start
+            (Knowledge.tags.like(f"%,{tag_lower}")) |  # tag at end
+            (Knowledge.tags.like(f"%,{tag_lower},%"))  # tag in middle
+        )
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())

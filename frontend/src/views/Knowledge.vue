@@ -37,6 +37,26 @@
           <option value="archived">Archived</option>
         </select>
       </div>
+      <div class="filter-group">
+        <label>Category:</label>
+        <select v-model="filterCategory" @change="loadKnowledge">
+          <option value="">All Categories</option>
+          <option v-for="cat in availableCategories" :key="cat" :value="cat">{{ cat }}</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Tag:</label>
+        <input 
+          v-model="filterTag" 
+          type="text" 
+          placeholder="Filter by tag..."
+          @keyup.enter="loadKnowledge"
+          class="tag-filter-input"
+        />
+        <button v-if="filterTag" class="btn-clear" @click="filterTag = ''; loadKnowledge()" title="Clear">
+          &times;
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -62,10 +82,10 @@
             <tr>
               <th class="col-type">Type</th>
               <th class="col-title">Title</th>
-              <th class="col-uri">URI</th>
+              <th class="col-category">Category</th>
+              <th class="col-tags">Tags</th>
               <th class="col-status">Status</th>
               <th class="col-date">Referenced</th>
-              <th class="col-date">Last Fetched</th>
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
@@ -78,13 +98,25 @@
               </td>
               <td class="col-title">
                 <span class="item-title">{{ item.title }}</span>
-                <span v-if="item.description" class="item-description">{{ truncate(item.description, 60) }}</span>
+                <span v-if="item.description" class="item-description">{{ truncate(item.description, 50) }}</span>
+                <span class="item-uri">{{ truncate(item.uri, 35) }}</span>
               </td>
-              <td class="col-uri">
-                <a v-if="isUrl(item.uri)" :href="item.uri" target="_blank" rel="noopener" class="uri-link">
-                  {{ truncate(item.uri, 40) }}
-                </a>
-                <span v-else class="uri-text">{{ truncate(item.uri, 40) }}</span>
+              <td class="col-category">
+                <span v-if="item.category" class="category-badge">{{ item.category }}</span>
+                <span v-else class="no-value">-</span>
+              </td>
+              <td class="col-tags">
+                <div v-if="item.tags" class="tags-list">
+                  <span 
+                    v-for="tag in item.tags.split(',')" 
+                    :key="tag" 
+                    class="tag-badge"
+                    @click="filterByTag(tag)"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
+                <span v-else class="no-value">-</span>
               </td>
               <td class="col-status">
                 <span :class="['status-badge', item.status]">
@@ -92,7 +124,6 @@
                 </span>
               </td>
               <td class="col-date">{{ formatDate(item.referenced_at) }}</td>
-              <td class="col-date">{{ item.last_fetched_at ? formatDate(item.last_fetched_at) : '-' }}</td>
               <td class="col-actions">
                 <button class="btn-icon" @click="openEditModal(item)" title="Edit">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -176,16 +207,117 @@
           </div>
         </div>
 
+        <div class="form-row">
+          <div class="form-group">
+            <label for="category">Category</label>
+            <input 
+              id="category" 
+              v-model="formData.category" 
+              type="text" 
+              list="category-suggestions"
+              placeholder="e.g., Documentation, Reference, Tutorial"
+            />
+            <datalist id="category-suggestions">
+              <option v-for="cat in availableCategories" :key="cat" :value="cat" />
+            </datalist>
+          </div>
+
+          <div class="form-group">
+            <label for="tags">Tags</label>
+            <input 
+              id="tags" 
+              v-model="formData.tags" 
+              type="text" 
+              placeholder="Comma-separated: python, api, backend"
+            />
+            <span class="form-hint">Separate multiple tags with commas</span>
+          </div>
+        </div>
+
         <div class="form-group">
-          <label for="uri">URI *</label>
-          <input 
-            id="uri" 
-            v-model="formData.uri" 
-            type="text" 
-            required 
-            :placeholder="formData.document_type === 'website' ? 'https://example.com/docs' : 'file:///path/to/document.md'"
-          />
-          <span class="form-hint">File path or URL to the document</span>
+          <label>Source *</label>
+          
+          <!-- Source type toggle for markdown -->
+          <div v-if="formData.document_type === 'markdown'" class="source-toggle">
+            <button 
+              type="button" 
+              :class="['toggle-btn', { active: sourceMode === 'file' }]"
+              @click="sourceMode = 'file'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+              </svg>
+              File
+            </button>
+            <button 
+              type="button" 
+              :class="['toggle-btn', { active: sourceMode === 'url' }]"
+              @click="sourceMode = 'url'"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+              </svg>
+              URL
+            </button>
+          </div>
+
+          <!-- File input -->
+          <div v-if="formData.document_type === 'markdown' && sourceMode === 'file'" class="file-input-wrapper">
+            <input 
+              ref="fileInputRef"
+              type="file" 
+              accept=".md,.markdown,.txt"
+              @change="handleFileSelect"
+              class="file-input"
+            />
+            <div class="file-input-display" @click="triggerFileInput">
+              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/>
+                <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
+                <path d="M3 15h6"/>
+                <path d="M6 12v6"/>
+              </svg>
+              <span v-if="selectedFileName">{{ selectedFileName }}</span>
+              <span v-else class="placeholder">Click to select a markdown file...</span>
+            </div>
+            <span class="form-hint">Select a .md or .markdown file from your computer</span>
+          </div>
+
+          <!-- URL input for markdown -->
+          <div v-else-if="formData.document_type === 'markdown' && sourceMode === 'url'">
+            <input 
+              id="uri" 
+              v-model="formData.uri" 
+              type="text" 
+              required 
+              placeholder="https://example.com/document.md or file:///path/to/document.md"
+            />
+            <span class="form-hint">Enter a URL or file path to the markdown document</span>
+          </div>
+
+          <!-- URL input for website (always shown) -->
+          <div v-else-if="formData.document_type === 'website'">
+            <input 
+              id="uri" 
+              v-model="formData.uri" 
+              type="url" 
+              required 
+              placeholder="https://example.com/docs"
+            />
+            <span class="form-hint">Enter the website URL to scrape</span>
+          </div>
+
+          <!-- Placeholder when no type selected -->
+          <div v-else>
+            <input 
+              type="text" 
+              disabled 
+              placeholder="Select a document type first"
+              class="disabled-input"
+            />
+          </div>
         </div>
       </form>
 
@@ -216,6 +348,8 @@ const error = ref(null)
 // Filters
 const filterType = ref('')
 const filterStatus = ref('')
+const filterCategory = ref('')
+const filterTag = ref('')
 
 // Modal state
 const showModal = ref(false)
@@ -226,8 +360,24 @@ const formData = ref({
   description: '',
   document_type: '',
   uri: '',
+  category: '',
+  tags: '',
   status: 'active'
 })
+
+// Computed available categories from items
+const availableCategories = computed(() => {
+  const categories = new Set()
+  items.value.forEach(item => {
+    if (item.category) categories.add(item.category)
+  })
+  return Array.from(categories).sort()
+})
+
+// File input state
+const sourceMode = ref('file') // 'file' or 'url'
+const selectedFileName = ref('')
+const fileInputRef = ref(null)
 
 const sortedItems = computed(() => {
   return [...items.value].sort((a, b) => {
@@ -264,6 +414,8 @@ async function loadKnowledge() {
     const params = { skip: 0, limit }
     if (filterType.value) params.document_type = filterType.value
     if (filterStatus.value) params.status = filterStatus.value
+    if (filterCategory.value) params.category = filterCategory.value
+    if (filterTag.value) params.tag = filterTag.value.trim()
     
     const response = await knowledgeStore.fetchItems(params)
     items.value = response.items
@@ -282,6 +434,8 @@ async function loadMore() {
     const params = { skip: currentSkip.value, limit }
     if (filterType.value) params.document_type = filterType.value
     if (filterStatus.value) params.status = filterStatus.value
+    if (filterCategory.value) params.category = filterCategory.value
+    if (filterTag.value) params.tag = filterTag.value.trim()
     
     const response = await knowledgeStore.fetchItems(params)
     items.value = [...items.value, ...response.items]
@@ -289,6 +443,11 @@ async function loadMore() {
   } catch (err) {
     console.error('Failed to load more items:', err)
   }
+}
+
+function filterByTag(tag) {
+  filterTag.value = tag.trim()
+  loadKnowledge()
 }
 
 function openCreateModal() {
@@ -299,8 +458,12 @@ function openCreateModal() {
     description: '',
     document_type: '',
     uri: '',
+    category: '',
+    tags: '',
     status: 'active'
   }
+  sourceMode.value = 'file'
+  resetFileInput()
   showModal.value = true
 }
 
@@ -312,7 +475,17 @@ function openEditModal(item) {
     description: item.description || '',
     document_type: item.document_type,
     uri: item.uri,
+    category: item.category || '',
+    tags: item.tags || '',
     status: item.status
+  }
+  // Determine source mode based on existing URI
+  if (item.document_type === 'markdown') {
+    sourceMode.value = isUrl(item.uri) ? 'url' : 'file'
+    if (!isUrl(item.uri)) {
+      // Extract filename from file:// URI
+      selectedFileName.value = item.uri.replace('file://', '')
+    }
   }
   showModal.value = true
 }
@@ -321,6 +494,7 @@ function closeModal() {
   showModal.value = false
   isEditing.value = false
   editingId.value = null
+  resetFileInput()
 }
 
 async function handleSubmit() {
@@ -390,6 +564,28 @@ function truncate(text, maxLength) {
 
 function isUrl(uri) {
   return uri.startsWith('http://') || uri.startsWith('https://')
+}
+
+function triggerFileInput() {
+  fileInputRef.value?.click()
+}
+
+function handleFileSelect(event) {
+  const file = event.target.files[0]
+  if (file) {
+    selectedFileName.value = file.name
+    // Create a file:// URI from the file name
+    // Note: For security reasons, browsers don't expose the full path
+    // We'll store the filename and the backend can handle the actual file location
+    formData.value.uri = `file://${file.name}`
+  }
+}
+
+function resetFileInput() {
+  selectedFileName.value = ''
+  if (fileInputRef.value) {
+    fileInputRef.value.value = ''
+  }
 }
 </script>
 
@@ -487,6 +683,34 @@ function isUrl(uri) {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.tag-filter-input {
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  width: 140px;
+}
+
+.tag-filter-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.btn-clear {
+  background: none;
+  border: none;
+  font-size: 1.25rem;
+  color: #6b7280;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+}
+
+.btn-clear:hover {
+  color: #111827;
+}
+
 .loading-state,
 .error-state {
   display: flex;
@@ -579,29 +803,33 @@ function isUrl(uri) {
 }
 
 .col-type {
-  width: 100px;
-}
-
-.col-title {
-  min-width: 200px;
-}
-
-.col-uri {
-  min-width: 200px;
-  max-width: 300px;
-}
-
-.col-status {
   width: 90px;
 }
 
+.col-title {
+  min-width: 180px;
+}
+
+.col-category {
+  width: 120px;
+}
+
+.col-tags {
+  min-width: 140px;
+  max-width: 200px;
+}
+
+.col-status {
+  width: 80px;
+}
+
 .col-date {
-  width: 110px;
+  width: 100px;
   white-space: nowrap;
 }
 
 .col-actions {
-  width: 110px;
+  width: 100px;
   text-align: center;
 }
 
@@ -668,6 +896,14 @@ function isUrl(uri) {
   margin-top: 0.25rem;
 }
 
+.item-uri {
+  display: block;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 0.25rem;
+  font-family: ui-monospace, monospace;
+}
+
 .uri-link {
   color: #2563eb;
   text-decoration: none;
@@ -682,6 +918,42 @@ function isUrl(uri) {
   color: #6b7280;
   font-size: 0.8125rem;
   font-family: ui-monospace, monospace;
+}
+
+.category-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+
+.tag-badge {
+  display: inline-block;
+  padding: 0.125rem 0.375rem;
+  background: #f3f4f6;
+  color: #4b5563;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.tag-badge:hover {
+  background: #2563eb;
+  color: white;
+}
+
+.no-value {
+  color: #d1d5db;
 }
 
 .btn-icon {
@@ -795,6 +1067,102 @@ function isUrl(uri) {
 .form-hint {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+/* Source toggle styles */
+.source-toggle {
+  display: flex;
+  gap: 0;
+  margin-bottom: 0.75rem;
+  background: #f3f4f6;
+  border-radius: 8px;
+  padding: 4px;
+  width: fit-content;
+}
+
+.toggle-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.toggle-btn:hover {
+  color: #374151;
+}
+
+.toggle-btn.active {
+  background: white;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* File input styles */
+.file-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.file-input-display {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: #fafafa;
+}
+
+.file-input-display:hover {
+  border-color: #2563eb;
+  background: #f0f7ff;
+}
+
+.file-input-display svg {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.file-input-display:hover svg {
+  color: #2563eb;
+}
+
+.file-input-display span {
+  font-size: 0.9375rem;
+  color: #111827;
+}
+
+.file-input-display .placeholder {
+  color: #9ca3af;
+}
+
+.disabled-input {
+  background: #f3f4f6 !important;
+  cursor: not-allowed;
+  color: #9ca3af !important;
 }
 
 @media (max-width: 1024px) {

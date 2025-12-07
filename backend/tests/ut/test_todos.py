@@ -5,7 +5,7 @@ from httpx import AsyncClient
 @pytest.mark.asyncio
 async def test_create_todo(client: AsyncClient):
     response = await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Test Todo",
             "description": "This is a test todo",
@@ -31,14 +31,14 @@ async def test_list_todos(client: AsyncClient):
     # Create a few todos
     for i in range(3):
         await client.post(
-            "/api/v1/todos/",
+            "/api/todos/",
             json={
                 "title": f"Test Todo {i}",
                 "status": "Open"
             }
         )
     
-    response = await client.get("/api/v1/todos/")
+    response = await client.get("/api/todos/")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 3
@@ -49,7 +49,7 @@ async def test_list_todos(client: AsyncClient):
 async def test_get_todo(client: AsyncClient):
     # Create a todo
     create_response = await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Test Todo",
             "status": "Open"
@@ -58,7 +58,7 @@ async def test_get_todo(client: AsyncClient):
     todo_id = create_response.json()["id"]
     
     # Get the todo
-    response = await client.get(f"/api/v1/todos/{todo_id}")
+    response = await client.get(f"/api/todos/{todo_id}")
     assert response.status_code == 200
     data = response.json()
     assert data["id"] == todo_id
@@ -67,7 +67,7 @@ async def test_get_todo(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_get_todo_not_found(client: AsyncClient):
-    response = await client.get("/api/v1/todos/999")
+    response = await client.get("/api/todos/999")
     assert response.status_code == 404
 
 
@@ -75,7 +75,7 @@ async def test_get_todo_not_found(client: AsyncClient):
 async def test_update_todo(client: AsyncClient):
     # Create a todo
     create_response = await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Test Todo",
             "status": "Open"
@@ -85,7 +85,7 @@ async def test_update_todo(client: AsyncClient):
     
     # Update the todo
     response = await client.put(
-        f"/api/v1/todos/{todo_id}",
+        f"/api/todos/{todo_id}",
         json={
             "status": "Started",
             "urgency": "Urgent"
@@ -101,7 +101,7 @@ async def test_update_todo(client: AsyncClient):
 async def test_update_todo_to_completed(client: AsyncClient):
     # Create a todo
     create_response = await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Test Todo",
             "status": "Open"
@@ -111,7 +111,7 @@ async def test_update_todo_to_completed(client: AsyncClient):
     
     # Update to completed
     response = await client.put(
-        f"/api/v1/todos/{todo_id}",
+        f"/api/todos/{todo_id}",
         json={"status": "Completed"}
     )
     assert response.status_code == 200
@@ -124,7 +124,7 @@ async def test_update_todo_to_completed(client: AsyncClient):
 async def test_delete_todo(client: AsyncClient):
     # Create a todo
     create_response = await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Test Todo",
             "status": "Open"
@@ -133,11 +133,11 @@ async def test_delete_todo(client: AsyncClient):
     todo_id = create_response.json()["id"]
     
     # Delete the todo
-    response = await client.delete(f"/api/v1/todos/{todo_id}")
+    response = await client.delete(f"/api/todos/{todo_id}")
     assert response.status_code == 204
     
     # Verify it's deleted
-    get_response = await client.get(f"/api/v1/todos/{todo_id}")
+    get_response = await client.get(f"/api/todos/{todo_id}")
     assert get_response.status_code == 404
 
 
@@ -145,7 +145,7 @@ async def test_delete_todo(client: AsyncClient):
 async def test_list_todos_with_filters(client: AsyncClient):
     # Create todos with different attributes
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Urgent Important Todo",
             "status": "Open",
@@ -154,7 +154,7 @@ async def test_list_todos_with_filters(client: AsyncClient):
         }
     )
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Not Urgent Todo",
             "status": "Open",
@@ -164,7 +164,7 @@ async def test_list_todos_with_filters(client: AsyncClient):
     )
     
     # Filter by urgency
-    response = await client.get("/api/v1/todos/?urgency=Urgent")
+    response = await client.get("/api/todos/?urgency=Urgent")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
@@ -175,7 +175,7 @@ async def test_list_todos_with_filters(client: AsyncClient):
 async def test_list_unclassified_todos(client: AsyncClient):
     # Create classified todo
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Classified Todo",
             "status": "Open",
@@ -186,14 +186,14 @@ async def test_list_unclassified_todos(client: AsyncClient):
     
     # Create unclassified todo
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Unclassified Todo",
             "status": "Open"
         }
     )
     
-    response = await client.get("/api/v1/todos/unclassified")
+    response = await client.get("/api/todos/unclassified")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
@@ -204,7 +204,7 @@ async def test_list_unclassified_todos(client: AsyncClient):
 async def test_list_todos_by_quadrant(client: AsyncClient):
     # Create todos in different quadrants
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Urgent Important Todo",
             "status": "Open",
@@ -213,7 +213,7 @@ async def test_list_todos_by_quadrant(client: AsyncClient):
         }
     )
     await client.post(
-        "/api/v1/todos/",
+        "/api/todos/",
         json={
             "title": "Not Urgent Important Todo",
             "status": "Open",
@@ -222,7 +222,7 @@ async def test_list_todos_by_quadrant(client: AsyncClient):
         }
     )
     
-    response = await client.get("/api/v1/todos/canvas/Urgent/Important")
+    response = await client.get("/api/todos/canvas/Urgent/Important")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
