@@ -27,24 +27,30 @@ The Retrieval-Augmented Generation (RAG) system enables semantic search across t
 
 ### Document Loader
 
-Loads document content from various sources:
+Loads document content from various sources (`app/rag/document_loader.py`):
 
 ```python
 class DocumentLoader:
     async def load(uri: str, document_type: str) -> LoadedDocument:
-        # Returns content and metadata
+        # Returns content and metadata including content_hash
 ```
 
 Supported sources:
 
 | Type | Description | Example URI |
 | ---- | ----------- | ----------- |
-| markdown | Local markdown files | `/path/to/doc.md` |
+| markdown | Local markdown files | `file:///path/to/doc.md` |
 | website | Web page content | `https://example.com/page` |
+
+The loader returns a `LoadedDocument` containing:
+
+- `content`: The extracted text content
+- `content_hash`: MD5 hash for change detection
+- `metadata`: Source information
 
 ### Text Splitter
 
-Splits documents into chunks for embedding:
+Splits documents into chunks for embedding (`app/rag/text_splitter.py`):
 
 ```python
 class RecursiveTextSplitter:
@@ -61,30 +67,40 @@ The recursive splitter attempts to split on natural boundaries:
 3. Sentences (`. `)
 4. Words (` `)
 
+Each chunk includes metadata:
+
+- `chunk_index`: Position in the document
+- `start_index`: Character offset in original content
+
 ### Embedding Model
 
 Uses sentence-transformers for local embedding generation:
 
 - Model: `all-MiniLM-L6-v2`
-- Runs entirely locally (no API calls)
+- Runs entirely locally (no external API calls)
 - Produces 384-dimensional vectors
+- Optimized for semantic similarity
 
 ### Vector Store
 
-ChromaDB provides persistent vector storage:
+ChromaDB provides persistent vector storage (`app/rag/service.py`):
 
 ```python
 RAGService(
     persist_directory="./data/chroma",
-    collection_name="knowledge_base"
+    collection_name="knowledge_base",
+    chunk_size=1000,
+    chunk_overlap=200,
+    embedding_model="all-MiniLM-L6-v2"
 )
 ```
 
 Features:
 
-- Cosine similarity for search
-- Metadata filtering
-- Persistent storage
+- Cosine similarity for search (configured via `hnsw:space`)
+- Metadata filtering by category, tags, knowledge_id
+- Persistent storage across restarts
+- Automatic collection management
 
 ## API Endpoints
 
@@ -250,6 +266,60 @@ backend/data/chroma/
     └── link_lists.bin
 ```
 
+## Knowledge Status Integration
+
+Indexing automatically updates the knowledge item:
+
+| Action | Status Change | Fields Updated |
+| ------ | ------------- | -------------- |
+| Index success | `pending` → `active` | `content_hash`, `last_fetched_at` |
+| Index failure | `pending` → `error` | `status` only |
+| Re-index | Unchanged | `content_hash`, `last_fetched_at` |
+
+## Testing
+
+The RAG system includes comprehensive tests (`tests/ut/test_rag.py`):
+
+```bash
+# Run RAG tests
+uv run pytest tests/ut/test_rag.py -v
+```
+
+### Test Coverage
+
+- Empty collection queries
+- Indexing with valid markdown files
+- Search after indexing
+- Category filtering
+- Index removal
+- Bulk indexing (`index-all`)
+- Status and hash updates
+- Error handling for invalid files
+
+### Test Example
+
+```python
+@pytest.mark.asyncio
+async def test_rag_search_after_indexing(client, sample_markdown_file):
+    # Create and index a knowledge item
+    create_response = await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Search Test Document",
+            "document_type": "markdown",
+            "uri": f"file://{sample_markdown_file}",
+            "category": "SearchTest"
+        }
+    )
+    knowledge_id = create_response.json()["id"]
+    
+    await client.post(f"/api/rag/index/{knowledge_id}")
+    
+    # Search for content
+    search_response = await client.get("/api/rag/search?q=Python+programming&n=3")
+    assert search_response.json()["total_results"] > 0
+```
+
 ## Performance Considerations
 
 ### Chunk Size
@@ -266,4 +336,26 @@ For initial setup, use `index-all` endpoint to process documents in batch rather
 ### Embedding Cache
 
 Embeddings are computed once during indexing. Queries compute embeddings on-demand (fast for short queries).
+
+## Error Handling
+
+The RAG service handles errors gracefully:
+
+```json
+{
+  "success": false,
+  "knowledge_id": 1,
+  "chunks_indexed": 0,
+  "content_hash": null,
+  "error": "File not found: /nonexistent/path/file.md"
+}
+```
+
+Common errors:
+
+| Error | Cause | Resolution |
+| ----- | ----- | ---------- |
+| File not found | Invalid file path in URI | Verify the `uri` field points to an existing file |
+| No content to index | Empty document | Add content to the document |
+| ChromaDB error | Storage issue | Check disk space and permissions |
 

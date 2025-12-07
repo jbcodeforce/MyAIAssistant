@@ -12,6 +12,22 @@
           <span class="stat-badge markdown">{{ markdownCount }} markdown</span>
           <span class="stat-badge website">{{ websiteCount }} website</span>
         </div>
+        <button 
+          class="btn-secondary index-all-btn" 
+          @click="handleIndexAll"
+          :disabled="indexingAll || items.length === 0"
+        >
+          <svg v-if="indexingAll" class="spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <path d="m21 21-4.3-4.3"/>
+            <path d="M11 8v6"/>
+            <path d="M8 11h6"/>
+          </svg>
+          {{ indexingAll ? 'Indexing...' : 'Index All' }}
+        </button>
         <button class="btn-primary" @click="openCreateModal">
           + Add Knowledge
         </button>
@@ -125,6 +141,23 @@
               </td>
               <td class="col-date">{{ formatDate(item.referenced_at) }}</td>
               <td class="col-actions">
+                <button 
+                  class="btn-icon index-btn" 
+                  @click="handleIndex(item)" 
+                  :title="isIndexing(item.id) ? 'Indexing...' : 'Index for RAG'"
+                  :disabled="isIndexing(item.id)"
+                  :class="{ indexing: isIndexing(item.id) }"
+                >
+                  <svg v-if="isIndexing(item.id)" class="spinner" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                  </svg>
+                  <svg v-else xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                    <path d="M11 8v6"/>
+                    <path d="M8 11h6"/>
+                  </svg>
+                </button>
                 <button class="btn-icon" @click="openEditModal(item)" title="Edit">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -263,26 +296,22 @@
             </button>
           </div>
 
-          <!-- File input -->
-          <div v-if="formData.document_type === 'markdown' && sourceMode === 'file'" class="file-input-wrapper">
-            <input 
-              ref="fileInputRef"
-              type="file" 
-              accept=".md,.markdown,.txt"
-              @change="handleFileSelect"
-              class="file-input"
-            />
-            <div class="file-input-display" @click="triggerFileInput">
-              <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M4 22h14a2 2 0 0 0 2-2V7l-5-5H6a2 2 0 0 0-2 2v4"/>
+          <!-- Local file path input -->
+          <div v-if="formData.document_type === 'markdown' && sourceMode === 'file'">
+            <div class="file-path-input">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/>
                 <path d="M14 2v4a2 2 0 0 0 2 2h4"/>
-                <path d="M3 15h6"/>
-                <path d="M6 12v6"/>
               </svg>
-              <span v-if="selectedFileName">{{ selectedFileName }}</span>
-              <span v-else class="placeholder">Click to select a markdown file...</span>
+              <input 
+                v-model="formData.uri" 
+                type="text" 
+                required 
+                placeholder="/Users/username/Documents/notes.md"
+                @blur="normalizeFilePath"
+              />
             </div>
-            <span class="form-hint">Select a .md or .markdown file from your computer</span>
+            <span class="form-hint">Enter the absolute path to the markdown file (e.g., /home/user/docs/readme.md)</span>
           </div>
 
           <!-- URL input for markdown -->
@@ -334,6 +363,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useKnowledgeStore } from '@/stores/knowledgeStore'
+import { ragApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
 const knowledgeStore = useKnowledgeStore()
@@ -344,6 +374,8 @@ const currentSkip = ref(0)
 const limit = 50
 const loading = ref(false)
 const error = ref(null)
+const indexingItems = ref(new Set()) // Track items currently being indexed
+const indexingAll = ref(false) // Track bulk indexing state
 
 // Filters
 const filterType = ref('')
@@ -374,10 +406,8 @@ const availableCategories = computed(() => {
   return Array.from(categories).sort()
 })
 
-// File input state
+// Source mode state
 const sourceMode = ref('file') // 'file' or 'url'
-const selectedFileName = ref('')
-const fileInputRef = ref(null)
 
 const sortedItems = computed(() => {
   return [...items.value].sort((a, b) => {
@@ -463,7 +493,6 @@ function openCreateModal() {
     status: 'active'
   }
   sourceMode.value = 'file'
-  resetFileInput()
   showModal.value = true
 }
 
@@ -482,10 +511,6 @@ function openEditModal(item) {
   // Determine source mode based on existing URI
   if (item.document_type === 'markdown') {
     sourceMode.value = isUrl(item.uri) ? 'url' : 'file'
-    if (!isUrl(item.uri)) {
-      // Extract filename from file:// URI
-      selectedFileName.value = item.uri.replace('file://', '')
-    }
   }
   showModal.value = true
 }
@@ -494,11 +519,13 @@ function closeModal() {
   showModal.value = false
   isEditing.value = false
   editingId.value = null
-  resetFileInput()
 }
 
 async function handleSubmit() {
   if (!isFormValid.value) return
+  
+  // Ensure file:// prefix for local file paths
+  normalizeFilePath()
   
   try {
     if (isEditing.value) {
@@ -547,6 +574,77 @@ async function handleDelete(item) {
   }
 }
 
+async function handleIndex(item) {
+  if (indexingItems.value.has(item.id)) return
+  
+  indexingItems.value.add(item.id)
+  
+  try {
+    const response = await ragApi.indexItem(item.id)
+    const result = response.data
+    
+    if (result.success) {
+      // Update the item with new content_hash and last_fetched_at
+      const index = items.value.findIndex(i => i.id === item.id)
+      if (index !== -1) {
+        items.value[index] = {
+          ...items.value[index],
+          content_hash: result.content_hash,
+          status: 'active'
+        }
+      }
+      alert(`Successfully indexed "${item.title}" (${result.chunks_indexed} chunks)`)
+    } else {
+      alert(`Failed to index "${item.title}": ${result.error}`)
+      // Update status to error
+      const index = items.value.findIndex(i => i.id === item.id)
+      if (index !== -1) {
+        items.value[index] = { ...items.value[index], status: 'error' }
+      }
+    }
+  } catch (err) {
+    console.error('Failed to index item:', err)
+    alert(`Failed to index "${item.title}": ${err.response?.data?.detail || err.message}`)
+  } finally {
+    indexingItems.value.delete(item.id)
+  }
+}
+
+function isIndexing(itemId) {
+  return indexingItems.value.has(itemId)
+}
+
+async function handleIndexAll() {
+  if (indexingAll.value || items.value.length === 0) return
+  
+  const activeItems = items.value.filter(i => i.status === 'active' || i.status === 'pending')
+  if (activeItems.length === 0) {
+    alert('No active items to index')
+    return
+  }
+  
+  if (!confirm(`Index ${activeItems.length} active/pending items into the RAG system?`)) {
+    return
+  }
+  
+  indexingAll.value = true
+  
+  try {
+    const response = await ragApi.indexAll('active,pending')
+    const result = response.data
+    
+    // Refresh the list to get updated statuses
+    await loadKnowledge()
+    
+    alert(`Indexing complete: ${result.successful} succeeded, ${result.failed} failed`)
+  } catch (err) {
+    console.error('Failed to index all items:', err)
+    alert(`Failed to index items: ${err.response?.data?.detail || err.message}`)
+  } finally {
+    indexingAll.value = false
+  }
+}
+
 function formatDate(dateString) {
   const date = new Date(dateString)
   return date.toLocaleDateString('en-US', {
@@ -566,25 +664,16 @@ function isUrl(uri) {
   return uri.startsWith('http://') || uri.startsWith('https://')
 }
 
-function triggerFileInput() {
-  fileInputRef.value?.click()
-}
-
-function handleFileSelect(event) {
-  const file = event.target.files[0]
-  if (file) {
-    selectedFileName.value = file.name
-    // Create a file:// URI from the file name
-    // Note: For security reasons, browsers don't expose the full path
-    // We'll store the filename and the backend can handle the actual file location
-    formData.value.uri = `file://${file.name}`
+function normalizeFilePath() {
+  // Ensure the path starts with file:// for local files (only for markdown + file mode)
+  if (formData.value.document_type !== 'markdown' || sourceMode.value !== 'file') {
+    return
   }
-}
-
-function resetFileInput() {
-  selectedFileName.value = ''
-  if (fileInputRef.value) {
-    fileInputRef.value.value = ''
+  
+  let path = formData.value.uri
+  if (path && !path.startsWith('file://') && !path.startsWith('http://') && !path.startsWith('https://')) {
+    // It's a local path, add file:// prefix
+    formData.value.uri = `file://${path}`
   }
 }
 </script>
@@ -645,6 +734,29 @@ function resetFileInput() {
 .stat-badge.website {
   background: #fef3c7;
   color: #92400e;
+}
+
+.index-all-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: #f3e8ff;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.index-all-btn:hover:not(:disabled) {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+
+.index-all-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.index-all-btn svg {
+  flex-shrink: 0;
 }
 
 .filters-bar {
@@ -976,6 +1088,37 @@ function resetFileInput() {
   color: #dc2626;
 }
 
+.btn-icon.index-btn {
+  color: #8b5cf6;
+}
+
+.btn-icon.index-btn:hover {
+  background: #f3e8ff;
+  color: #7c3aed;
+}
+
+.btn-icon.index-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.btn-icon.index-btn.indexing {
+  color: #8b5cf6;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .load-more {
   display: flex;
   justify-content: center;
@@ -1105,23 +1248,47 @@ function resetFileInput() {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-/* File input styles */
+/* File path input styles */
+.file-path-input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  background: white;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.file-path-input:focus-within {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.file-path-input svg {
+  color: #6b7280;
+  flex-shrink: 0;
+}
+
+.file-path-input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 0.9375rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: transparent;
+}
+
+.file-path-input input::placeholder {
+  font-family: inherit;
+  color: #9ca3af;
+}
+
+/* Legacy file input styles - kept for compatibility */
 .file-input-wrapper {
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
-}
-
-.file-input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
 }
 
 .file-input-display {
