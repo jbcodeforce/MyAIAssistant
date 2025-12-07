@@ -1,0 +1,4 @@
+---
+alwaysApply: true
+description: start by unit test under the backend/tests/ut/ folder before writing any function in app services.
+---

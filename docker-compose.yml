@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  backend:
+    build: ./backend
+    container_name: myaiassistant-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=sqlite+aiosqlite:///./myaiassistant.db
+    volumes:
+      - backend-data:/app/data
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: myaiassistant-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://backend:8000
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+
