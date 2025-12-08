@@ -10,6 +10,8 @@ Based on Stephen Covey's "7 Habits of Highly Effective People," the system helps
 
 ![](./images/aia_dashboard.png)
 
+[Access the webApp local once started](http://localhost:3000).
+
 ## Core Features
 
 | Feature | Status | Description |

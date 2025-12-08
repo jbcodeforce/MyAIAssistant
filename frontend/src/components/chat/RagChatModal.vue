@@ -273,7 +273,7 @@ function sendSuggested(prompt) {
   background: #0f172a;
   border-radius: 16px;
   width: 100%;
-  max-width: 650px;
+  max-width: 850px;
   height: 80vh;
   max-height: 750px;
   display: flex;

@@ -128,12 +128,34 @@
         </div>
 
         <div class="chat-input-area">
-          <div class="rag-toggle">
-            <label class="toggle-switch">
-              <input type="checkbox" v-model="useRag" />
-              <span class="toggle-slider"></span>
-            </label>
-            <span class="toggle-label">Use knowledge base</span>
+          <div class="input-controls">
+            <div class="rag-toggle">
+              <label class="toggle-switch">
+                <input type="checkbox" v-model="useRag" />
+                <span class="toggle-slider"></span>
+              </label>
+              <span class="toggle-label">Use knowledge base</span>
+            </div>
+            <button 
+              v-if="lastAssistantMessage"
+              class="save-plan-btn"
+              :class="{ success: saveSuccess }"
+              @click="saveAsTaskPlan"
+              :disabled="isSaving"
+            >
+              <svg v-if="isSaving" class="spinner" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+              </svg>
+              <svg v-else-if="saveSuccess" xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              <svg v-else xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+                <polyline points="17 21 17 13 7 13 7 21"/>
+                <polyline points="7 3 7 8 15 8"/>
+              </svg>
+              <span>{{ saveSuccess ? 'Saved' : 'Save as Plan' }}</span>
+            </button>
           </div>
           <div class="input-row">
             <textarea
@@ -163,7 +185,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
-import { chatApi } from '@/services/api'
+import { chatApi, todosApi } from '@/services/api'
 
 const props = defineProps({
   show: {
@@ -185,12 +207,23 @@ const error = ref(null)
 const useRag = ref(true)
 const messagesContainer = ref(null)
 const inputField = ref(null)
+const isSaving = ref(false)
+const saveSuccess = ref(false)
 
 const truncatedDescription = computed(() => {
   if (!props.todo.description) return ''
   return props.todo.description.length > 100
     ? props.todo.description.substring(0, 100) + '...'
     : props.todo.description
+})
+
+const lastAssistantMessage = computed(() => {
+  for (let i = messages.value.length - 1; i >= 0; i--) {
+    if (messages.value[i].role === 'assistant') {
+      return messages.value[i]
+    }
+  }
+  return null
 })
 
 // Reset chat when todo changes
@@ -289,6 +322,28 @@ function sendSuggested(prompt) {
   inputMessage.value = prompt
   sendMessage()
 }
+
+async function saveAsTaskPlan() {
+  if (!lastAssistantMessage.value || isSaving.value) return
+  
+  isSaving.value = true
+  saveSuccess.value = false
+  error.value = null
+  
+  try {
+    await todosApi.saveTaskPlan(props.todo.id, lastAssistantMessage.value.content)
+    saveSuccess.value = true
+    // Reset success message after 3 seconds
+    setTimeout(() => {
+      saveSuccess.value = false
+    }, 3000)
+  } catch (err) {
+    console.error('Save task plan error:', err)
+    error.value = err.response?.data?.detail || 'Failed to save task plan. Please try again.'
+  } finally {
+    isSaving.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -307,7 +362,7 @@ function sendSuggested(prompt) {
   background: #0f172a;
   border-radius: 16px;
   width: 100%;
-  max-width: 600px;
+  max-width: 800px;
   height: 80vh;
   max-height: 700px;
   display: flex;
@@ -623,11 +678,60 @@ function sendSuggested(prompt) {
   border-top: 1px solid #1e293b;
 }
 
+.input-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
 .rag-toggle {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.75rem;
+}
+
+.save-plan-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #e2e8f0;
+  padding: 0.375rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.save-plan-btn:hover:not(:disabled) {
+  background: #334155;
+  border-color: #8b5cf6;
+}
+
+.save-plan-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.save-plan-btn.success {
+  background: #166534;
+  border-color: #22c55e;
+  color: #bbf7d0;
+}
+
+.save-plan-btn .spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .toggle-switch {

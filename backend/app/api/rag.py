@@ -58,12 +58,14 @@ async def index_knowledge_item(
     
     # Update the knowledge item with indexing results
     if result.success:
+        now = datetime.now(timezone.utc)
         await crud.update_knowledge(
             db,
             knowledge_id,
             KnowledgeUpdate(
                 content_hash=result.content_hash,
-                last_fetched_at=datetime.now(timezone.utc),
+                last_fetched_at=now,
+                indexed_at=now,
                 status="active"
             )
         )
@@ -123,12 +125,14 @@ async def index_all_knowledge(
         # Update knowledge item status
         if result.success:
             successful += 1
+            now = datetime.now(timezone.utc)
             await crud.update_knowledge(
                 db,
                 item.id,
                 KnowledgeUpdate(
                     content_hash=result.content_hash,
-                    last_fetched_at=datetime.now(timezone.utc),
+                    last_fetched_at=now,
+                    indexed_at=now,
                     status="active"
                 )
             )

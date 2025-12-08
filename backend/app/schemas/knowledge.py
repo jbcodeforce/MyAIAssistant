@@ -67,6 +67,7 @@ class KnowledgeUpdate(BaseModel):
     status: Optional[str] = None
     content_hash: Optional[str] = Field(None, max_length=64)
     last_fetched_at: Optional[datetime] = None
+    indexed_at: Optional[datetime] = None
 
     @field_validator('tags')
     @classmethod
@@ -103,6 +104,7 @@ class KnowledgeResponse(KnowledgeBase):
     content_hash: Optional[str] = None
     referenced_at: datetime
     last_fetched_at: Optional[datetime] = None
+    indexed_at: Optional[datetime] = None
     created_at: datetime
     updated_at: datetime
 

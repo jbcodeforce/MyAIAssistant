@@ -111,7 +111,7 @@
               <th class="col-category">Category</th>
               <th class="col-tags">Tags</th>
               <th class="col-status">Status</th>
-              <th class="col-date">Referenced</th>
+              <th class="col-date">Indexed</th>
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
@@ -149,7 +149,10 @@
                   {{ item.status }}
                 </span>
               </td>
-              <td class="col-date">{{ formatDate(item.referenced_at) }}</td>
+              <td class="col-date">
+                <span v-if="item.indexed_at">{{ formatDate(item.indexed_at) }}</span>
+                <span v-else class="not-indexed">Not yet</span>
+              </td>
               <td class="col-actions">
                 <button 
                   class="btn-icon index-btn" 
@@ -1106,6 +1109,11 @@ function normalizeFilePath() {
 
 .no-value {
   color: #d1d5db;
+}
+
+.not-indexed {
+  color: #9ca3af;
+  font-style: italic;
 }
 
 .btn-icon {
