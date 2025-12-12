@@ -181,6 +181,7 @@ function onDrop(urgency, importance) {
 <style scoped>
 .todo-canvas {
   padding: 2rem;
+  width: 100%;
 }
 
 .canvas-header {
@@ -206,9 +207,8 @@ function onDrop(urgency, importance) {
   grid-template-columns: 40px 1fr;
   grid-template-rows: 1fr 40px;
   gap: 1rem;
-  max-width: 1400px;
-  margin: 0 auto;
   min-height: 600px;
+  width: 100%;
 }
 
 .axis-label {
@@ -236,6 +236,7 @@ function onDrop(urgency, importance) {
   grid-template-columns: repeat(2, 1fr);
   grid-template-rows: repeat(2, 1fr);
   gap: 1rem;
+  width: 100%;
 }
 
 .quadrant {
@@ -245,6 +246,8 @@ function onDrop(urgency, importance) {
   padding: 1rem;
   overflow-y: auto;
   transition: all 0.2s;
+  min-width: 0;
+  width: 100%;
 }
 
 .quadrant:hover {

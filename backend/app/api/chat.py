@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db import crud
 from app.chat.service import ChatService, ChatMessage, get_chat_service
-from app.core.config import settings
+from app.core.config import get_settings
 from app.schemas.chat import (
     ChatRequest,
     ChatResponse,
@@ -142,6 +142,7 @@ async def get_chat_config():
     
     Returns information about the LLM provider and settings.
     """
+    settings = get_settings()
     return ChatConfigResponse(
         provider=settings.llm_provider,
         model=settings.llm_model,
@@ -158,6 +159,7 @@ async def chat_health_check(chat: ChatService = Depends(get_chat)):
     
     Returns the provider configuration status.
     """
+    settings = get_settings()
     provider = settings.llm_provider
     has_api_key = settings.llm_api_key is not None
     

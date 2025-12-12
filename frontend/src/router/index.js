@@ -3,6 +3,7 @@ import Dashboard from '@/views/Dashboard.vue'
 import Unclassified from '@/views/Unclassified.vue'
 import ArchivedTodos from '@/views/ArchivedTodos.vue'
 import Knowledge from '@/views/Knowledge.vue'
+import Documentation from '@/views/Documentation.vue'
 
 const routes = [
   {
@@ -35,6 +36,14 @@ const routes = [
     component: Knowledge,
     meta: {
       title: 'Knowledge Base - MyAIAssistant'
+    }
+  },
+  {
+    path: '/documentation',
+    name: 'Documentation',
+    component: Documentation,
+    meta: {
+      title: 'Documentation - MyAIAssistant'
     }
   }
 ]

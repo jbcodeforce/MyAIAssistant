@@ -1,0 +1,25 @@
+# Default configuration for MyAIAssistant Backend
+# These values are used unless overridden by:
+# 1. User config file (set CONFIG_FILE environment variable)
+# 2. Environment variables
+# 3. .env file
+
+# Database settings
+database_url: "sqlite+aiosqlite:///Users/jerome/Documents/Code/MyAIAssistant/workspaces/km-db/km-assistant.db"
+
+# Knowledge base / Vector store settings
+chroma_persist_directory: "/Users/jerome/Documents/Code/MyAIAssistant/workspaces/km-db/chroma"
+chroma_collection_name: "km-kb"
+
+# CORS settings (list of allowed origins)
+cors_origins:
+  - "http://localhost:5173"
+  - "http://localhost:3000"
+
+# LLM settings
+llm_provider: "ollama"
+llm_model: "gpt-oss:20b"
+llm_api_key: null
+llm_base_url: "http://localhost:11434"
+llm_max_tokens: 2048
+llm_temperature: 0.1

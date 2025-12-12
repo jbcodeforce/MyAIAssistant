@@ -15,6 +15,9 @@
         <router-link to="/knowledge" class="nav-link" active-class="active">
           Knowledge
         </router-link>
+        <router-link to="/documentation" class="nav-link" active-class="active">
+          Docs
+        </router-link>
         <button class="btn-primary" @click="emit('create')">
           + New Todo
         </button>

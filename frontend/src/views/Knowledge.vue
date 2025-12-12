@@ -701,9 +701,14 @@ function normalizeFilePath() {
 
 <style scoped>
 .knowledge-view {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 52px);
   background: #f9fafb;
   padding: 2rem;
+  width: 100%;
+}
+
+:global(.dark) .knowledge-view {
+  background: #0f172a;
 }
 
 .view-header {
@@ -711,9 +716,6 @@ function normalizeFilePath() {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1.5rem;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .view-header h2 {
@@ -806,9 +808,6 @@ function normalizeFilePath() {
   display: flex;
   gap: 1.5rem;
   margin-bottom: 1.5rem;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .filter-group {
@@ -883,8 +882,7 @@ function normalizeFilePath() {
 }
 
 .knowledge-content {
-  max-width: 1400px;
-  margin: 0 auto;
+  width: 100%;
 }
 
 .empty-state {
@@ -912,6 +910,7 @@ function normalizeFilePath() {
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
+  width: 100%;
 }
 
 .knowledge-table {

@@ -300,10 +300,11 @@ _rag_service: Optional[RAGService] = None
 
 def get_rag_service() -> RAGService:
     """Get or create the global RAG service instance."""
-    from app.core.config import settings
+    from app.core.config import get_settings
     
     global _rag_service
     if _rag_service is None:
+        settings = get_settings()
         _rag_service = RAGService(
             persist_directory=settings.chroma_persist_directory,
             collection_name=settings.chroma_collection_name,

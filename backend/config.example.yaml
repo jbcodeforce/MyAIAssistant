@@ -2,12 +2,19 @@
 # Only include settings you want to change from the defaults.
 # Set CONFIG_FILE environment variable to point to this file:
 #   export CONFIG_FILE=/path/to/myconfig.yaml
+#
+# Then verify your config is loaded correctly:
+#   curl http://localhost:8000/debug/config
 
 # Database path (change to use a different SQLite database)
-database_url: "sqlite+aiosqlite:///./my_custom.db"
+# Use ABSOLUTE paths to avoid confusion with working directory
+database_url: "sqlite+aiosqlite:////absolute/path/to/my_custom.db"
+# Or relative (resolved from current working directory when app starts):
+# database_url: "sqlite+aiosqlite:///./my_custom.db"
 
 # Knowledge base storage (change to use a different ChromaDB location)
-chroma_persist_directory: "/data/my_knowledge_base"
+# Use ABSOLUTE paths for predictable behavior
+chroma_persist_directory: "/absolute/path/to/my_knowledge_base"
 chroma_collection_name: "my_documents"
 
 # LLM settings (uncomment and modify as needed)

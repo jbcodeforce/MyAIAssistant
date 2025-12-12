@@ -21,7 +21,7 @@
       <button @click="loadUnclassified" class="btn-primary">Retry</button>
     </div>
 
-    <div v-else class="todos-list">
+    <div v-else class="todos-list-container">
       <div v-if="unclassifiedTodos.length === 0" class="empty-state">
         <p>No unclassified todos</p>
         <p class="empty-state-hint">
@@ -215,9 +215,14 @@ function closePlanModal() {
 
 <style scoped>
 .unclassified-view {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 52px);
   background: #f9fafb;
   padding: 2rem;
+  width: 100%;
+}
+
+:global(.dark) .unclassified-view {
+  background: #0f172a;
 }
 
 .view-header {
@@ -225,9 +230,6 @@ function closePlanModal() {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 2rem;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .view-header h2 {
@@ -259,9 +261,8 @@ function closePlanModal() {
   color: #6b7280;
 }
 
-.todos-list {
-  max-width: 1400px;
-  margin: 0 auto;
+.todos-list-container {
+  width: 100%;
 }
 
 .empty-state {
@@ -288,6 +289,7 @@ function closePlanModal() {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
+  width: 100%;
 }
 
 .load-more {

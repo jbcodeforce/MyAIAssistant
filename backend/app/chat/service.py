@@ -6,7 +6,7 @@ from typing import Optional
 
 import httpx
 
-from app.core.config import settings
+from app.core.config import get_settings
 from app.rag.service import RAGService, get_rag_service
 
 logger = logging.getLogger(__name__)
@@ -45,6 +45,7 @@ class ChatService:
         temperature: float = None,
         rag_service: RAGService = None
     ):
+        settings = get_settings()
         self.provider = provider or settings.llm_provider
         self.model = model or settings.llm_model
         self.api_key = api_key or settings.llm_api_key

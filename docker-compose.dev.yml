@@ -1,4 +1,3 @@
-version: '3.8'
 
 services:
   backend:
@@ -7,7 +6,7 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./myaiassistant.db
+      - CONFIG_FILE=./backend/app/config.yaml
     volumes:
       - ./backend:/app
       - backend-data:/app/data
@@ -23,6 +22,7 @@ services:
       - "3000:3000"
     volumes:
       - ./frontend:/app
+      - ./site:/site
       - /app/node_modules
     environment:
       - VITE_API_URL=http://backend:8000

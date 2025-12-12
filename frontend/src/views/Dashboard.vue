@@ -9,7 +9,7 @@
       <button @click="loadTodos" class="btn-primary">Retry</button>
     </div>
 
-    <div v-else>
+    <div v-else class="dashboard-content">
       <TodoCanvas
         :urgent-important-todos="todoStore.urgentImportant"
         :urgent-not-important-todos="todoStore.urgentNotImportant"
@@ -208,8 +208,17 @@ defineExpose({
 
 <style scoped>
 .dashboard {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 52px);
   background: #f9fafb;
+  width: 100%;
+}
+
+:global(.dark) .dashboard {
+  background: #0f172a;
+}
+
+.dashboard-content {
+  width: 100%;
 }
 
 .loading-state,
@@ -244,8 +253,7 @@ defineExpose({
 }
 
 .unclassified-section {
-  max-width: 1400px;
-  margin: 2rem auto;
+  margin: 2rem 0;
   padding: 0 2rem 2rem;
 }
 
@@ -268,6 +276,7 @@ defineExpose({
 
 .todos-grid {
   display: grid;
+  width: 100%;
   grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 1rem;
 }

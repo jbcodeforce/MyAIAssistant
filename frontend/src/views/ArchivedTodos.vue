@@ -22,7 +22,7 @@
       <button @click="loadArchived" class="btn-primary">Retry</button>
     </div>
 
-    <div v-else class="archived-content">
+    <div v-else class="archived-content-container">
       <div v-if="archivedTodos.length === 0" class="empty-state">
         <p>No archived todos</p>
         <p class="empty-state-hint">
@@ -279,9 +279,14 @@ function truncate(text, maxLength) {
 
 <style scoped>
 .archived-view {
-  min-height: calc(100vh - 80px);
+  min-height: calc(100vh - 52px);
   background: #f9fafb;
   padding: 2rem;
+  width: 100%;
+}
+
+:global(.dark) .archived-view {
+  background: #0f172a;
 }
 
 .view-header {
@@ -289,9 +294,6 @@ function truncate(text, maxLength) {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 2rem;
-  max-width: 1400px;
-  margin-left: auto;
-  margin-right: auto;
 }
 
 .view-header h2 {
@@ -345,9 +347,8 @@ function truncate(text, maxLength) {
   color: #6b7280;
 }
 
-.archived-content {
-  max-width: 1400px;
-  margin: 0 auto;
+.archived-content-container {
+  width: 100%;
 }
 
 .empty-state {
@@ -375,6 +376,7 @@ function truncate(text, maxLength) {
   border-radius: 12px;
   border: 1px solid #e5e7eb;
   overflow: hidden;
+  width: 100%;
 }
 
 .todos-table {

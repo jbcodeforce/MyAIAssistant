@@ -37,7 +37,7 @@ from app.db.crud import get_knowledge_by_uri, create_knowledge, update_knowledge
 from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 from app.rag.document_loader import DocumentLoader
 from app.rag.text_splitter import RecursiveTextSplitter
-from app.core.config import settings
+from app.core.config import get_settings
 
 # Configure logging
 logging.basicConfig(
@@ -79,7 +79,7 @@ class FolderVectorizer:
         self.collection_name = collection_name
         self.chunk_size = chunk_size
         self.chunk_overlap = chunk_overlap
-        self.database_url = database_url or settings.database_url
+        self.database_url = database_url or get_settings().database_url
         
         # Ensure persist directory exists
         Path(persist_directory).mkdir(parents=True, exist_ok=True)
