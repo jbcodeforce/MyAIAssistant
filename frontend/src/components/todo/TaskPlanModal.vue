@@ -53,6 +53,7 @@
             <div class="editor-toolbar">
               <div class="toolbar-left">
                 <button 
+                  type="button"
                   class="toolbar-btn"
                   :class="{ active: viewMode === 'edit' }"
                   @click="viewMode = 'edit'"
@@ -63,6 +64,7 @@
                   Edit
                 </button>
                 <button 
+                  type="button"
                   class="toolbar-btn"
                   :class="{ active: viewMode === 'preview' }"
                   @click="viewMode = 'preview'"
@@ -83,7 +85,7 @@
               <textarea
                 ref="editorRef"
                 v-model="planContent"
-                class="plan-editor"
+                class="markdown-editor"
                 placeholder="Write your task plan in Markdown...
 
 ## Steps
@@ -93,12 +95,16 @@
 ## Notes
 - Important note
 - Another note"
-                @input="onContentChange"
               ></textarea>
             </div>
 
             <div v-else class="preview-area">
-              <div class="markdown-preview" v-html="renderedMarkdown"></div>
+              <div 
+                v-if="planContent" 
+                class="content-preview" 
+                v-html="renderedPreview"
+              ></div>
+              <p v-else class="empty-preview">No content to preview</p>
             </div>
           </div>
         </div>
@@ -136,6 +142,13 @@
 <script setup>
 import { ref, computed, watch, nextTick } from 'vue'
 import { todosApi } from '@/services/api'
+import { marked } from 'marked'
+
+// Configure marked options
+marked.setOptions({
+  breaks: true,
+  gfm: true
+})
 
 const props = defineProps({
   show: {
@@ -169,16 +182,10 @@ const hasChanges = computed(() => {
   return planContent.value !== originalContent.value
 })
 
-const renderedMarkdown = computed(() => {
-  return renderMarkdown(planContent.value)
+const renderedPreview = computed(() => {
+  if (!planContent.value) return ''
+  return marked(planContent.value)
 })
-
-// Load plan when modal opens or todo changes
-watch(() => [props.show, props.todo.id], ([newShow]) => {
-  if (newShow && props.todo.id) {
-    loadPlan()
-  }
-}, { immediate: true })
 
 // Focus editor when switching to edit mode
 watch(viewMode, (newMode) => {
@@ -188,6 +195,13 @@ watch(viewMode, (newMode) => {
     })
   }
 })
+
+// Load plan when modal opens or todo changes
+watch(() => [props.show, props.todo.id], ([newShow]) => {
+  if (newShow && props.todo.id) {
+    loadPlan()
+  }
+}, { immediate: true })
 
 async function loadPlan() {
   isLoading.value = true
@@ -232,10 +246,6 @@ async function savePlan() {
   }
 }
 
-function onContentChange() {
-  // Could add auto-save here if desired
-}
-
 function handleClose() {
   if (hasChanges.value) {
     if (!confirm('You have unsaved changes. Discard them?')) {
@@ -243,45 +253,6 @@ function handleClose() {
     }
   }
   emit('close')
-}
-
-function renderMarkdown(content) {
-  if (!content) return '<p class="empty-preview">No content to preview</p>'
-  
-  let html = content
-    // Headers
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    // Code blocks
-    .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Bold
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    // Strikethrough
-    .replace(/~~([^~]+)~~/g, '<del>$1</del>')
-    // Horizontal rule
-    .replace(/^---$/gm, '<hr>')
-    // Blockquotes
-    .replace(/^> (.+)$/gm, '<blockquote>$1</blockquote>')
-    // Unordered lists
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    // Ordered lists
-    .replace(/^\d+\. (.+)$/gm, '<li>$1</li>')
-    // Line breaks
-    .replace(/\n/g, '<br>')
-    // Clean up consecutive blockquotes
-    .replace(/<\/blockquote><br><blockquote>/g, '<br>')
-
-  // Wrap consecutive li elements in ul
-  html = html.replace(/(<li>.*?<\/li>(<br>)?)+/g, (match) => {
-    return '<ul>' + match.replace(/<br>/g, '') + '</ul>'
-  })
-
-  return html
 }
 </script>
 
@@ -482,16 +453,15 @@ function renderMarkdown(content) {
   font-weight: 500;
 }
 
-.editor-area,
-.preview-area {
+.editor-area {
   flex: 1;
   overflow: auto;
+  display: flex;
 }
 
-.plan-editor {
+.markdown-editor {
+  flex: 1;
   width: 100%;
-  height: 100%;
-  min-height: 300px;
   padding: 1rem 1.25rem;
   border: none;
   outline: none;
@@ -503,62 +473,76 @@ function renderMarkdown(content) {
   background: white;
 }
 
-.plan-editor::placeholder {
+.markdown-editor::placeholder {
   color: #9ca3af;
 }
 
 .preview-area {
+  flex: 1;
+  overflow: auto;
   padding: 1rem 1.25rem;
 }
 
-.markdown-preview {
+.content-preview {
   font-size: 0.9375rem;
   line-height: 1.7;
   color: #374151;
 }
 
-.markdown-preview :deep(h1) {
+.content-preview :deep(h1) {
   font-size: 1.5rem;
   font-weight: 700;
-  margin: 1.5rem 0 1rem 0;
+  margin: 0 0 1rem 0;
   color: #111827;
   border-bottom: 1px solid #e5e7eb;
   padding-bottom: 0.5rem;
 }
 
-.markdown-preview :deep(h2) {
+.content-preview :deep(h2) {
   font-size: 1.25rem;
   font-weight: 600;
   margin: 1.25rem 0 0.75rem 0;
   color: #111827;
 }
 
-.markdown-preview :deep(h3) {
-  font-size: 1.125rem;
+.content-preview :deep(h3) {
+  font-size: 1.1rem;
   font-weight: 600;
   margin: 1rem 0 0.5rem 0;
   color: #374151;
 }
 
-.markdown-preview :deep(ul) {
+.content-preview :deep(p) {
+  margin: 0 0 0.75rem 0;
+}
+
+.content-preview :deep(ul),
+.content-preview :deep(ol) {
   margin: 0.5rem 0;
   padding-left: 1.5rem;
+}
+
+.content-preview :deep(ul) {
   list-style-type: disc;
 }
 
-.markdown-preview :deep(li) {
+.content-preview :deep(ol) {
+  list-style-type: decimal;
+}
+
+.content-preview :deep(li) {
   margin: 0.25rem 0;
 }
 
-.markdown-preview :deep(pre) {
-  background: #f3f4f6;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  overflow-x: auto;
+.content-preview :deep(blockquote) {
+  border-left: 3px solid #2563eb;
   margin: 0.75rem 0;
+  padding-left: 1rem;
+  color: #6b7280;
+  font-style: italic;
 }
 
-.markdown-preview :deep(code) {
+.content-preview :deep(code) {
   background: #f3f4f6;
   padding: 0.125rem 0.375rem;
   border-radius: 4px;
@@ -567,37 +551,36 @@ function renderMarkdown(content) {
   color: #dc2626;
 }
 
-.markdown-preview :deep(pre code) {
+.content-preview :deep(pre) {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.content-preview :deep(pre code) {
   background: transparent;
   padding: 0;
-  color: #374151;
+  color: inherit;
 }
 
-.markdown-preview :deep(blockquote) {
-  border-left: 3px solid #2563eb;
-  margin: 0.75rem 0;
-  padding-left: 1rem;
-  color: #6b7280;
-  font-style: italic;
-}
-
-.markdown-preview :deep(hr) {
-  border: none;
-  border-top: 1px solid #e5e7eb;
-  margin: 1rem 0;
-}
-
-.markdown-preview :deep(strong) {
+.content-preview :deep(strong) {
   font-weight: 600;
   color: #111827;
 }
 
-.markdown-preview :deep(del) {
+.content-preview :deep(em) {
+  font-style: italic;
+}
+
+.content-preview :deep(del) {
   text-decoration: line-through;
   color: #9ca3af;
 }
 
-.markdown-preview :deep(.empty-preview) {
+.empty-preview {
   color: #9ca3af;
   font-style: italic;
 }

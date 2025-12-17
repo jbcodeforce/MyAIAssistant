@@ -1,0 +1,220 @@
+---
+alwaysApply: false
+description: Backend API context - FastAPI, SQLAlchemy async, ChromaDB RAG, and LLM integration
+globs:
+  - backend/**
+---
+
+# MyAIAssistant Backend
+
+A FastAPI backend providing REST APIs for task management, knowledge base operations, RAG-based semantic search, and LLM-powered chat.
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Web Framework | FastAPI | >=0.115.0 |
+| Python | Python | >=3.12 |
+| ORM | SQLAlchemy | >=2.0.0 (async) |
+| Database | SQLite | via aiosqlite |
+| Validation | Pydantic | >=2.0.0 |
+| Vector Store | ChromaDB | >=0.5.0 |
+| Embeddings | sentence-transformers | >=3.0.0 |
+| HTTP Client | httpx | >=0.27.0 |
+| Package Manager | uv | - |
+| Testing | pytest + pytest-asyncio | >=8.0.0 |
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── main.py              # FastAPI app factory, lifespan, CORS
+│   ├── config.yaml          # Default configuration
+│   ├── api/                  # Route handlers
+│   │   ├── todos.py         # Todo CRUD endpoints
+│   │   ├── knowledge.py     # Knowledge item endpoints
+│   │   ├── rag.py           # Indexing and search endpoints
+│   │   ├── chat.py          # LLM chat endpoints
+│   │   └── schemas/         # Pydantic request/response models
+│   │       ├── todo.py
+│   │       ├── knowledge.py
+│   │       ├── rag.py
+│   │       ├── chat.py
+│   │       └── ...
+│   ├── core/
+│   │   └── config.py        # Settings singleton, YAML config loading
+│   ├── db/
+│   │   ├── database.py      # Async engine, session maker
+│   │   ├── models.py        # SQLAlchemy ORM models
+│   │   └── crud.py          # Database operations
+│   ├── rag/
+│   │   ├── service.py       # RAG indexing and search
+│   │   ├── document_loader.py
+│   │   └── text_splitter.py
+│   └── chat/
+│       └── service.py       # LLM chat with RAG context
+├── tests/
+│   ├── conftest.py          # Test fixtures, DB/RAG overrides
+│   └── ut/                   # Unit tests
+└── pyproject.toml
+```
+
+## Core Patterns
+
+### Async Database with SQLAlchemy 2.0
+
+```python
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.db.database import get_db
+
+@router.get("/items/{id}")
+async def get_item(id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Model).where(Model.id == id))
+    return result.scalar_one_or_none()
+```
+
+- Use `AsyncSession` for all database operations
+- Use `select()` statements with `await db.execute()`
+- Models inherit from `Base` with `AsyncAttrs, DeclarativeBase`
+- Use `Mapped[type]` and `mapped_column()` for type-safe columns
+
+### Pydantic Schemas
+
+```python
+from pydantic import BaseModel, Field, ConfigDict
+
+class ItemCreate(BaseModel):
+    title: str = Field(..., min_length=1, max_length=255)
+    description: str | None = None
+
+class ItemResponse(ItemCreate):
+    id: int
+    created_at: datetime
+    model_config = ConfigDict(from_attributes=True)
+```
+
+- Separate schemas for Create, Update, and Response
+- Use `Field()` for validation constraints
+- Set `from_attributes=True` for ORM model conversion
+- Use `Optional[type]` or `type | None` for nullable fields
+
+### Dependency Injection
+
+```python
+from fastapi import Depends
+
+def get_service() -> Service:
+    return get_singleton_service()
+
+@router.post("/action")
+async def action(
+    db: AsyncSession = Depends(get_db),
+    service: Service = Depends(get_service)
+):
+    ...
+```
+
+### Configuration
+
+Configuration loads from multiple sources (highest priority first):
+1. Environment variables
+2. `.env` file
+3. `CONFIG_FILE` yaml (user overrides)
+4. Default `app/config.yaml`
+
+Access settings via singleton:
+```python
+from app.core.config import get_settings
+settings = get_settings()
+```
+
+### RAG Service
+
+```python
+from app.rag.service import get_rag_service
+
+rag = get_rag_service()
+# Index a document
+result = await rag.index_knowledge(knowledge_id, title, uri, doc_type)
+# Search
+results = await rag.search(query, n_results=5, category=None)
+```
+
+- ChromaDB with persistent storage
+- Uses `all-MiniLM-L6-v2` for embeddings (local, no API)
+- Documents split into chunks with overlap
+
+### LLM Chat
+
+Supports multiple providers: `openai`, `anthropic`, `ollama`
+
+```python
+from app.chat.service import get_chat_service
+
+chat = get_chat_service()
+response = await chat.chat_with_rag(user_message, history)
+```
+
+## API Conventions
+
+| Method | Path Pattern | Purpose |
+|--------|--------------|---------|
+| GET | `/api/{resource}` | List with pagination |
+| GET | `/api/{resource}/{id}` | Get single item |
+| POST | `/api/{resource}` | Create item |
+| PUT | `/api/{resource}/{id}` | Update item |
+| DELETE | `/api/{resource}/{id}` | Delete item |
+
+- All routes prefixed with `/api`
+- Use `Query()` for optional filters
+- Return 404 for missing resources
+- Use status code 201 for creates, 204 for deletes
+
+## Testing
+
+Tests use pytest-asyncio with in-memory SQLite and isolated ChromaDB:
+
+```python
+@pytest.fixture
+async def client(db_session):
+    app.dependency_overrides[get_db] = override_get_db
+    async with AsyncClient(...) as ac:
+        yield ac
+```
+
+Run tests:
+```bash
+uv run pytest
+uv run pytest tests/ut/test_todos.py -v
+```
+
+## Development Commands
+
+```bash
+# Install dependencies
+uv sync
+
+# Run dev server
+uv run uvicorn app.main:app --reload
+
+# Run with custom config
+CONFIG_FILE=/path/to/config.yaml uv run uvicorn app.main:app --reload
+
+# Run tests
+uv run pytest
+
+# Check config
+curl http://localhost:8000/debug/config
+```
+
+## Best Practices
+
+1. **Always use async/await** for database and HTTP operations
+2. **Validate with Pydantic** - never trust raw input
+3. **Use dependency injection** for services and DB sessions
+4. **Handle errors explicitly** - raise HTTPException with appropriate status codes
+5. **Write tests first** - follow TDD pattern per `tdd.mdc` rule
+6. **Keep routes thin** - business logic in services, not route handlers
+7. **Use type hints everywhere** - enables IDE support and validation
+8. **Log important operations** - use the logging module, not print

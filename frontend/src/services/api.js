@@ -105,6 +105,54 @@ export const ragApi = {
   }
 }
 
+export const customersApi = {
+  list(params = {}) {
+    return api.get('/customers/', { params })
+  },
+
+  get(id) {
+    return api.get(`/customers/${id}`)
+  },
+
+  create(customer) {
+    return api.post('/customers/', customer)
+  },
+
+  update(id, customer) {
+    return api.put(`/customers/${id}`, customer)
+  },
+
+  delete(id) {
+    return api.delete(`/customers/${id}`)
+  }
+}
+
+export const projectsApi = {
+  list(params = {}) {
+    return api.get('/projects/', { params })
+  },
+
+  get(id) {
+    return api.get(`/projects/${id}`)
+  },
+
+  create(project) {
+    return api.post('/projects/', project)
+  },
+
+  update(id, project) {
+    return api.put(`/projects/${id}`, project)
+  },
+
+  delete(id) {
+    return api.delete(`/projects/${id}`)
+  },
+
+  getTodos(id, params = {}) {
+    return api.get(`/projects/${id}/todos`, { params })
+  }
+}
+
 export const chatApi = {
   /**
    * Send a message to chat about a specific todo task

@@ -29,12 +29,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 
 from app.db.models import Base, Knowledge
 from app.db.crud import get_knowledge_by_uri, create_knowledge, update_knowledge
-from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
+from app.api.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 from app.rag.document_loader import DocumentLoader
 from app.rag.text_splitter import RecursiveTextSplitter
 from app.core.config import get_settings
@@ -361,6 +360,14 @@ class FolderVectorizer:
                 category=category,
                 tags=tags
             )
+            
+            # Update indexed_at timestamp after successful indexing
+            if num_chunks > 0:
+                await update_knowledge(
+                    db,
+                    knowledge_id,
+                    KnowledgeUpdate(indexed_at=datetime.now(timezone.utc))
+                )
             
             return {
                 "file": relative_path,

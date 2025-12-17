@@ -9,8 +9,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db import crud
 from app.rag.service import get_rag_service, RAGService
-from app.schemas.knowledge import KnowledgeUpdate
-from app.schemas.rag import (
+from app.api.schemas.knowledge import KnowledgeUpdate
+from app.api.schemas.rag import (
     IndexKnowledgeRequest,
     IndexKnowledgeResponse,
     IndexAllResponse,

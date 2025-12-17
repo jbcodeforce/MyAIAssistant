@@ -10,6 +10,73 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
+class Customer(Base):
+    __tablename__ = "customers"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    stakeholders: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    team: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    related_products: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    # Relationships
+    projects: Mapped[list["Project"]] = relationship("Project", back_populates="customer")
+
+    def __repr__(self) -> str:
+        return f"Customer(id={self.id!r}, name={self.name!r})"
+
+
+class Project(Base):
+    __tablename__ = "projects"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    customer_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("customers.id"), nullable=True
+    )
+    # Status: Draft, Active, On Hold, Completed, Cancelled
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="Draft")
+    # Bullet list of small tasks stored as markdown text
+    tasks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Past steps taken to address the project's challenges
+    past_steps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    # Relationships
+    customer: Mapped[Optional["Customer"]] = relationship("Customer", back_populates="projects")
+    todos: Mapped[list["Todo"]] = relationship("Todo", back_populates="project")
+
+    def __repr__(self) -> str:
+        return f"Project(id={self.id!r}, name={self.name!r}, status={self.status!r})"
+
+
 class Todo(Base):
     __tablename__ = "todos"
 
@@ -28,6 +95,11 @@ class Todo(Base):
     
     # Category for grouping todos
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    
+    # Link to project (optional)
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True
+    )
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -49,6 +121,9 @@ class Todo(Base):
     # Source reference (e.g., meeting note ID, knowledge reference ID)
     source_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     source_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project", back_populates="todos")
 
     def __repr__(self) -> str:
         return f"Todo(id={self.id!r}, title={self.title!r}, status={self.status!r})"

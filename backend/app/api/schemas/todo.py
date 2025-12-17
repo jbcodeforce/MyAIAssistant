@@ -11,6 +11,7 @@ class TodoBase(BaseModel):
     urgency: Optional[str] = Field(None, description="Urgency level: Urgent, Not Urgent")
     importance: Optional[str] = Field(None, description="Importance level: Important, Not Important")
     category: Optional[str] = Field(None, max_length=100, description="Category for grouping todos")
+    project_id: Optional[int] = Field(None, description="Related project ID")
     due_date: Optional[datetime] = Field(None, description="Due date for the todo")
     source_type: Optional[str] = Field(None, max_length=50, description="Source type (e.g., meeting, knowledge)")
     source_id: Optional[int] = Field(None, description="Source reference ID")
@@ -41,6 +42,7 @@ class TodoUpdate(BaseModel):
     urgency: Optional[str] = None
     importance: Optional[str] = None
     category: Optional[str] = Field(None, max_length=100)
+    project_id: Optional[int] = None
     due_date: Optional[datetime] = None
     source_type: Optional[str] = Field(None, max_length=50)
     source_id: Optional[int] = None

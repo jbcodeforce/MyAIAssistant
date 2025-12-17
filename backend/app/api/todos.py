@@ -5,8 +5,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import crud
-from app.schemas.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse
-from app.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate, TaskPlanResponse
+from app.api.schemas.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse
+from app.api.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate, TaskPlanResponse
 
 
 router = APIRouter(prefix="/todos", tags=["todos"])

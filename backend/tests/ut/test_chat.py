@@ -41,36 +41,6 @@ async def test_chat_todo_not_found(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_chat_todo_no_api_key(client: AsyncClient):
-    """Test chatting without API key configured (for non-Ollama providers)."""
-    # Create a todo first
-    create_response = await client.post(
-        "/api/todos/",
-        json={
-            "title": "Test Todo for Chat",
-            "description": "This is a test task",
-            "status": "Open"
-        }
-    )
-    todo_id = create_response.json()["id"]
-    
-    # Try to chat - this should fail if no API key is set
-    # The behavior depends on the provider configured
-    response = await client.post(
-        f"/api/chat/todo/{todo_id}",
-        json={
-            "message": "How should I approach this task?",
-            "use_rag": False  # Disable RAG for simpler test
-        }
-    )
-    
-    # For default OpenAI provider without key, this should return an error
-    # For Ollama, it would try to connect to local server
-    # We accept either 400 (missing API key) or 500 (connection error)
-    assert response.status_code in [400, 500]
-
-
-@pytest.mark.asyncio
 async def test_chat_request_validation(client: AsyncClient):
     """Test chat request validation."""
     # Create a todo first

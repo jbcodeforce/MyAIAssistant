@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import crud
-from app.schemas.knowledge import (
+from app.api.schemas.knowledge import (
     KnowledgeCreate,
     KnowledgeUpdate,
     KnowledgeResponse,

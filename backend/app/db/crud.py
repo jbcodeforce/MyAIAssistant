@@ -4,10 +4,12 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Todo, Knowledge, TaskPlan
-from app.schemas.todo import TodoCreate, TodoUpdate
-from app.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
-from app.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate
+from app.db.models import Todo, Knowledge, TaskPlan, Customer, Project
+from app.api.schemas.todo import TodoCreate, TodoUpdate
+from app.api.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
+from app.api.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate
+from app.api.schemas.customer import CustomerCreate, CustomerUpdate
+from app.api.schemas.project import ProjectCreate, ProjectEntity
 
 
 async def create_todo(db: AsyncSession, todo: TodoCreate) -> Todo:
@@ -297,4 +299,197 @@ async def delete_task_plan(db: AsyncSession, todo_id: int) -> bool:
     await db.delete(db_task_plan)
     await db.commit()
     return True
+
+
+# Customer CRUD operations
+
+async def create_customer(db: AsyncSession, customer: CustomerCreate) -> Customer:
+    """Create a new customer."""
+    db_customer = Customer(**customer.model_dump())
+    db.add(db_customer)
+    await db.commit()
+    await db.refresh(db_customer)
+    return db_customer
+
+
+async def get_customer(db: AsyncSession, customer_id: int) -> Optional[Customer]:
+    """Get a customer by ID."""
+    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+    return result.scalar_one_or_none()
+
+
+async def get_customers(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[Customer], int]:
+    """Get all customers with pagination."""
+    query = select(Customer)
+    
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+    
+    # Get paginated results
+    query = query.order_by(Customer.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    customers = list(result.scalars().all())
+    
+    return customers, total
+
+
+async def update_customer(
+    db: AsyncSession,
+    customer_id: int,
+    customer_update: CustomerUpdate
+) -> Optional[Customer]:
+    """Update an existing customer."""
+    db_customer = await get_customer(db, customer_id)
+    if not db_customer:
+        return None
+    
+    update_data = customer_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_customer, field, value)
+    
+    await db.commit()
+    await db.refresh(db_customer)
+    return db_customer
+
+
+async def delete_customer(db: AsyncSession, customer_id: int) -> bool:
+    """Delete a customer by ID."""
+    db_customer = await get_customer(db, customer_id)
+    if not db_customer:
+        return False
+    
+    await db.delete(db_customer)
+    await db.commit()
+    return True
+
+
+async def get_customer_by_name(db: AsyncSession, name: str) -> Optional[Customer]:
+    """Get a customer by name (case-insensitive)."""
+    result = await db.execute(
+        select(Customer).where(func.lower(Customer.name) == name.lower())
+    )
+    return result.scalar_one_or_none()
+
+
+async def get_project_by_name_and_customer(
+    db: AsyncSession,
+    name: str,
+    customer_id: int
+) -> Optional[Project]:
+    """Get a project by name and customer ID."""
+    result = await db.execute(
+        select(Project).where(
+            func.lower(Project.name) == name.lower(),
+            Project.customer_id == customer_id
+        )
+    )
+    return result.scalar_one_or_none()
+
+
+# Project CRUD operations
+
+async def create_project(db: AsyncSession, project: ProjectCreate) -> Project:
+    """Create a new project."""
+    db_project = Project(**project.model_dump())
+    db.add(db_project)
+    await db.commit()
+    await db.refresh(db_project)
+    return db_project
+
+
+async def get_project(db: AsyncSession, project_id: int) -> Optional[Project]:
+    """Get a project by ID."""
+    result = await db.execute(select(Project).where(Project.id == project_id))
+    return result.scalar_one_or_none()
+
+
+async def get_projects(
+    db: AsyncSession,
+    skip: int = 0,
+    limit: int = 100,
+    customer_id: Optional[int] = None,
+    status: Optional[str] = None,
+) -> tuple[list[Project], int]:
+    """Get all projects with pagination and optional filtering."""
+    query = select(Project)
+    
+    if customer_id:
+        query = query.where(Project.customer_id == customer_id)
+    if status:
+        # Support comma-separated status values
+        status_list = [s.strip() for s in status.split(',')]
+        if len(status_list) == 1:
+            query = query.where(Project.status == status_list[0])
+        else:
+            query = query.where(Project.status.in_(status_list))
+    
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+    
+    # Get paginated results
+    query = query.order_by(Project.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    projects = list(result.scalars().all())
+    
+    return projects, total
+
+
+async def update_project(
+    db: AsyncSession,
+    project_id: int,
+    project_update: ProjectEntity
+) -> Optional[Project]:
+    """Update an existing project."""
+    db_project = await get_project(db, project_id)
+    if not db_project:
+        return None
+    
+    update_data = project_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_project, field, value)
+    
+    await db.commit()
+    await db.refresh(db_project)
+    return db_project
+
+
+async def delete_project(db: AsyncSession, project_id: int) -> bool:
+    """Delete a project by ID."""
+    db_project = await get_project(db, project_id)
+    if not db_project:
+        return False
+    
+    await db.delete(db_project)
+    await db.commit()
+    return True
+
+
+async def get_todos_by_project(
+    db: AsyncSession,
+    project_id: int,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[Todo], int]:
+    """Get all todos for a specific project."""
+    query = select(Todo).where(Todo.project_id == project_id)
+    
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+    
+    # Get paginated results
+    query = query.order_by(Todo.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    todos = list(result.scalars().all())
+    
+    return todos, total
 

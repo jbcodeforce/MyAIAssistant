@@ -4,6 +4,8 @@ FastAPI backend for the MyAIAssistant application.
 
 ## Quick Start
 
+Set environment variable for the config.yaml
+
 ```bash
 # Install dependencies
 uv sync

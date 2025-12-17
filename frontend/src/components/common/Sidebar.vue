@@ -47,8 +47,22 @@
           <router-link to="/archived" class="nav-subitem" active-class="active">
             <span class="nav-label">Archived</span>
           </router-link>
+          <router-link to="/projects" class="nav-subitem" active-class="active">
+            <span class="nav-label">Projects</span>
+          </router-link>
         </div>
       </div>
+
+      <!-- Customers -->
+      <router-link to="/customers" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+          <circle cx="9" cy="7" r="4"/>
+          <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+          <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+        </svg>
+        <span class="nav-label">Customers</span>
+      </router-link>
 
       <!-- Knowledge -->
       <router-link to="/knowledge" class="nav-item" active-class="active">
@@ -100,7 +114,7 @@ const route = useRoute()
 const tasksExpanded = ref(true)
 
 const isTasksActive = computed(() => {
-  return route.path === '/unclassified' || route.path === '/archived'
+  return route.path === '/unclassified' || route.path === '/archived' || route.path === '/projects'
 })
 </script>
 
@@ -114,6 +128,7 @@ const isTasksActive = computed(() => {
   flex-direction: column;
   transition: width 0.25s ease, min-width 0.25s ease;
   overflow: hidden;
+  flex-shrink: 0;
 }
 
 :global(.dark) .sidebar {

@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal">
     <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
-      <div class="modal-container">
+      <div class="modal-container" :class="{ 'modal-wide': wide }">
         <div class="modal-header">
           <slot name="header">
             <h3>{{ title }}</h3>
@@ -28,6 +28,10 @@ defineProps({
   title: {
     type: String,
     default: ''
+  },
+  wide: {
+    type: Boolean,
+    default: false
   }
 })
 
@@ -56,6 +60,10 @@ defineEmits(['close'])
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.modal-container.modal-wide {
+  max-width: 800px;
 }
 
 .modal-header {

@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+
     <Sidebar 
       ref="sidebarRef"
       :collapsed="sidebarCollapsed"
@@ -16,7 +16,7 @@
         </router-view>
       </main>
     </div>
-  </div>
+
 </template>
 
 <script setup>
@@ -69,24 +69,18 @@ html.dark body {
 }
 
 .main-wrapper {
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  width: 100%;
+  overflow: hidden;
 }
 
 .app-content {
-  flex: 1;
+  flex: 1 1 auto;
   overflow-y: auto;
+  overflow-x: hidden;
   height: calc(100vh - 52px);
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-}
-
-.app-content > * {
-  width: 100%;
 }
 
 .fade-enter-active,

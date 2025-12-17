@@ -2,6 +2,8 @@ import { createRouter, createWebHistory } from 'vue-router'
 import Dashboard from '@/views/Dashboard.vue'
 import Unclassified from '@/views/Unclassified.vue'
 import ArchivedTodos from '@/views/ArchivedTodos.vue'
+import Projects from '@/views/Projects.vue'
+import Customers from '@/views/Customers.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Documentation from '@/views/Documentation.vue'
 
@@ -28,6 +30,22 @@ const routes = [
     component: ArchivedTodos,
     meta: {
       title: 'Archived Todos - MyAIAssistant'
+    }
+  },
+  {
+    path: '/projects',
+    name: 'Projects',
+    component: Projects,
+    meta: {
+      title: 'Projects - MyAIAssistant'
+    }
+  },
+  {
+    path: '/customers',
+    name: 'Customers',
+    component: Customers,
+    meta: {
+      title: 'Customers - MyAIAssistant'
     }
   },
   {

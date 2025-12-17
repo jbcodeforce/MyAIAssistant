@@ -1,0 +1,1 @@
+uv run python ./tools/vectorize_folder.py  ~/Documents/Code/flink-studies/docs/ --chunk-size 500 --collection km --persist-dir ~/Documents/Code/MyAIAssistant/workspaces/biz-db/data/chroma

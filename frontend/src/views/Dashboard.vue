@@ -45,6 +45,7 @@
     <Modal
       :show="showCreateModal"
       title="Create New Todo"
+      :wide="true"
       @close="closeCreateModal"
     >
       <TodoForm
@@ -56,6 +57,7 @@
     <Modal
       :show="showEditModal"
       title="Edit Todo"
+      :wide="true"
       @close="closeEditModal"
     >
       <TodoForm

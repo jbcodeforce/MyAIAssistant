@@ -7,7 +7,7 @@ from app.db.database import get_db
 from app.db import crud
 from app.chat.service import ChatService, ChatMessage, get_chat_service
 from app.core.config import get_settings
-from app.schemas.chat import (
+from app.api.schemas.chat import (
     ChatRequest,
     ChatResponse,
     ContextItem,

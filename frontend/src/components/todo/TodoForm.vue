@@ -14,13 +14,10 @@
 
     <div class="form-group">
       <label for="description">Description</label>
-      <textarea
-        id="description"
+      <RichTextEditor
         v-model="form.description"
-        rows="4"
         placeholder="Enter description (optional)"
-        class="form-input"
-      ></textarea>
+      />
     </div>
 
     <div class="form-row">
@@ -89,6 +86,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
+import RichTextEditor from '@/components/common/RichTextEditor.vue'
 
 const props = defineProps({
   initialData: {
