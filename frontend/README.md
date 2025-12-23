@@ -11,13 +11,6 @@ npm run dev
 
 Application available at `http://localhost:3000`.
 
-## Docker
-
-```bash
-docker build -t myaiassistant-frontend .
-docker run -p 80:80 myaiassistant-frontend
-```
-
 ## Features
 
 - Eisenhower Matrix (4-quadrant) todo organization

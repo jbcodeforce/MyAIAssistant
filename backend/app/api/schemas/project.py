@@ -13,7 +13,7 @@ class ProjectEntity(BaseModel):
         description="Project name"
     )
     description: Optional[str] = Field(None, description="Project description")
-    customer_id: Optional[int] = Field(None, description="Related customer ID")
+    organization_id: Optional[int] = Field(None, description="Related organization ID")
     status: Optional[str] = Field(
         None,
         description="Project status: Draft, Active, On Hold, Completed, Cancelled"
@@ -53,8 +53,8 @@ class ProjectCreate(ProjectEntity):
             "examples": [
                 {
                     "name": "Q1 Platform Migration",
-                    "description": "Migrate customer to new platform version",
-                    "customer_id": 1,
+                    "description": "Migrate organization to new platform version",
+                    "organization_id": 1,
                     "status": "Active",
                     "tasks": "- Review requirements\n- Setup environment\n- Run migration",
                     "past_steps": "- Review requirements\n- Setup environment\n- Run migration"             
@@ -79,4 +79,3 @@ class ProjectListResponse(BaseModel):
     total: int
     skip: int
     limit: int
-

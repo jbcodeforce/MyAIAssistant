@@ -3,23 +3,23 @@ from httpx import AsyncClient
 
 
 @pytest.fixture
-async def customer(client: AsyncClient) -> dict:
-    """Create a customer for project tests."""
+async def organization(client: AsyncClient) -> dict:
+    """Create an organization for project tests."""
     response = await client.post(
-        "/api/customers/",
-        json={"name": "Test Customer"}
+        "/api/organizations/",
+        json={"name": "Test Organization"}
     )
     return response.json()
 
 
 @pytest.mark.asyncio
-async def test_create_project(client: AsyncClient, customer: dict):
+async def test_create_project(client: AsyncClient, organization: dict):
     response = await client.post(
         "/api/projects/",
         json={
             "name": "Q1 Platform Migration",
-            "description": "Migrate customer to new platform version",
-            "customer_id": customer["id"],
+            "description": "Migrate organization to new platform version",
+            "organization_id": organization["id"],
             "status": "Active",
             "tasks": "- Review requirements\n- Setup environment\n- Run migration"
         }
@@ -27,8 +27,8 @@ async def test_create_project(client: AsyncClient, customer: dict):
     assert response.status_code == 201
     data = response.json()
     assert data["name"] == "Q1 Platform Migration"
-    assert data["description"] == "Migrate customer to new platform version"
-    assert data["customer_id"] == customer["id"]
+    assert data["description"] == "Migrate organization to new platform version"
+    assert data["organization_id"] == organization["id"]
     assert data["status"] == "Active"
     assert data["tasks"] == "- Review requirements\n- Setup environment\n- Run migration"
     assert "id" in data
@@ -46,30 +46,30 @@ async def test_create_project_minimal(client: AsyncClient):
     data = response.json()
     assert data["name"] == "Minimal Project"
     assert data["status"] == "Draft"
-    assert data["customer_id"] is None
+    assert data["organization_id"] is None
 
 
 @pytest.mark.asyncio
-async def test_create_project_invalid_customer(client: AsyncClient):
+async def test_create_project_invalid_organization(client: AsyncClient):
     response = await client.post(
         "/api/projects/",
         json={
             "name": "Project",
-            "customer_id": 999
+            "organization_id": 999
         }
     )
     assert response.status_code == 404
 
 
 @pytest.mark.asyncio
-async def test_list_projects(client: AsyncClient, customer: dict):
+async def test_list_projects(client: AsyncClient, organization: dict):
     # Create a few projects
     for i in range(3):
         await client.post(
             "/api/projects/",
             json={
                 "name": f"Project {i}",
-                "customer_id": customer["id"]
+                "organization_id": organization["id"]
             }
         )
     
@@ -81,33 +81,33 @@ async def test_list_projects(client: AsyncClient, customer: dict):
 
 
 @pytest.mark.asyncio
-async def test_list_projects_filter_by_customer(client: AsyncClient):
-    # Create two customers
-    customer1 = (await client.post(
-        "/api/customers/",
-        json={"name": "Customer 1"}
+async def test_list_projects_filter_by_organization(client: AsyncClient):
+    # Create two organizations
+    organization1 = (await client.post(
+        "/api/organizations/",
+        json={"name": "Organization 1"}
     )).json()
-    customer2 = (await client.post(
-        "/api/customers/",
-        json={"name": "Customer 2"}
+    organization2 = (await client.post(
+        "/api/organizations/",
+        json={"name": "Organization 2"}
     )).json()
     
-    # Create projects for each customer
+    # Create projects for each organization
     await client.post(
         "/api/projects/",
-        json={"name": "Project for C1", "customer_id": customer1["id"]}
+        json={"name": "Project for O1", "organization_id": organization1["id"]}
     )
     await client.post(
         "/api/projects/",
-        json={"name": "Project for C2", "customer_id": customer2["id"]}
+        json={"name": "Project for O2", "organization_id": organization2["id"]}
     )
     
-    # Filter by customer
-    response = await client.get(f"/api/projects/?customer_id={customer1['id']}")
+    # Filter by organization
+    response = await client.get(f"/api/projects/?organization_id={organization1['id']}")
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 1
-    assert data["projects"][0]["customer_id"] == customer1["id"]
+    assert data["projects"][0]["organization_id"] == organization1["id"]
 
 
 @pytest.mark.asyncio
@@ -153,7 +153,7 @@ async def test_get_project_not_found(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_update_project(client: AsyncClient, customer: dict):
+async def test_update_project(client: AsyncClient, organization: dict):
     # Create a project
     create_response = await client.post(
         "/api/projects/",
@@ -167,7 +167,7 @@ async def test_update_project(client: AsyncClient, customer: dict):
         json={
             "name": "Updated Name",
             "status": "Active",
-            "customer_id": customer["id"],
+            "organization_id": organization["id"],
             "tasks": "- New task"
         }
     )
@@ -175,12 +175,12 @@ async def test_update_project(client: AsyncClient, customer: dict):
     data = response.json()
     assert data["name"] == "Updated Name"
     assert data["status"] == "Active"
-    assert data["customer_id"] == customer["id"]
+    assert data["organization_id"] == organization["id"]
     assert data["tasks"] == "- New task"
 
 
 @pytest.mark.asyncio
-async def test_update_project_invalid_customer(client: AsyncClient):
+async def test_update_project_invalid_organization(client: AsyncClient):
     # Create a project
     create_response = await client.post(
         "/api/projects/",
@@ -188,10 +188,10 @@ async def test_update_project_invalid_customer(client: AsyncClient):
     )
     project_id = create_response.json()["id"]
     
-    # Try to update with invalid customer
+    # Try to update with invalid organization
     response = await client.put(
         f"/api/projects/{project_id}",
-        json={"customer_id": 999}
+        json={"organization_id": 999}
     )
     assert response.status_code == 404
 
@@ -302,4 +302,3 @@ async def test_project_status_lifecycle(client: AsyncClient):
         json={"status": "Completed"}
     )
     assert response.json()["status"] == "Completed"
-

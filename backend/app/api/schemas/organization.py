@@ -4,15 +4,15 @@ from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
-class CustomerBase(BaseModel):
-    name: str = Field(..., min_length=1, max_length=255, description="Customer name")
-    stakeholders: Optional[str] = Field(None, description="Key stakeholders at the customer")
-    team: Optional[str] = Field(None, description="Team members working with this customer")
-    description: Optional[str] = Field(None, description="Customer strategy and notes")
-    related_products: Optional[str] = Field(None, description="Products related to this customer")
+class OrganizationBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255, description="Organization name")
+    stakeholders: Optional[str] = Field(None, description="Key stakeholders at the organization")
+    team: Optional[str] = Field(None, description="Team members working with this organization")
+    description: Optional[str] = Field(None, description="Organization strategy and notes")
+    related_products: Optional[str] = Field(None, description="Products related to this organization")
 
 
-class CustomerCreate(CustomerBase):
+class OrganizationCreate(OrganizationBase):
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -20,7 +20,7 @@ class CustomerCreate(CustomerBase):
                     "name": "Acme Corporation",
                     "stakeholders": "John Doe (CTO), Jane Smith (PM)",
                     "team": "Alice, Bob",
-                    "description": "Enterprise customer focused on cloud migration",
+                    "description": "Enterprise organization focused on cloud migration",
                     "related_products": "Platform API, Analytics Dashboard"
                 }
             ]
@@ -28,7 +28,7 @@ class CustomerCreate(CustomerBase):
     )
 
 
-class CustomerUpdate(BaseModel):
+class OrganizationUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=255)
     stakeholders: Optional[str] = None
     team: Optional[str] = None
@@ -39,14 +39,14 @@ class CustomerUpdate(BaseModel):
         json_schema_extra={
             "examples": [
                 {
-                    "description": "Updated customer strategy notes"
+                    "description": "Updated organization strategy notes"
                 }
             ]
         }
     )
 
 
-class CustomerResponse(CustomerBase):
+class OrganizationResponse(OrganizationBase):
     id: int
     created_at: datetime
     updated_at: datetime
@@ -54,8 +54,8 @@ class CustomerResponse(CustomerBase):
     model_config = ConfigDict(from_attributes=True)
 
 
-class CustomerListResponse(BaseModel):
-    customers: list[CustomerResponse]
+class OrganizationListResponse(BaseModel):
+    organizations: list[OrganizationResponse]
     total: int
     skip: int
     limit: int

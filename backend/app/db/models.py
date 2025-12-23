@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Integer, ForeignKey, func
+from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -10,8 +10,8 @@ class Base(AsyncAttrs, DeclarativeBase):
     pass
 
 
-class Customer(Base):
-    __tablename__ = "customers"
+class Organization(Base):
+    __tablename__ = "organizations"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
@@ -34,10 +34,10 @@ class Customer(Base):
     )
 
     # Relationships
-    projects: Mapped[list["Project"]] = relationship("Project", back_populates="customer")
+    projects: Mapped[list["Project"]] = relationship("Project", back_populates="organization")
 
     def __repr__(self) -> str:
-        return f"Customer(id={self.id!r}, name={self.name!r})"
+        return f"Organization(id={self.id!r}, name={self.name!r})"
 
 
 class Project(Base):
@@ -46,8 +46,8 @@ class Project(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    customer_id: Mapped[Optional[int]] = mapped_column(
-        Integer, ForeignKey("customers.id"), nullable=True
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True
     )
     # Status: Draft, Active, On Hold, Completed, Cancelled
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="Draft")
@@ -70,7 +70,7 @@ class Project(Base):
     )
 
     # Relationships
-    customer: Mapped[Optional["Customer"]] = relationship("Customer", back_populates="projects")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", back_populates="projects")
     todos: Mapped[list["Todo"]] = relationship("Todo", back_populates="project")
 
     def __repr__(self) -> str:
@@ -210,3 +210,36 @@ class TaskPlan(Base):
     def __repr__(self) -> str:
         return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
 
+
+class Settings(Base):
+    __tablename__ = "settings"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    
+    # LLM Configuration
+    llm_provider: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    llm_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    llm_api_endpoint: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    api_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    default_temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.7)
+    
+    # RAG Configuration
+    chunk_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=1000)
+    overlap: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=200)
+    min_chunk_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=100)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return f"Settings(id={self.id!r}, llm_name={self.llm_name!r})"

@@ -4,13 +4,14 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Todo, Knowledge, TaskPlan, Customer, Project
+from app.db.models import Todo, Knowledge, TaskPlan, Organization, Project, Settings
 from app.api.schemas.todo import TodoCreate, TodoUpdate
 from app.api.schemas.knowledge import KnowledgeCreate, KnowledgeUpdate
 from app.api.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate
-from app.api.schemas.customer import CustomerCreate, CustomerUpdate
+from app.api.schemas.organization import OrganizationCreate, OrganizationUpdate
 from app.api.schemas.project import ProjectCreate, ProjectEntity
-
+from app.api.schemas.settings import SettingsCreate, SettingsUpdate
+from app.core.config import get_settings
 
 async def create_todo(db: AsyncSession, todo: TodoCreate) -> Todo:
     db_todo = Todo(**todo.model_dump())
@@ -301,30 +302,30 @@ async def delete_task_plan(db: AsyncSession, todo_id: int) -> bool:
     return True
 
 
-# Customer CRUD operations
+# Organization CRUD operations
 
-async def create_customer(db: AsyncSession, customer: CustomerCreate) -> Customer:
-    """Create a new customer."""
-    db_customer = Customer(**customer.model_dump())
-    db.add(db_customer)
+async def create_organization(db: AsyncSession, organization: OrganizationCreate) -> Organization:
+    """Create a new organization."""
+    db_organization = Organization(**organization.model_dump())
+    db.add(db_organization)
     await db.commit()
-    await db.refresh(db_customer)
-    return db_customer
+    await db.refresh(db_organization)
+    return db_organization
 
 
-async def get_customer(db: AsyncSession, customer_id: int) -> Optional[Customer]:
-    """Get a customer by ID."""
-    result = await db.execute(select(Customer).where(Customer.id == customer_id))
+async def get_organization(db: AsyncSession, organization_id: int) -> Optional[Organization]:
+    """Get an organization by ID."""
+    result = await db.execute(select(Organization).where(Organization.id == organization_id))
     return result.scalar_one_or_none()
 
 
-async def get_customers(
+async def get_organizations(
     db: AsyncSession,
     skip: int = 0,
     limit: int = 100,
-) -> tuple[list[Customer], int]:
-    """Get all customers with pagination."""
-    query = select(Customer)
+) -> tuple[list[Organization], int]:
+    """Get all organizations with pagination."""
+    query = select(Organization)
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
@@ -332,61 +333,61 @@ async def get_customers(
     total = total_result.scalar_one()
     
     # Get paginated results
-    query = query.order_by(Customer.created_at.desc()).offset(skip).limit(limit)
+    query = query.order_by(Organization.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
-    customers = list(result.scalars().all())
+    organizations = list(result.scalars().all())
     
-    return customers, total
+    return organizations, total
 
 
-async def update_customer(
+async def update_organization(
     db: AsyncSession,
-    customer_id: int,
-    customer_update: CustomerUpdate
-) -> Optional[Customer]:
-    """Update an existing customer."""
-    db_customer = await get_customer(db, customer_id)
-    if not db_customer:
+    organization_id: int,
+    organization_update: OrganizationUpdate
+) -> Optional[Organization]:
+    """Update an existing organization."""
+    db_organization = await get_organization(db, organization_id)
+    if not db_organization:
         return None
     
-    update_data = customer_update.model_dump(exclude_unset=True)
+    update_data = organization_update.model_dump(exclude_unset=True)
     for field, value in update_data.items():
-        setattr(db_customer, field, value)
+        setattr(db_organization, field, value)
     
     await db.commit()
-    await db.refresh(db_customer)
-    return db_customer
+    await db.refresh(db_organization)
+    return db_organization
 
 
-async def delete_customer(db: AsyncSession, customer_id: int) -> bool:
-    """Delete a customer by ID."""
-    db_customer = await get_customer(db, customer_id)
-    if not db_customer:
+async def delete_organization(db: AsyncSession, organization_id: int) -> bool:
+    """Delete an organization by ID."""
+    db_organization = await get_organization(db, organization_id)
+    if not db_organization:
         return False
     
-    await db.delete(db_customer)
+    await db.delete(db_organization)
     await db.commit()
     return True
 
 
-async def get_customer_by_name(db: AsyncSession, name: str) -> Optional[Customer]:
-    """Get a customer by name (case-insensitive)."""
+async def get_organization_by_name(db: AsyncSession, name: str) -> Optional[Organization]:
+    """Get an organization by name (case-insensitive)."""
     result = await db.execute(
-        select(Customer).where(func.lower(Customer.name) == name.lower())
+        select(Organization).where(func.lower(Organization.name) == name.lower())
     )
     return result.scalar_one_or_none()
 
 
-async def get_project_by_name_and_customer(
+async def get_project_by_name_and_organization(
     db: AsyncSession,
     name: str,
-    customer_id: int
+    organization_id: int
 ) -> Optional[Project]:
-    """Get a project by name and customer ID."""
+    """Get a project by name and organization ID."""
     result = await db.execute(
         select(Project).where(
             func.lower(Project.name) == name.lower(),
-            Project.customer_id == customer_id
+            Project.organization_id == organization_id
         )
     )
     return result.scalar_one_or_none()
@@ -413,14 +414,14 @@ async def get_projects(
     db: AsyncSession,
     skip: int = 0,
     limit: int = 100,
-    customer_id: Optional[int] = None,
+    organization_id: Optional[int] = None,
     status: Optional[str] = None,
 ) -> tuple[list[Project], int]:
     """Get all projects with pagination and optional filtering."""
     query = select(Project)
     
-    if customer_id:
-        query = query.where(Project.customer_id == customer_id)
+    if organization_id:
+        query = query.where(Project.organization_id == organization_id)
     if status:
         # Support comma-separated status values
         status_list = [s.strip() for s in status.split(',')]
@@ -493,3 +494,54 @@ async def get_todos_by_project(
     
     return todos, total
 
+
+# Settings CRUD operations
+
+async def get_settings_from_db(db: AsyncSession) -> Optional[Settings]:
+    """Get the application settings (singleton pattern - only one row)."""
+    result = await db.execute(select(Settings).limit(1))
+    return result.scalar_one_or_none()
+
+
+async def create_settings(db: AsyncSession, settings: SettingsCreate) -> Settings:
+    """Create application settings (should only be called once)."""
+    db_settings = Settings(**settings.model_dump(exclude_unset=True))
+    db.add(db_settings)
+    await db.commit()
+    await db.refresh(db_settings)
+    return db_settings
+
+
+async def update_settings(
+    db: AsyncSession,
+    settings_update: SettingsUpdate
+) -> Optional[Settings]:
+    """Update application settings."""
+    db_settings = await get_settings_from_db(db)
+    if not db_settings:
+        return None
+    
+    update_data = settings_update.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_settings, field, value)
+    
+    await db.commit()
+    await db.refresh(db_settings)
+    return db_settings
+
+
+async def get_or_create_settings(db: AsyncSession) -> Settings:
+    """Get existing settings or create default settings if none exist."""
+    settings = await get_settings_from_db(db)
+    if settings:
+        return settings
+    app_settings = get_settings()
+    default_settings = SettingsCreate(
+        llm_name=app_settings.llm_model,
+        llm_api_endpoint=app_settings.llm_base_url,
+        api_key=app_settings.llm_api_key,
+        default_temperature=app_settings.llm_temperature,
+        chunk_size=app_settings.chunk_size,
+        overlap=app_settings.overlap,
+        min_chunk_size=app_settings.min_chunk_size)
+    return await create_settings(db, default_settings)

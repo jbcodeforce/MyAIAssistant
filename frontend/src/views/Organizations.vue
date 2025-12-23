@@ -1,57 +1,57 @@
 <template>
-  <div class="customers-view">
+  <div class="organizations-view">
     <div class="view-header">
       <div>
-        <h2>Customers</h2>
+        <h2>Organizations</h2>
         <p class="view-description">
-          Manage customer profiles, stakeholders, and strategy information
+          Manage organization profiles, stakeholders, and strategy information
         </p>
       </div>
       <div class="header-actions">
-        <span class="customer-count" v-if="!loading && !error">
-          {{ totalCount }} customer{{ totalCount !== 1 ? 's' : '' }}
+        <span class="organization-count" v-if="!loading && !error">
+          {{ totalCount }} organization{{ totalCount !== 1 ? 's' : '' }}
         </span>
         <button class="btn-primary" @click="openCreateModal">
-          + New Customer
+          + New Organization
         </button>
       </div>
     </div>
 
     <div v-if="loading" class="loading-state">
-      <p>Loading customers...</p>
+      <p>Loading organizations...</p>
     </div>
 
     <div v-else-if="error" class="error-state">
       <p>{{ error }}</p>
-      <button @click="loadCustomers" class="btn-primary">Retry</button>
+      <button @click="loadOrganizations" class="btn-primary">Retry</button>
     </div>
 
-    <div v-else class="customers-content">
-      <div v-if="customers.length === 0" class="empty-state">
-        <p>No customers found</p>
+    <div v-else class="organizations-content">
+      <div v-if="organizations.length === 0" class="empty-state">
+        <p>No organizations found</p>
         <p class="empty-state-hint">
-          Add customers to track stakeholders and strategy information
+          Add organizations to track stakeholders and strategy information
         </p>
       </div>
 
-      <div v-else class="customers-grid">
+      <div v-else class="organizations-grid">
         <div 
-          v-for="customer in customers" 
-          :key="customer.id" 
-          class="customer-card"
+          v-for="organization in organizations" 
+          :key="organization.id" 
+          class="organization-card"
         >
-          <div class="customer-header">
-            <div class="customer-avatar">
-              {{ getInitials(customer.name) }}
+          <div class="organization-header">
+            <div class="organization-avatar">
+              {{ getInitials(organization.name) }}
             </div>
-            <div class="customer-actions">
-              <button class="btn-icon" @click="openEditModal(customer)" title="Edit">
+            <div class="organization-actions">
+              <button class="btn-icon" @click="openEditModal(organization)" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                   <path d="m15 5 4 4"/>
                 </svg>
               </button>
-              <button class="btn-icon danger" @click="handleDelete(customer)" title="Delete">
+              <button class="btn-icon danger" @click="handleDelete(organization)" title="Delete">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 6h18"/>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
@@ -61,10 +61,10 @@
             </div>
           </div>
 
-          <h3 class="customer-name">{{ customer.name }}</h3>
+          <h3 class="organization-name">{{ organization.name }}</h3>
 
-          <div class="customer-details">
-            <div class="detail-section" v-if="customer.stakeholders">
+          <div class="organization-details">
+            <div class="detail-section" v-if="organization.stakeholders">
               <h4>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -74,10 +74,10 @@
                 </svg>
                 Stakeholders
               </h4>
-              <p>{{ truncate(customer.stakeholders, 80) }}</p>
+              <p>{{ truncate(organization.stakeholders, 80) }}</p>
             </div>
 
-            <div class="detail-section" v-if="customer.team">
+            <div class="detail-section" v-if="organization.team">
               <h4>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -87,10 +87,10 @@
                 </svg>
                 Team
               </h4>
-              <p>{{ truncate(customer.team, 80) }}</p>
+              <p>{{ truncate(organization.team, 80) }}</p>
             </div>
 
-            <div class="detail-section" v-if="customer.description">
+            <div class="detail-section" v-if="organization.description">
               <h4>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
@@ -98,10 +98,10 @@
                 </svg>
                 Strategy
               </h4>
-              <p>{{ truncate(customer.description, 120) }}</p>
+              <p>{{ truncate(organization.description, 120) }}</p>
             </div>
 
-            <div class="detail-section" v-if="customer.related_products">
+            <div class="detail-section" v-if="organization.related_products">
               <h4>
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="m7.5 4.27 9 5.15"/>
@@ -111,11 +111,11 @@
                 </svg>
                 Products
               </h4>
-              <p>{{ truncate(customer.related_products, 80) }}</p>
+              <p>{{ truncate(organization.related_products, 80) }}</p>
             </div>
           </div>
 
-          <div class="customer-meta">
+          <div class="organization-meta">
             <span class="meta-item">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
@@ -123,7 +123,7 @@
                 <line x1="8" x2="8" y1="2" y2="6"/>
                 <line x1="3" x2="21" y1="10" y2="10"/>
               </svg>
-              Added {{ formatDate(customer.created_at) }}
+              Added {{ formatDate(organization.created_at) }}
             </span>
           </div>
         </div>
@@ -131,22 +131,22 @@
 
       <div v-if="hasMore" class="load-more">
         <button @click="loadMore" class="btn-secondary">
-          Load More ({{ customers.length }} of {{ totalCount }})
+          Load More ({{ organizations.length }} of {{ totalCount }})
         </button>
       </div>
     </div>
 
     <!-- Create/Edit Modal -->
-    <Modal :show="showModal" :title="isEditing ? 'Edit Customer' : 'New Customer'" @close="closeModal">
-      <form @submit.prevent="handleSubmit" class="customer-form">
+    <Modal :show="showModal" :title="isEditing ? 'Edit Organization' : 'New Organization'" @close="closeModal">
+      <form @submit.prevent="handleSubmit" class="organization-form">
         <div class="form-group">
-          <label for="name">Customer Name *</label>
+          <label for="name">Organization Name *</label>
           <input 
             id="name" 
             v-model="formData.name" 
             type="text" 
             required 
-            placeholder="Enter customer or company name"
+            placeholder="Enter organization or company name"
           />
         </div>
 
@@ -167,9 +167,9 @@
             id="team" 
             v-model="formData.team" 
             rows="2"
-            placeholder="Internal team members working with this customer"
+            placeholder="Internal team members working with this organization"
           ></textarea>
-          <span class="form-hint">Your team members assigned to this customer</span>
+          <span class="form-hint">Your team members assigned to this organization</span>
         </div>
 
         <div class="form-group">
@@ -178,7 +178,7 @@
             id="description" 
             v-model="formData.description" 
             rows="4"
-            placeholder="Customer strategy, goals, and important notes"
+            placeholder="Organization strategy, goals, and important notes"
           ></textarea>
           <span class="form-hint">Overall strategy and relationship notes</span>
         </div>
@@ -189,9 +189,9 @@
             id="related_products" 
             v-model="formData.related_products" 
             rows="2"
-            placeholder="Products or services used by this customer"
+            placeholder="Products or services used by this organization"
           ></textarea>
-          <span class="form-hint">Products, services, or solutions relevant to this customer</span>
+          <span class="form-hint">Products, services, or solutions relevant to this organization</span>
         </div>
       </form>
 
@@ -207,10 +207,10 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { customersApi } from '@/services/api'
+import { organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
-const customers = ref([])
+const organizations = ref([])
 const totalCount = ref(0)
 const currentSkip = ref(0)
 const limit = 50
@@ -230,7 +230,7 @@ const formData = ref({
 })
 
 const hasMore = computed(() => {
-  return customers.value.length < totalCount.value
+  return organizations.value.length < totalCount.value
 })
 
 const isFormValid = computed(() => {
@@ -238,20 +238,20 @@ const isFormValid = computed(() => {
 })
 
 onMounted(async () => {
-  await loadCustomers()
+  await loadOrganizations()
 })
 
-async function loadCustomers() {
+async function loadOrganizations() {
   loading.value = true
   error.value = null
   try {
-    const response = await customersApi.list({ skip: 0, limit })
-    customers.value = response.data.customers
+    const response = await organizationsApi.list({ skip: 0, limit })
+    organizations.value = response.data.organizations
     totalCount.value = response.data.total
-    currentSkip.value = response.data.customers.length
+    currentSkip.value = response.data.organizations.length
   } catch (err) {
-    error.value = err.response?.data?.detail || 'Failed to load customers'
-    console.error('Failed to load customers:', err)
+    error.value = err.response?.data?.detail || 'Failed to load organizations'
+    console.error('Failed to load organizations:', err)
   } finally {
     loading.value = false
   }
@@ -259,11 +259,11 @@ async function loadCustomers() {
 
 async function loadMore() {
   try {
-    const response = await customersApi.list({ skip: currentSkip.value, limit })
-    customers.value = [...customers.value, ...response.data.customers]
-    currentSkip.value = customers.value.length
+    const response = await organizationsApi.list({ skip: currentSkip.value, limit })
+    organizations.value = [...organizations.value, ...response.data.organizations]
+    currentSkip.value = organizations.value.length
   } catch (err) {
-    console.error('Failed to load more customers:', err)
+    console.error('Failed to load more organizations:', err)
   }
 }
 
@@ -289,15 +289,15 @@ function openCreateModal() {
   showModal.value = true
 }
 
-function openEditModal(customer) {
+function openEditModal(organization) {
   isEditing.value = true
-  editingId.value = customer.id
+  editingId.value = organization.id
   formData.value = {
-    name: customer.name,
-    stakeholders: customer.stakeholders || '',
-    team: customer.team || '',
-    description: customer.description || '',
-    related_products: customer.related_products || ''
+    name: organization.name,
+    stakeholders: organization.stakeholders || '',
+    team: organization.team || '',
+    description: organization.description || '',
+    related_products: organization.related_products || ''
   }
   showModal.value = true
 }
@@ -313,32 +313,32 @@ async function handleSubmit() {
   
   try {
     if (isEditing.value) {
-      const response = await customersApi.update(editingId.value, formData.value)
-      const index = customers.value.findIndex(c => c.id === editingId.value)
+      const response = await organizationsApi.update(editingId.value, formData.value)
+      const index = organizations.value.findIndex(o => o.id === editingId.value)
       if (index !== -1) {
-        customers.value[index] = response.data
+        organizations.value[index] = response.data
       }
     } else {
-      const response = await customersApi.create(formData.value)
-      customers.value.unshift(response.data)
+      const response = await organizationsApi.create(formData.value)
+      organizations.value.unshift(response.data)
       totalCount.value++
     }
     closeModal()
   } catch (err) {
-    console.error('Failed to save customer:', err)
-    alert(err.response?.data?.detail || 'Failed to save customer')
+    console.error('Failed to save organization:', err)
+    alert(err.response?.data?.detail || 'Failed to save organization')
   }
 }
 
-async function handleDelete(customer) {
-  if (confirm(`Delete customer "${customer.name}"? This will not delete associated projects.`)) {
+async function handleDelete(organization) {
+  if (confirm(`Delete organization "${organization.name}"? This will not delete associated projects.`)) {
     try {
-      await customersApi.delete(customer.id)
-      customers.value = customers.value.filter(c => c.id !== customer.id)
+      await organizationsApi.delete(organization.id)
+      organizations.value = organizations.value.filter(o => o.id !== organization.id)
       totalCount.value--
     } catch (err) {
-      console.error('Failed to delete customer:', err)
-      alert(err.response?.data?.detail || 'Failed to delete customer')
+      console.error('Failed to delete organization:', err)
+      alert(err.response?.data?.detail || 'Failed to delete organization')
     }
   }
 }
@@ -360,14 +360,14 @@ function truncate(text, maxLength) {
 </script>
 
 <style scoped>
-.customers-view {
+.organizations-view {
   min-height: calc(100vh - 52px);
   background: #f9fafb;
   padding: 2rem;
   width: 100%;
 }
 
-:global(.dark) .customers-view {
+:global(.dark) .organizations-view {
   background: #0f172a;
 }
 
@@ -401,7 +401,7 @@ function truncate(text, maxLength) {
   gap: 1rem;
 }
 
-.customer-count {
+.organization-count {
   padding: 0.375rem 0.75rem;
   background: #e0e7ff;
   color: #3730a3;
@@ -410,7 +410,7 @@ function truncate(text, maxLength) {
   font-weight: 500;
 }
 
-:global(.dark) .customer-count {
+:global(.dark) .organization-count {
   background: #312e81;
   color: #a5b4fc;
 }
@@ -431,7 +431,7 @@ function truncate(text, maxLength) {
   color: #6b7280;
 }
 
-.customers-content {
+.organizations-content {
   width: 100%;
 }
 
@@ -460,13 +460,13 @@ function truncate(text, maxLength) {
   color: #9ca3af !important;
 }
 
-.customers-grid {
+.organizations-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 1.25rem;
 }
 
-.customer-card {
+.organization-card {
   background: white;
   border-radius: 12px;
   border: 1px solid #e5e7eb;
@@ -474,24 +474,24 @@ function truncate(text, maxLength) {
   transition: all 0.2s;
 }
 
-:global(.dark) .customer-card {
+:global(.dark) .organization-card {
   background: #1e293b;
   border-color: #334155;
 }
 
-.customer-card:hover {
+.organization-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   transform: translateY(-2px);
 }
 
-.customer-header {
+.organization-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 1rem;
 }
 
-.customer-avatar {
+.organization-avatar {
   width: 48px;
   height: 48px;
   border-radius: 12px;
@@ -505,7 +505,7 @@ function truncate(text, maxLength) {
   letter-spacing: -0.025em;
 }
 
-.customer-actions {
+.organization-actions {
   display: flex;
   gap: 0.25rem;
 }
@@ -535,18 +535,18 @@ function truncate(text, maxLength) {
   color: #dc2626;
 }
 
-.customer-name {
+.organization-name {
   margin: 0 0 1rem 0;
   font-size: 1.25rem;
   font-weight: 600;
   color: #111827;
 }
 
-:global(.dark) .customer-name {
+:global(.dark) .organization-name {
   color: #f1f5f9;
 }
 
-.customer-details {
+.organization-details {
   display: flex;
   flex-direction: column;
   gap: 0.875rem;
@@ -580,14 +580,14 @@ function truncate(text, maxLength) {
   color: #94a3b8;
 }
 
-.customer-meta {
+.organization-meta {
   display: flex;
   gap: 1rem;
   padding-top: 0.75rem;
   border-top: 1px solid #f3f4f6;
 }
 
-:global(.dark) .customer-meta {
+:global(.dark) .organization-meta {
   border-top-color: #334155;
 }
 
@@ -650,7 +650,7 @@ function truncate(text, maxLength) {
 }
 
 /* Form styles */
-.customer-form {
+.organization-form {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -709,7 +709,7 @@ function truncate(text, maxLength) {
 }
 
 @media (max-width: 768px) {
-  .customers-view {
+  .organizations-view {
     padding: 1rem;
   }
 
@@ -723,10 +723,9 @@ function truncate(text, maxLength) {
     justify-content: space-between;
   }
 
-  .customers-grid {
+  .organizations-grid {
     grid-template-columns: 1fr;
   }
 }
 </style>
-
 

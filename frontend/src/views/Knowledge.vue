@@ -10,6 +10,7 @@
       <div class="header-actions">
         <div class="header-stats" v-if="!loading && !error">
           <span class="stat-badge markdown">{{ markdownCount }} markdown</span>
+          <span class="stat-badge folder">{{ folderCount }} folder</span>
           <span class="stat-badge website">{{ websiteCount }} website</span>
         </div>
         <button 
@@ -50,6 +51,7 @@
         <select v-model="filterType" @change="loadKnowledge">
           <option value="">All Types</option>
           <option value="markdown">Markdown</option>
+          <option value="folder">Folder</option>
           <option value="website">Website</option>
         </select>
       </div>
@@ -238,6 +240,7 @@
             <select id="document_type" v-model="formData.document_type" required>
               <option value="">Select type</option>
               <option value="markdown">Markdown</option>
+              <option value="folder">Folder</option>
               <option value="website">Website</option>
             </select>
           </div>
@@ -339,6 +342,56 @@
             <span class="form-hint">Enter a URL or file path to the markdown document</span>
           </div>
 
+          <!-- Folder path input -->
+          <div v-else-if="formData.document_type === 'folder'">
+            <div class="folder-picker-wrapper">
+              <button 
+                type="button" 
+                class="folder-picker-btn"
+                @click="openFolderPicker"
+                :disabled="!isFolderPickerSupported"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                </svg>
+                <span>{{ selectedFolderName || 'Choose Folder...' }}</span>
+              </button>
+              <div class="folder-path-display" v-if="formData.uri">
+                <span class="folder-path-text">{{ formData.uri }}</span>
+                <button type="button" class="clear-folder-btn" @click="clearFolderSelection" title="Clear">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <div class="folder-manual-input" v-if="!isFolderPickerSupported || showManualFolderInput">
+              <div class="file-path-input folder-input">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>
+                </svg>
+                <input 
+                  v-model="formData.uri" 
+                  type="text" 
+                  required 
+                  placeholder="/Users/username/Documents/knowledge-folder"
+                  @blur="normalizeFolderPath"
+                />
+              </div>
+            </div>
+            <div class="folder-input-toggle">
+              <button 
+                type="button" 
+                class="toggle-manual-btn"
+                @click="showManualFolderInput = !showManualFolderInput"
+                v-if="isFolderPickerSupported"
+              >
+                {{ showManualFolderInput ? 'Hide manual input' : 'Enter path manually' }}
+              </button>
+            </div>
+            <span class="form-hint">Select or enter the path to the folder containing markdown files</span>
+          </div>
+
           <!-- URL input for website (always shown) -->
           <div v-else-if="formData.document_type === 'website'">
             <input 
@@ -415,7 +468,7 @@ const formData = ref({
   uri: '',
   category: '',
   tags: '',
-  status: 'active'
+  status: 'pending'
 })
 
 // Computed available categories from items
@@ -430,6 +483,11 @@ const availableCategories = computed(() => {
 // Source mode state
 const sourceMode = ref('file') // 'file' or 'url'
 
+// Folder picker state
+const selectedFolderName = ref('')
+const showManualFolderInput = ref(false)
+const isFolderPickerSupported = computed(() => 'showDirectoryPicker' in window)
+
 const sortedItems = computed(() => {
   return [...items.value].sort((a, b) => {
     const dateA = new Date(a.created_at)
@@ -440,6 +498,10 @@ const sortedItems = computed(() => {
 
 const markdownCount = computed(() => {
   return items.value.filter(item => item.document_type === 'markdown').length
+})
+
+const folderCount = computed(() => {
+  return items.value.filter(item => item.document_type === 'folder').length
 })
 
 const websiteCount = computed(() => {
@@ -511,9 +573,11 @@ function openCreateModal() {
     uri: '',
     category: '',
     tags: '',
-    status: 'active'
+    status: 'pending'
   }
   sourceMode.value = 'file'
+  selectedFolderName.value = ''
+  showManualFolderInput.value = false
   showModal.value = true
 }
 
@@ -540,6 +604,8 @@ function closeModal() {
   showModal.value = false
   isEditing.value = false
   editingId.value = null
+  selectedFolderName.value = ''
+  showManualFolderInput.value = false
 }
 
 async function handleSubmit() {
@@ -697,6 +763,50 @@ function normalizeFilePath() {
     formData.value.uri = `file://${path}`
   }
 }
+
+function normalizeFolderPath() {
+  // Ensure the path starts with file:// for folder paths
+  if (formData.value.document_type !== 'folder') {
+    return
+  }
+  
+  let path = formData.value.uri
+  if (path && !path.startsWith('file://')) {
+    // It's a local path, add file:// prefix
+    formData.value.uri = `file://${path}`
+  }
+}
+
+async function openFolderPicker() {
+  try {
+    const dirHandle = await window.showDirectoryPicker({
+      mode: 'read'
+    })
+    selectedFolderName.value = dirHandle.name
+    
+    // Note: Browser security prevents access to full path
+    // User may need to enter the full path manually or the backend
+    // needs to resolve it. We'll prompt for manual path entry.
+    const confirmPath = prompt(
+      `Selected folder: "${dirHandle.name}"\n\nPlease enter the full absolute path to this folder:`,
+      `/path/to/${dirHandle.name}`
+    )
+    
+    if (confirmPath) {
+      formData.value.uri = confirmPath.startsWith('file://') ? confirmPath : `file://${confirmPath}`
+    }
+  } catch (err) {
+    // User cancelled or error occurred
+    if (err.name !== 'AbortError') {
+      console.error('Failed to open folder picker:', err)
+    }
+  }
+}
+
+function clearFolderSelection() {
+  formData.value.uri = ''
+  selectedFolderName.value = ''
+}
 </script>
 
 <style scoped>
@@ -752,6 +862,11 @@ function normalizeFilePath() {
 .stat-badge.markdown {
   background: #dbeafe;
   color: #1e40af;
+}
+
+.stat-badge.folder {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .stat-badge.website {
@@ -1000,6 +1115,11 @@ function normalizeFilePath() {
 .type-badge.markdown {
   background: #dbeafe;
   color: #1e40af;
+}
+
+.type-badge.folder {
+  background: #d1fae5;
+  color: #065f46;
 }
 
 .type-badge.website {
@@ -1329,6 +1449,112 @@ function normalizeFilePath() {
 .file-path-input input::placeholder {
   font-family: inherit;
   color: #9ca3af;
+}
+
+.file-path-input.folder-input svg {
+  color: #059669;
+}
+
+/* Folder picker styles */
+.folder-picker-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.folder-picker-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border: 2px dashed #10b981;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  width: 100%;
+  text-align: left;
+}
+
+.folder-picker-btn:hover:not(:disabled) {
+  background: #d1fae5;
+  border-color: #059669;
+}
+
+.folder-picker-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  border-color: #d1d5db;
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.folder-picker-btn svg {
+  flex-shrink: 0;
+  color: #10b981;
+}
+
+.folder-picker-btn:disabled svg {
+  color: #9ca3af;
+}
+
+.folder-path-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 6px;
+}
+
+.folder-path-text {
+  flex: 1;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  color: #166534;
+  word-break: break-all;
+}
+
+.clear-folder-btn {
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.clear-folder-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.folder-manual-input {
+  margin-top: 0.5rem;
+}
+
+.folder-input-toggle {
+  margin-top: 0.5rem;
+}
+
+.toggle-manual-btn {
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #2563eb;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.toggle-manual-btn:hover {
+  color: #1d4ed8;
 }
 
 /* Legacy file input styles - kept for compatibility */

@@ -1,19 +1,18 @@
 services:
   backend:
-    build: ./backend
+    image: jbcodeforce/myaiassistant-backend:latest
     container_name: myaiassistant-backend
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=sqlite+aiosqlite:///./myaiassistant.db
+      - CONFIG_FILE=/workspace/config.yaml
     volumes:
-      - backend-data:/app/data
+      - ./data:/app/data
+      - ./config.yaml:/workspace/config.yaml:ro
     restart: unless-stopped
 
   frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
+    image: jbcodeforce/myaiassistant-frontend:latest
     container_name: myaiassistant-frontend
     ports:
       - "80:80"

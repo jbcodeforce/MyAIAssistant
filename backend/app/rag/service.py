@@ -1,10 +1,10 @@
 """RAG service for knowledge base indexing and retrieval."""
 
 import logging
+from pydantic import BaseModel
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path 
 from typing import Optional
-from dataclasses import dataclass
 
 import chromadb
 from chromadb.config import Settings
@@ -16,8 +16,8 @@ from app.rag.text_splitter import RecursiveTextSplitter
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class SearchResult:
+
+class SearchResult(BaseModel):
     """A search result from the vector store."""
     content: str
     knowledge_id: int
@@ -27,8 +27,8 @@ class SearchResult:
     chunk_index: int
 
 
-@dataclass
-class IndexingResult:
+
+class IndexingResult(BaseModel):
     """Result of indexing a knowledge item."""
     success: bool
     chunks_indexed: int

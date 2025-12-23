@@ -105,25 +105,25 @@ export const ragApi = {
   }
 }
 
-export const customersApi = {
+export const organizationsApi = {
   list(params = {}) {
-    return api.get('/customers/', { params })
+    return api.get('/organizations/', { params })
   },
 
   get(id) {
-    return api.get(`/customers/${id}`)
+    return api.get(`/organizations/${id}`)
   },
 
-  create(customer) {
-    return api.post('/customers/', customer)
+  create(organization) {
+    return api.post('/organizations/', organization)
   },
 
-  update(id, customer) {
-    return api.put(`/customers/${id}`, customer)
+  update(id, organization) {
+    return api.put(`/organizations/${id}`, organization)
   },
 
   delete(id) {
-    return api.delete(`/customers/${id}`)
+    return api.delete(`/organizations/${id}`)
   }
 }
 
@@ -192,5 +192,28 @@ export const chatApi = {
   }
 }
 
-export default api
+export const settingsApi = {
+  /**
+   * Get application settings (without sensitive api_key)
+   */
+  get() {
+    return api.get('/settings/')
+  },
 
+  /**
+   * Get full application settings (including api_key)
+   */
+  getFull() {
+    return api.get('/settings/full')
+  },
+
+  /**
+   * Update application settings
+   * @param {Object} settings - Settings to update (partial update supported)
+   */
+  update(settings) {
+    return api.put('/settings/', settings)
+  }
+}
+
+export default api

@@ -90,7 +90,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 
-const emit = defineEmits(['toggle-sidebar'])
+const emit = defineEmits(['toggle-sidebar', 'open-preferences'])
 const route = useRoute()
 
 const isDarkMode = ref(false)
@@ -120,8 +120,7 @@ function toggleSettings() {
 
 function openPreferences() {
   showSettings.value = false
-  // TODO: Open preferences modal
-  console.log('Open preferences')
+  emit('open-preferences')
 }
 
 function openAbout() {

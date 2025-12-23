@@ -1,11 +1,11 @@
 """Text splitting utilities for chunking documents."""
 
-from dataclasses import dataclass
 from typing import Optional
 
+from pydantic import BaseModel
 
-@dataclass
-class TextChunk:
+
+class TextChunk(BaseModel):
     """A chunk of text with its metadata."""
     content: str
     start_index: int

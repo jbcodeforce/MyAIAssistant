@@ -1,0 +1,416 @@
+---
+alwaysApply: false
+description: Frontend Vue.js context - Vue 3 Composition API, Pinia, Vue Router, and Vite
+globs:
+  - frontend/**
+---
+
+# MyAIAssistant Frontend
+
+A Vue 3 single-page application providing task management with an Eisenhower matrix view, knowledge base management, and AI-powered chat features.
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Framework | Vue | ^3.5.0 |
+| Build Tool | Vite | ^6.0.0 |
+| State Management | Pinia | ^2.3.0 |
+| Routing | Vue Router | ^4.5.0 |
+| HTTP Client | Axios | ^1.7.0 |
+| Rich Text Editor | TipTap | ^3.13.0 |
+| Markdown Rendering | marked | ^17.0.0 |
+| Dev Server Port | 3000 | - |
+| API Proxy | /api -> localhost:8000 | - |
+
+## Project Structure
+
+```
+frontend/
+├── index.html              # Entry HTML
+├── vite.config.js          # Vite configuration, proxy, aliases
+├── package.json
+├── src/
+│   ├── main.js             # App bootstrap, Pinia, Router
+│   ├── App.vue             # Root layout (Sidebar + TopBar + router-view)
+│   ├── assets/
+│   │   └── styles/
+│   │       └── main.css    # Global styles
+│   ├── components/
+│   │   ├── chat/           # AI chat modals
+│   │   │   ├── ChatModal.vue
+│   │   │   └── RagChatModal.vue
+│   │   ├── common/         # Reusable UI components
+│   │   │   ├── Header.vue
+│   │   │   ├── Modal.vue
+│   │   │   ├── RichTextEditor.vue
+│   │   │   ├── Sidebar.vue
+│   │   │   └── TopBar.vue
+│   │   └── todo/           # Todo-specific components
+│   │       ├── StatusIndicator.vue
+│   │       ├── TaskPlanModal.vue
+│   │       ├── TodoCanvas.vue
+│   │       ├── TodoCard.vue
+│   │       └── TodoForm.vue
+│   ├── router/
+│   │   └── index.js        # Route definitions
+│   ├── services/
+│   │   └── api.js          # Axios API client and endpoints
+│   ├── stores/
+│   │   ├── knowledgeStore.js
+│   │   ├── todoStore.js
+│   │   └── uiStore.js
+│   └── views/              # Page-level components
+│       ├── ArchivedTodos.vue
+│       ├── Customers.vue
+│       ├── Dashboard.vue
+│       ├── Documentation.vue
+│       ├── Knowledge.vue
+│       ├── Projects.vue
+│       └── Unclassified.vue
+└── dist/                   # Production build output
+```
+
+## Core Patterns
+
+### Vue 3 Composition API with `<script setup>`
+
+All components use the Composition API with `<script setup>` syntax:
+
+```vue
+<template>
+  <div class="component">
+    <p>{{ message }}</p>
+    <button @click="handleClick">Action</button>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from 'vue'
+import { useTodoStore } from '@/stores/todoStore'
+
+const todoStore = useTodoStore()
+
+const message = ref('Hello')
+const items = computed(() => todoStore.todos)
+
+function handleClick() {
+  // ...
+}
+
+onMounted(() => {
+  // ...
+})
+</script>
+
+<style scoped>
+/* Component-scoped styles */
+</style>
+```
+
+- Use `ref()` for primitive reactive values
+- Use `computed()` for derived state
+- Use `onMounted()` for initialization
+- Prefer function declarations over arrow functions for methods
+
+### Props and Emits
+
+```vue
+<script setup>
+const props = defineProps({
+  todo: {
+    type: Object,
+    required: true
+  },
+  showActions: {
+    type: Boolean,
+    default: true
+  }
+})
+
+const emit = defineEmits(['click', 'edit', 'delete'])
+
+function handleEdit() {
+  emit('edit', props.todo)
+}
+</script>
+```
+
+- Always define prop types and required status
+- Provide defaults for optional props
+- Explicitly declare all emitted events
+
+### Pinia Store Pattern
+
+Stores use the Composition API style (setup stores):
+
+```javascript
+import { ref, computed } from 'vue'
+import { defineStore } from 'pinia'
+import { todosApi } from '@/services/api'
+
+export const useTodoStore = defineStore('todo', () => {
+  // State
+  const todos = ref([])
+  const loading = ref(false)
+  const error = ref(null)
+
+  // Getters (computed)
+  const openTodos = computed(() =>
+    todos.value.filter(todo => todo.status === 'Open')
+  )
+
+  // Actions
+  async function fetchTodos(params = {}) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await todosApi.list(params)
+      todos.value = response.data.todos
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.detail || 'Failed to fetch'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  return {
+    todos,
+    loading,
+    error,
+    openTodos,
+    fetchTodos
+  }
+})
+```
+
+- State as `ref()` values
+- Getters as `computed()` properties
+- Actions as async functions with loading/error handling
+- Return all public state, getters, and actions
+
+### API Service Layer
+
+Centralized API client in `services/api.js`:
+
+```javascript
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' }
+})
+
+api.interceptors.response.use(
+  response => response,
+  error => {
+    console.error('API Error:', error.response?.data || error.message)
+    return Promise.reject(error)
+  }
+)
+
+export const todosApi = {
+  list(params = {}) {
+    return api.get('/todos/', { params })
+  },
+  get(id) {
+    return api.get(`/todos/${id}`)
+  },
+  create(todo) {
+    return api.post('/todos/', todo)
+  },
+  update(id, todo) {
+    return api.put(`/todos/${id}`, todo)
+  },
+  delete(id) {
+    return api.delete(`/todos/${id}`)
+  }
+}
+```
+
+- Group endpoints by resource
+- Return Axios promises (not response.data)
+- Use interceptors for global error handling
+
+### Vue Router Configuration
+
+```javascript
+import { createRouter, createWebHistory } from 'vue-router'
+import Dashboard from '@/views/Dashboard.vue'
+
+const routes = [
+  {
+    path: '/',
+    name: 'Dashboard',
+    component: Dashboard,
+    meta: { title: 'Dashboard - MyAIAssistant' }
+  }
+]
+
+const router = createRouter({
+  history: createWebHistory(),
+  routes
+})
+
+router.beforeEach((to, from, next) => {
+  document.title = to.meta.title || 'MyAIAssistant'
+  next()
+})
+```
+
+- Use HTML5 history mode
+- Define page title in route meta
+- Use named routes for programmatic navigation
+
+### Path Aliases
+
+Configured in `vite.config.js`:
+
+```javascript
+resolve: {
+  alias: {
+    '@': fileURLToPath(new URL('./src', import.meta.url))
+  }
+}
+```
+
+Use `@/` prefix for all imports:
+```javascript
+import { useTodoStore } from '@/stores/todoStore'
+import Modal from '@/components/common/Modal.vue'
+```
+
+## Component Conventions
+
+### File Naming
+
+- Components: `PascalCase.vue` (e.g., `TodoCard.vue`)
+- Stores: `camelCaseStore.js` (e.g., `todoStore.js`)
+- Services: `camelCase.js` (e.g., `api.js`)
+
+### Component Organization
+
+| Directory | Purpose | Example |
+|-----------|---------|---------|
+| `views/` | Page-level components (route targets) | `Dashboard.vue` |
+| `components/common/` | Reusable UI primitives | `Modal.vue` |
+| `components/{feature}/` | Feature-specific components | `todo/TodoCard.vue` |
+
+### Modal Pattern
+
+Use the shared Modal component for overlays:
+
+```vue
+<Modal
+  :show="showModal"
+  title="Modal Title"
+  :wide="true"
+  @close="closeModal"
+>
+  <FormComponent @submit="handleSubmit" @cancel="closeModal" />
+</Modal>
+```
+
+### Drag and Drop
+
+TodoCard implements HTML5 drag and drop:
+
+```javascript
+function onDragStart(event) {
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('todo-id', props.todo.id.toString())
+  emit('dragstart', props.todo)
+}
+```
+
+## Styling Conventions
+
+### Scoped Styles
+
+Always use `<style scoped>` for component styles:
+
+```vue
+<style scoped>
+.component { /* only affects this component */ }
+</style>
+```
+
+### Dark Mode Support
+
+Use CSS class selectors for dark mode:
+
+```css
+.card {
+  background: white;
+  color: #111827;
+}
+
+:global(.dark) .card,
+html.dark .card {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+```
+
+### Color Palette
+
+| Usage | Light | Dark |
+|-------|-------|------|
+| Background | `#f8fafc`, `#f9fafb` | `#0f172a`, `#1e293b` |
+| Text Primary | `#111827` | `#f1f5f9` |
+| Text Secondary | `#6b7280` | `#94a3b8` |
+| Border | `#e5e7eb` | `#334155` |
+| Primary Action | `#2563eb` | `#3b82f6` |
+| Accent | `#8b5cf6` | `#a78bfa` |
+
+### Transitions
+
+Use Vue's built-in transition component:
+
+```vue
+<transition name="fade" mode="out-in">
+  <component :is="Component" />
+</transition>
+```
+
+```css
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+```
+
+## Development Commands
+
+```bash
+# Install dependencies
+npm install
+
+# Start dev server (port 3000)
+npm run dev
+
+# Build for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+## Best Practices
+
+1. **Use Composition API** - All new components use `<script setup>`
+2. **Keep components focused** - Single responsibility, extract when growing
+3. **Centralize API calls** - All HTTP in `services/api.js`
+4. **State in stores** - Cross-component state in Pinia, local state in components
+5. **Handle loading/error states** - Show feedback for async operations
+6. **Scoped styles only** - Avoid global CSS except in `main.css`
+7. **Use path aliases** - Always `@/` instead of relative paths
+8. **Emit events up** - Props down, events up pattern
+9. **Type your props** - Always define type and required status
+10. **Clean up side effects** - Use `onUnmounted()` for cleanup when needed

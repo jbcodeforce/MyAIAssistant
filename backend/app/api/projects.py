@@ -25,11 +25,11 @@ async def create_project(
     """
     Create a new project.
     """
-    # Verify customer exists if customer_id is provided
-    if project.customer_id:
-        customer = await crud.get_customer(db=db, customer_id=project.customer_id)
-        if not customer:
-            raise HTTPException(status_code=404, detail="Customer not found")
+    # Verify organization exists if organization_id is provided
+    if project.organization_id:
+        organization = await crud.get_organization(db=db, organization_id=project.organization_id)
+        if not organization:
+            raise HTTPException(status_code=404, detail="Organization not found")
     
     return await crud.create_project(db=db, project=project)
 
@@ -38,7 +38,7 @@ async def create_project(
 async def list_projects(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
-    customer_id: Optional[int] = Query(None, description="Filter by customer ID"),
+    organization_id: Optional[int] = Query(None, description="Filter by organization ID"),
     status: Optional[str] = Query(None, description="Filter by status"),
     db: AsyncSession = Depends(get_db)
 ):
@@ -49,7 +49,7 @@ async def list_projects(
         db=db,
         skip=skip,
         limit=limit,
-        customer_id=customer_id,
+        organization_id=organization_id,
         status=status
     )
     return ProjectListResponse(projects=projects, total=total, skip=skip, limit=limit)
@@ -58,14 +58,14 @@ async def list_projects(
 @router.get("/search/by-name", response_model=ProjectResponse)
 async def get_project_by_name(
     name: str = Query(..., description="Project name to search for (case-insensitive)"),
-    customer_id: int = Query(..., description="Customer ID the project belongs to"),
+    organization_id: int = Query(..., description="Organization ID the project belongs to"),
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Find a project by name and customer ID (case-insensitive exact match).
+    Find a project by name and organization ID (case-insensitive exact match).
     """
-    project = await crud.get_project_by_name_and_customer(
-        db=db, name=name, customer_id=customer_id
+    project = await crud.get_project_by_name_and_organization(
+        db=db, name=name, organization_id=organization_id
     )
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -95,11 +95,11 @@ async def update_project(
     """
     Update a project.
     """
-    # Verify customer exists if customer_id is being updated
-    if project_update.customer_id is not None:
-        customer = await crud.get_customer(db=db, customer_id=project_update.customer_id)
-        if not customer:
-            raise HTTPException(status_code=404, detail="Customer not found")
+    # Verify organization exists if organization_id is being updated
+    if project_update.organization_id is not None:
+        organization = await crud.get_organization(db=db, organization_id=project_update.organization_id)
+        if not organization:
+            raise HTTPException(status_code=404, detail="Organization not found")
     
     project = await crud.update_project(
         db=db, project_id=project_id, project_update=project_update
@@ -142,4 +142,3 @@ async def list_project_todos(
         db=db, project_id=project_id, skip=skip, limit=limit
     )
     return TodoListResponse(todos=todos, total=total, skip=skip, limit=limit)
-

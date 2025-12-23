@@ -1,13 +1,59 @@
 # User Guide
 
-This guide covers how to use the main features of MyAIAssistant.
+This guide covers how to use the main features of MyAIAssistant. As a web application, the configuration is set using a `config.yaml`, to specify where to access the database for the main entities, like tasks, organizations, documents, and where to access the vector store to keep document chunks and embeddings.
+
+As of now this tool should run locally. LLM is done locally, or remotely using one of the existing service.
 
 ## Setup
 
-Define a configuration file like config.yaml with settings for the database and vector DB to use. 
+### configuration
+
+There is a `config.yaml` to set access to the database and vector DB used. There is no need to change anything for first utilisation. There is a default database to support this user guide.
+
+In the future, a user may change the following elements of the config.yaml, to separate knowledge and project per major context. Like a student working for his/her university projects, then later for a company during a internship. The student may use two databases for that. The same way, a consultant who wants to have separate databases for very different set of activities linked to different knowledge and customer industry:
 
 ```yaml
+# Database settings
+database_url: "sqlite+aiosqlite:////app/data/myaiassistant.db"
+
+# Knowledge base / Vector store settings
+chroma_persist_directory: "/app/data/chroma"
+chroma_collection_name: "km-db"
 ```
+
+* `database_url` can be another name to keep data for a separate context. The data folder will include the database file,
+* `chroma_persist_directory:`: the reference to the folder to persiste vector store and document chunks
+* `chroma_collection_name`: chrome collection name. From now there is one collection. It may be relevant in the future to support adding more collection and to query at the collection level.
+
+
+### Launch the application
+
+* If you have docker and docker compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+* If you are on Mac with MacOS Tahoe, and use the [container cli](https://github.com/apple/container): TBD
+
+* Run with python and nodes:
+      * Backend:
+         ```bash
+         cd backend
+         uv sync
+         uv run uvicorn app.main:app --reload
+         ```
+      * Frontend:
+         ```bash
+         cd frontend
+         npm install
+         npm run dev
+         ```
+
+* The application access points:
+      - Frontend: [http://localhost:80](http://localhost:80)
+      - Backend API: http://localhost:8000
+      - API Documentation: http://localhost:8000/docs
+
 
 ## Knowledge Base
 
@@ -164,3 +210,9 @@ uv run python -m tools.vectorize_folder /path/to/docs --force
 # View current collection stats
 python -m tools.vectorize_folder --stats-only .
 ```
+
+* Tools:
+    ```sh
+    cd backend
+    uv run tools/vectorize_folder.py
+    ```

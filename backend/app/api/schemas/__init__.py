@@ -8,12 +8,12 @@ from .chat import (
     ChatResponse,
     ChatConfigResponse,
 )
-from .customer import (
-    CustomerBase,
-    CustomerCreate,
-    CustomerUpdate,
-    CustomerResponse,
-    CustomerListResponse,
+from .organization import (
+    OrganizationBase,
+    OrganizationCreate,
+    OrganizationUpdate,
+    OrganizationResponse,
+    OrganizationListResponse,
 )
 from .knowledge import (
     KnowledgeBase,
@@ -59,12 +59,12 @@ __all__ = [
     "ContextItem",
     "ChatResponse",
     "ChatConfigResponse",
-    # Customer
-    "CustomerBase",
-    "CustomerCreate",
-    "CustomerUpdate",
-    "CustomerResponse",
-    "CustomerListResponse",
+    # Organization
+    "OrganizationBase",
+    "OrganizationCreate",
+    "OrganizationUpdate",
+    "OrganizationResponse",
+    "OrganizationListResponse",
     # Knowledge
     "KnowledgeBase",
     "KnowledgeCreate",
@@ -96,4 +96,3 @@ __all__ = [
     "TodoResponse",
     "TodoListResponse",
 ]
-

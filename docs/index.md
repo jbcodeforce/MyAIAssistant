@@ -1,11 +1,5 @@
 # MyAIAssistant
 
-An intelligent personal productivity and knowledge management tool that integrates task management with a semantic knowledge base, that should help user to work on tasks, with continous knowledge of previous meeting notes, tasks, technical local knowledge. It helps to build weekly report on metrics like:
-
-* Number of customer meetings
-* Customer roadblocks addressed
-* Assets completed or started
-* Task created, completed
 
 ## Project Goals
 
@@ -17,97 +11,73 @@ Based on Stephen Covey's "7 Habits of Highly Effective People," the system helps
 
 With a drag-and-drop user interface it is easy to continuously re-prioritize tasks.
 
-[Access the webApp local once started](http://localhost:3000).
+[Access the webApp local once started](http://localhost:80).
+
+It also helps to manage organizations for which a user works with, and the related projects for one organisation. The term organisation was selected instead of client or customer, as the tool can be used by students or non-profit organizations.
 
 ## Core Features
 
 | Feature | Status | Description |
 | ------- | ------ | ----------- |
 | Kanban-style Todo Management | Completed | Todos categorized by Importance/Urgency (Eisenhower Matrix) |
+| Organization Management | Completed | Track organizations with stakeholders, team, strategy, and related products |
+| Project Management | Completed | Manage projects with status lifecycle (Draft, Active, On Hold, Completed, Cancelled) linked to organizations |
 | Knowledge Base | Completed | Metadata storage referencing documents, notes, and website links |
 | Semantic Search (RAG) | Completed | AI-powered search across the knowledge base using embeddings |
 | LLM Chat Support | Completed | AI chat for task planning and knowledge base queries |
 | Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
 
-## Technical Stack
 
-| Layer | Technology | Purpose |
-| ----- | ---------- | ------- |
-| Frontend | Vue.js with Vite | User interface with drag-and-drop Todo visualization |
-| Backend API | Python FastAPI | Async API for logic and data orchestration |
-| Relational Database | SQLite (PostgreSQL-ready) | Storing Todos, user settings, knowledge metadata |
-| Vector Database | ChromaDB | Semantic search and RAG using text embeddings |
-| LLM Integration | OpenAI SDK | Semantic search, summarization, task generation |
+### Knowledge Management
 
-## Architecture Overview
+The knowledge management helps managing personal content for supporting queries on knowledge corpus and helps on the task recommendations. The KM manages the following element:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Vue.js Frontend                        │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Dashboard  │  │  Knowledge  │  │  Unclassified View  │  │
-│  │  (Matrix)   │  │    View     │  │                     │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                            │
-                            ▼
-┌─────────────────────────────────────────────────────────────┐
-│                    FastAPI Backend                          │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐  │
-│  │  Todo API   │  │ Knowledge   │  │      RAG API        │  │
-│  │  /api/v1/   │  │    API      │  │  (Index & Search)   │  │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-                     │                        │
-                     ▼                        ▼
-          ┌──────────────────┐    ┌──────────────────────┐
-          │     SQLite       │    │      ChromaDB        │
-          │  (Relational DB) │    │   (Vector Store)     │
-          └──────────────────┘    └──────────────────────┘
-```
+- **Title**
+- **Location/uri** of the source document
+- **Status**: one of active, pending, indexed, error, archived
+- **Document type**: Folder, website, markdown, pdf
+
+[See how to do document and knowledge management](./user_guide/index.md/#)
+
+### Task Management
+
+### Organization Management
+
+Organizations represent external entities you work with. Each organization record includes:
+
+- **Name**: Organization or company name
+- **Stakeholders**: Key decision makers and contacts
+- **Team**: Internal team members assigned to the organization
+- **Strategy/Notes**: Overall relationship strategy and important notes
+- **Related Products**: Products, services, or solutions relevant to the organization
+
+### Project Management
+
+Projects track specific work items within organizations. Each project includes:
+
+- **Name**: Project identifier
+- **Description**: Project goals and scope
+- **Organization**: Optional link to parent organization
+- **Status**: Lifecycle state (Draft, Active, On Hold, Completed, Cancelled)
+- **Tasks**: Markdown-formatted bullet list of actionable items
+- **Past Steps**: Historical record of completed actions
+
+Projects can be filtered by organization and status. The Projects view displays active and draft counts for quick status assessment.
+
+### Reporting
+
+It helps to build weekly report on metrics like:
+
+* Project started, actives, or closed
+* Number of meetings
+* Organization roadblocks addressed
+* Assets completed or started
+* Task created, completed
 
 ## Quick Start
 
-### Using Docker Compose
+[See user guide](./user_guide/index.md)
 
-```bash
-docker-compose up -d
-```
-
-Access points:
-
-- Frontend: http://localhost:80
-- Backend API: http://localhost:8000
-- API Documentation: http://localhost:8000/docs
-
-### Local Development
-
-* Set CONFIG_environment variables to support different persistence references:
-    ```sh
-    # For development and testing set the biz config which persist in workspace/biz-db
-    export CONFIG_FILE=./tests/biz-config.yaml
-    # Or for technical content development
-    export CONFIG_FILE=./tests/km-config.yaml
-    ```
-* Backend:
-    ```bash
-    cd backend
-    uv sync
-    uv run uvicorn app.main:app --reload
-    ```
-
-* Frontend:
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-
-* Tools:
-    ```sh
-    cd backend
-    uv run tools/vectorize_folder.py
-    ```
 
 ## Project Principles
 

@@ -7,7 +7,7 @@
       @toggle="toggleSidebar"
     />
     <div class="main-wrapper">
-      <TopBar @toggle-sidebar="toggleSidebar" />
+      <TopBar @toggle-sidebar="toggleSidebar" @open-preferences="openSettingsModal" />
       <main class="app-content">
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
@@ -17,6 +17,11 @@
       </main>
     </div>
 
+    <SettingsModal
+      :show="showSettingsModal"
+      @close="closeSettingsModal"
+    />
+
 </template>
 
 <script setup>
@@ -24,11 +29,13 @@ import { ref } from 'vue'
 import { useUiStore } from '@/stores/uiStore'
 import Sidebar from '@/components/common/Sidebar.vue'
 import TopBar from '@/components/common/TopBar.vue'
+import SettingsModal from '@/components/common/SettingsModal.vue'
 
 const uiStore = useUiStore()
 const currentViewRef = ref(null)
 const sidebarCollapsed = ref(false)
 const sidebarRef = ref(null)
+const showSettingsModal = ref(false)
 
 function setViewRef(el) {
   currentViewRef.value = el
@@ -40,6 +47,14 @@ function handleCreateTodo() {
 
 function toggleSidebar() {
   sidebarCollapsed.value = !sidebarCollapsed.value
+}
+
+function openSettingsModal() {
+  showSettingsModal.value = true
+}
+
+function closeSettingsModal() {
+  showSettingsModal.value = false
 }
 </script>
 

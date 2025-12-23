@@ -130,6 +130,9 @@ class Settings(BaseSettings):
     llm_base_url: Optional[str] = "http://localhost:11434"
     llm_max_tokens: int = 2048
     llm_temperature: float = 0.1
+    chunk_size: int = 1000
+    overlap: int = 200
+    min_chunk_size: int = 100
 
     # Logging settings
     log_level: str = "INFO"

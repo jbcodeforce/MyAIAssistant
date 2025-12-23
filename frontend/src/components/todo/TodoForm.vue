@@ -64,6 +64,16 @@
     </div>
 
     <div class="form-group">
+      <label for="project">Project</label>
+      <select id="project" v-model="form.project_id" class="form-input" :disabled="loadingProjects">
+        <option :value="null">No project</option>
+        <option v-for="project in projects" :key="project.id" :value="project.id">
+          {{ project.name }}
+        </option>
+      </select>
+    </div>
+
+    <div class="form-group">
       <label for="due_date">Due Date</label>
       <input
         id="due_date"
@@ -85,8 +95,9 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
+import { projectsApi } from '@/services/api'
 
 const props = defineProps({
   initialData: {
@@ -101,6 +112,9 @@ const props = defineProps({
 
 const emit = defineEmits(['submit', 'cancel'])
 
+const projects = ref([])
+const loadingProjects = ref(false)
+
 const form = ref({
   title: '',
   description: '',
@@ -108,8 +122,25 @@ const form = ref({
   urgency: null,
   importance: null,
   category: '',
+  project_id: null,
   due_date: ''
 })
+
+onMounted(async () => {
+  await loadProjects()
+})
+
+async function loadProjects() {
+  loadingProjects.value = true
+  try {
+    const response = await projectsApi.list({ limit: 500 })
+    projects.value = response.data.projects
+  } catch (err) {
+    console.error('Failed to load projects:', err)
+  } finally {
+    loadingProjects.value = false
+  }
+}
 
 watch(
   () => props.initialData,
@@ -122,6 +153,7 @@ watch(
         urgency: newData.urgency || null,
         importance: newData.importance || null,
         category: newData.category || '',
+        project_id: newData.project_id || null,
         due_date: newData.due_date ? formatDateTimeLocal(newData.due_date) : ''
       }
     }
@@ -144,7 +176,8 @@ function handleSubmit() {
   const submitData = {
     ...form.value,
     due_date: form.value.due_date || null,
-    category: form.value.category || null
+    category: form.value.category || null,
+    project_id: form.value.project_id || null
   }
   
   if (submitData.urgency === '') submitData.urgency = null

@@ -4,7 +4,7 @@
       <div>
         <h2>Projects</h2>
         <p class="view-description">
-          Manage customer projects and track their lifecycle
+          Manage organization projects and track their lifecycle
         </p>
       </div>
       <div class="header-actions">
@@ -20,10 +20,10 @@
 
     <div class="filters-bar">
       <div class="filter-group">
-        <label>Customer:</label>
-        <select v-model="filterCustomerId" @change="loadProjects">
-          <option value="">All Customers</option>
-          <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
+        <label>Organization:</label>
+        <select v-model="filterOrganizationId" @change="loadProjects">
+          <option value="">All Organizations</option>
+          <option v-for="o in organizations" :key="o.id" :value="o.id">{{ o.name }}</option>
         </select>
       </div>
       <div class="filter-group">
@@ -52,7 +52,7 @@
       <div v-if="projects.length === 0" class="empty-state">
         <p>No projects found</p>
         <p class="empty-state-hint">
-          Create a project to start tracking customer work
+          Create a project to start tracking organization work
         </p>
       </div>
 
@@ -86,14 +86,14 @@
 
           <h3 class="project-name">{{ project.name }}</h3>
           
-          <p class="project-customer" v-if="getCustomerName(project.customer_id)">
+          <p class="project-organization" v-if="getOrganizationName(project.organization_id)">
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
               <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
-            {{ getCustomerName(project.customer_id) }}
+            {{ getOrganizationName(project.organization_id) }}
           </p>
 
           <p class="project-description" v-if="project.description">
@@ -152,10 +152,10 @@
 
         <div class="form-row">
           <div class="form-group">
-            <label for="customer">Customer</label>
-            <select id="customer" v-model="formData.customer_id">
-              <option :value="null">No customer</option>
-              <option v-for="c in customers" :key="c.id" :value="c.id">{{ c.name }}</option>
+            <label for="organization">Organization</label>
+            <select id="organization" v-model="formData.organization_id">
+              <option :value="null">No organization</option>
+              <option v-for="o in organizations" :key="o.id" :value="o.id">{{ o.name }}</option>
             </select>
           </div>
 
@@ -196,11 +196,11 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { projectsApi, customersApi } from '@/services/api'
+import { projectsApi, organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
 const projects = ref([])
-const customers = ref([])
+const organizations = ref([])
 const totalCount = ref(0)
 const currentSkip = ref(0)
 const limit = 50
@@ -208,7 +208,7 @@ const loading = ref(false)
 const error = ref(null)
 
 // Filters
-const filterCustomerId = ref('')
+const filterOrganizationId = ref('')
 const filterStatus = ref('')
 
 // Modal state
@@ -218,7 +218,7 @@ const editingId = ref(null)
 const formData = ref({
   name: '',
   description: '',
-  customer_id: null,
+  organization_id: null,
   status: 'Draft',
   tasks: ''
 })
@@ -240,16 +240,16 @@ const isFormValid = computed(() => {
 })
 
 onMounted(async () => {
-  await loadCustomers()
+  await loadOrganizations()
   await loadProjects()
 })
 
-async function loadCustomers() {
+async function loadOrganizations() {
   try {
-    const response = await customersApi.list({ limit: 500 })
-    customers.value = response.data.customers
+    const response = await organizationsApi.list({ limit: 500 })
+    organizations.value = response.data.organizations
   } catch (err) {
-    console.error('Failed to load customers:', err)
+    console.error('Failed to load organizations:', err)
   }
 }
 
@@ -258,7 +258,7 @@ async function loadProjects() {
   error.value = null
   try {
     const params = { skip: 0, limit }
-    if (filterCustomerId.value) params.customer_id = filterCustomerId.value
+    if (filterOrganizationId.value) params.organization_id = filterOrganizationId.value
     if (filterStatus.value) params.status = filterStatus.value
     
     const response = await projectsApi.list(params)
@@ -276,7 +276,7 @@ async function loadProjects() {
 async function loadMore() {
   try {
     const params = { skip: currentSkip.value, limit }
-    if (filterCustomerId.value) params.customer_id = filterCustomerId.value
+    if (filterOrganizationId.value) params.organization_id = filterOrganizationId.value
     if (filterStatus.value) params.status = filterStatus.value
     
     const response = await projectsApi.list(params)
@@ -287,10 +287,10 @@ async function loadMore() {
   }
 }
 
-function getCustomerName(customerId) {
-  if (!customerId) return null
-  const customer = customers.value.find(c => c.id === customerId)
-  return customer?.name || null
+function getOrganizationName(organizationId) {
+  if (!organizationId) return null
+  const organization = organizations.value.find(o => o.id === organizationId)
+  return organization?.name || null
 }
 
 function openCreateModal() {
@@ -299,7 +299,7 @@ function openCreateModal() {
   formData.value = {
     name: '',
     description: '',
-    customer_id: null,
+    organization_id: null,
     status: 'Draft',
     tasks: ''
   }
@@ -312,7 +312,7 @@ function openEditModal(project) {
   formData.value = {
     name: project.name,
     description: project.description || '',
-    customer_id: project.customer_id || null,
+    organization_id: project.organization_id || null,
     status: project.status,
     tasks: project.tasks || ''
   }
@@ -330,9 +330,9 @@ async function handleSubmit() {
   
   try {
     const payload = { ...formData.value }
-    // Don't send null customer_id as it can cause issues
-    if (payload.customer_id === null) {
-      delete payload.customer_id
+    // Don't send null organization_id as it can cause issues
+    if (payload.organization_id === null) {
+      delete payload.organization_id
     }
     
     if (isEditing.value) {
@@ -682,7 +682,7 @@ function truncate(text, maxLength) {
   color: #f1f5f9;
 }
 
-.project-customer {
+.project-organization {
   display: flex;
   align-items: center;
   gap: 0.375rem;
@@ -691,7 +691,7 @@ function truncate(text, maxLength) {
   color: #6b7280;
 }
 
-.project-customer svg {
+.project-organization svg {
   color: #9ca3af;
 }
 
@@ -909,5 +909,3 @@ function truncate(text, maxLength) {
   }
 }
 </style>
-
-

@@ -1,47 +1,49 @@
 # [MyAIAssistant: Intelligent Todo and Knowledge Management](https://jbcodeforce.github.io/MyAIAssistant)
 
-An intelligent personal productivity and knowledge management tool that integrates task management with a semantic knowledge base.
+An intelligent personal productivity and knowledge management tool that integrates task management with a semantic knowledge base using local LLM.
 
 ## Quick Start
 
-```bash
-# Using Docker Compose (recommended)
-docker-compose up -d
+* Clone this project:
+    ```sh
+    git clone https://github.com/jbcodeforce/MyAIAssistant.git
+    ```
 
-# Access points:
-# - Frontend: http://localhost:80
-# - Backend API: http://localhost:8000
-# - API Docs: http://localhost:8000/docs
-```
+* If you have docker and docker compose:
+    ```bash
+    # Using Docker Compose (recommended)
+    docker-compose up -d
+    # User interface - Web Application main pages: http://localhost:80
+    ```
 
-For local development:
+* If you are on Mac, use the new `container` CLI
 
-```bash
-# Backend
-cd backend && uv sync && uv run uvicorn app.main:app --reload
+### For local development
 
-# Frontend
-cd frontend && npm install && npm run dev
-```
+* Only during development run backend and frontend using `uv` and `npm`.
+    ```bash
+    # Backend
+    cd backend && uv sync && uv run uvicorn app.main:app --reload
+
+    # Frontend
+    cd frontend && npm install && npm run dev
+
+    # Access points:
+    # - User interface - Web Application main pages: http://localhost:3000
+    # - Backend API: http://localhost:8000
+    # - API Docs: http://localhost:8000/docs
+    ```
+
+* Build docker images:
+    ```sh
+    ./build.sh           # builds with :latest tag
+    # or
+    ./build.sh v1.0.0    # builds with :v1.0.0 tag
+    ```
 
 ## Documentation
 
-Full documentation available at [https://jeromeboyer.net/myaiassistant](https://jeromeboyer.net/myaiassistant) or run locally:
-
-```bash
-pip install mkdocs mkdocs-material
-mkdocs serve
-```
-
-## Key Features
-
-| Feature | Status | Description |
-| ------- | ------ | ----------- |
-| Todo Management | Complete | Eisenhower Matrix (Urgent/Important) classification |
-| Knowledge Base | Complete | Document and website reference storage |
-| Semantic Search | Complete | RAG-powered search using ChromaDB |
-| Task Linking | Planned | Automatic knowledge-to-task linking |
-| LLM Chat | Planned | Action item extraction from meeting notes |
+Full documentation available at [https://jeromeboyer.net/myaiassistant](https://jeromeboyer.net/myaiassistant) or in the application itself.
 
 ## Technical Stack
 

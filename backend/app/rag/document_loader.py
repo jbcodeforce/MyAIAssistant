@@ -4,15 +4,14 @@ import hashlib
 import re
 from pathlib import Path
 from typing import Optional
-from dataclasses import dataclass
 
 import httpx
 from bs4 import BeautifulSoup
 from markdownify import markdownify
 
 
-@dataclass
-class LoadedDocument:
+from pydantic import BaseModel
+class LoadedDocument(BaseModel):
     """Represents a loaded document with its content and metadata."""
     content: str
     content_hash: str

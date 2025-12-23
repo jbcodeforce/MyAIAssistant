@@ -9,8 +9,9 @@ from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
 from app.api.rag import router as rag_router
 from app.api.chat import router as chat_router
-from app.api.customers import router as customers_router
+from app.api.organizations import router as organizations_router
 from app.api.projects import router as projects_router
+from app.api.settings import router as settings_router
 
 
 @asynccontextmanager
@@ -46,8 +47,9 @@ def create_app() -> FastAPI:
     application.include_router(knowledge_router, prefix="/api")
     application.include_router(rag_router, prefix="/api")
     application.include_router(chat_router, prefix="/api")
-    application.include_router(customers_router, prefix="/api")
+    application.include_router(organizations_router, prefix="/api")
     application.include_router(projects_router, prefix="/api")
+    application.include_router(settings_router, prefix="/api")
 
     return application
 

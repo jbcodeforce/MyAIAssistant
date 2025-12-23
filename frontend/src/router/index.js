@@ -3,7 +3,7 @@ import Dashboard from '@/views/Dashboard.vue'
 import Unclassified from '@/views/Unclassified.vue'
 import ArchivedTodos from '@/views/ArchivedTodos.vue'
 import Projects from '@/views/Projects.vue'
-import Customers from '@/views/Customers.vue'
+import Organizations from '@/views/Organizations.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Documentation from '@/views/Documentation.vue'
 
@@ -41,11 +41,11 @@ const routes = [
     }
   },
   {
-    path: '/customers',
-    name: 'Customers',
-    component: Customers,
+    path: '/organizations',
+    name: 'Organizations',
+    component: Organizations,
     meta: {
-      title: 'Customers - MyAIAssistant'
+      title: 'Organizations - MyAIAssistant'
     }
   },
   {
@@ -77,4 +77,3 @@ router.beforeEach((to, from, next) => {
 })
 
 export default router
-

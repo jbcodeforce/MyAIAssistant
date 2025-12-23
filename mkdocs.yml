@@ -52,6 +52,7 @@ nav:
       - Knowledge Base: implementation/knowledge.md
       - RAG System: implementation/rag.md
       - Chat: implementation/chat.md
+      - Frontend: implementation/frontend.md
   - Deployment:
       - Overview: deployment/index.md
       - Docker: deployment/docker.md

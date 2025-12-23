@@ -7,11 +7,11 @@ from pydantic import BaseModel, Field, ConfigDict, field_validator
 class KnowledgeBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=255, description="Title of the knowledge item")
     description: Optional[str] = Field(None, description="Description of the knowledge item")
-    document_type: str = Field(..., description="Document type: markdown, website")
+    document_type: str = Field(..., description="Document type: markdown, website, folder")
     uri: str = Field(..., max_length=2048, description="URI reference (file path or URL)")
     category: Optional[str] = Field(None, max_length=100, description="Category for classification")
     tags: Optional[str] = Field(None, max_length=500, description="Comma-separated tags for flexible querying")
-    status: str = Field(default="active", description="Status: active, pending, error, archived")
+    status: str = Field(default="active", description="Status: active, pending, indexed, error, archived")
 
     @field_validator('tags')
     @classmethod
@@ -31,6 +31,9 @@ class KnowledgeBase(BaseModel):
 
 
 class KnowledgeCreate(KnowledgeBase):
+    # The model_config with json_schema_extra is included to provide OpenAPI docs and example payloads
+    # for API consumers. These detailed examples show what a valid request looks like when creating
+    # a new Knowledge item via the API. This helps ensure correct usage and self-documentation.
     model_config = ConfigDict(
         json_schema_extra={
             "examples": [
@@ -41,7 +44,7 @@ class KnowledgeCreate(KnowledgeBase):
                     "uri": "file:///docs/README.md",
                     "category": "Documentation",
                     "tags": "python,backend,api",
-                    "status": "active"
+                    "status": "pending"
                 },
                 {
                     "title": "API Reference",
@@ -50,7 +53,7 @@ class KnowledgeCreate(KnowledgeBase):
                     "uri": "https://api.example.com/docs",
                     "category": "Reference",
                     "tags": "api,rest,external",
-                    "status": "active"
+                    "status": "pending"
                 }
             ]
         }
