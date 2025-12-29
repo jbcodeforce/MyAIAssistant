@@ -3,7 +3,6 @@
     <Sidebar 
       ref="sidebarRef"
       :collapsed="sidebarCollapsed"
-      @create="handleCreateTodo" 
       @toggle="toggleSidebar"
     />
     <div class="main-wrapper">
@@ -39,10 +38,6 @@ const showSettingsModal = ref(false)
 
 function setViewRef(el) {
   currentViewRef.value = el
-}
-
-function handleCreateTodo() {
-  uiStore.openCreateModal()
 }
 
 function toggleSidebar() {

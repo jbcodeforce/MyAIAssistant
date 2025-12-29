@@ -788,8 +788,8 @@ async function openFolderPicker() {
     // User may need to enter the full path manually or the backend
     // needs to resolve it. We'll prompt for manual path entry.
     const confirmPath = prompt(
-      `Selected folder: "${dirHandle.name}"\n\nPlease enter the full absolute path to this folder:`,
-      `/path/to/${dirHandle.name}`
+      `Selected folder: "${dirHandle.name}"\n\nDue to security reasons, please enter the full absolute path to this folder:`,
+      `/../${dirHandle.name}`
     )
     
     if (confirmPath) {

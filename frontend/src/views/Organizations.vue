@@ -125,6 +125,15 @@
               </svg>
               Added {{ formatDate(organization.created_at) }}
             </span>
+            <router-link 
+              :to="{ path: '/projects', query: { organization: organization.id } }" 
+              class="view-projects-link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+              View Projects
+            </router-link>
           </div>
         </div>
       </div>
@@ -597,6 +606,36 @@ function truncate(text, maxLength) {
   gap: 0.375rem;
   font-size: 0.75rem;
   color: #9ca3af;
+}
+
+.view-projects-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #7c3aed;
+  text-decoration: none;
+  background: #f5f3ff;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.view-projects-link:hover {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+:global(.dark) .view-projects-link {
+  background: rgba(124, 58, 237, 0.15);
+  color: #a78bfa;
+}
+
+:global(.dark) .view-projects-link:hover {
+  background: rgba(124, 58, 237, 0.25);
+  color: #c4b5fd;
 }
 
 .load-more {

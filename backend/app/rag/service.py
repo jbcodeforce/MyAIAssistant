@@ -1,17 +1,18 @@
 """RAG service for knowledge base indexing and retrieval."""
 
+from ast import Dict
 import logging
 from pydantic import BaseModel
 from datetime import datetime, timezone
-from pathlib import Path 
-from typing import Optional
-
+from pathlib import Path
+from typing import Optional, List
 import chromadb
 from chromadb.config import Settings
 from chromadb.utils import embedding_functions
 
 from app.rag.document_loader import DocumentLoader
 from app.rag.text_splitter import RecursiveTextSplitter
+from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -51,28 +52,31 @@ class RAGService:
         chunk_overlap: int = 200,
         embedding_model: str = "all-MiniLM-L6-v2"
     ):
-        self.persist_directory = persist_directory
-        self.collection_name = collection_name
-        self.chunk_size = chunk_size
-        self.chunk_overlap = chunk_overlap
+        settings = get_settings()
+        self.persist_directory = settings.chroma_persist_directory
+        self.collection_name = settings.chroma_collection_name
+        self.chunk_size = settings.chunk_size
+        self.chunk_overlap = settings.overlap
+        self.embedding_model = settings.embedding_model
+
         
         # Ensure persist directory exists
-        Path(persist_directory).mkdir(parents=True, exist_ok=True)
+        Path(self.persist_directory).mkdir(parents=True, exist_ok=True)
         
         # Initialize ChromaDB client with persistence
         self.client = chromadb.PersistentClient(
-            path=persist_directory,
+            path=self.persist_directory,
             settings=Settings(anonymized_telemetry=False)
         )
         
         # Use sentence-transformers for embeddings (runs locally)
         self.embedding_function = embedding_functions.SentenceTransformerEmbeddingFunction(
-            model_name=embedding_model
+            model_name=self.embedding_model
         )
         
         # Get or create the collection
         self.collection = self.client.get_or_create_collection(
-            name=collection_name,
+            name=self.collection_name,
             embedding_function=self.embedding_function,
             metadata={"hnsw:space": "cosine"}
         )
@@ -80,8 +84,8 @@ class RAGService:
         # Initialize document loader and text splitter
         self.document_loader = DocumentLoader()
         self.text_splitter = RecursiveTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap
+            chunk_size=self.chunk_size,
+            chunk_overlap=self.chunk_overlap
         )
 
     async def index_knowledge(
@@ -100,7 +104,7 @@ class RAGService:
             knowledge_id: Database ID of the knowledge item
             title: Title of the knowledge item
             uri: URI to the document
-            document_type: Type of document ('markdown' or 'website')
+            document_type: Type of document ('markdown', 'folder', or 'website')
             category: Optional category for filtering
             tags: Optional comma-separated tags
             
@@ -113,54 +117,56 @@ class RAGService:
             
             # Load the document
             logger.info(f"Loading document from {uri}")
-            loaded_doc = await self.document_loader.load(uri, document_type)
+            loaded_docs = await self.document_loader.load(uri, document_type)
             
-            # Split into chunks
-            metadata = {
-                "knowledge_id": knowledge_id,
-                "title": title,
-                "uri": uri,
-                "document_type": document_type,
-                "category": category or "",
-                "tags": tags or "",
-                "indexed_at": datetime.now(timezone.utc).isoformat()
-            }
-            
-            chunks = self.text_splitter.split_text(loaded_doc.content, metadata)
-            
-            if not chunks:
-                return IndexingResult(
-                    success=False,
-                    chunks_indexed=0,
-                    content_hash=loaded_doc.content_hash,
-                    error="No content to index"
-                )
-            
-            # Prepare data for ChromaDB
-            ids = [f"kb_{knowledge_id}_chunk_{i}" for i in range(len(chunks))]
-            documents = [chunk.content for chunk in chunks]
-            metadatas = [
-                {
-                    **metadata,
-                    "chunk_index": chunk.chunk_index,
-                    "start_index": chunk.start_index
+            for loaded_doc in loaded_docs:
+                # Split into chunks
+                metadata = {
+                    "knowledge_id": knowledge_id,
+                    "title": loaded_doc.title,
+                    "uri": loaded_doc.source_uri,
+                    "document_type": document_type,
+                    "category": category or "",
+                    "tags": tags or "",
+                    "indexed_at": datetime.now(timezone.utc).isoformat(),
+                    "fetched_at": datetime.now(timezone.utc).isoformat()
                 }
-                for chunk in chunks
-            ]
             
-            # Add to collection
-            self.collection.add(
-                ids=ids,
-                documents=documents,
-                metadatas=metadatas
-            )
+                chunks = self.text_splitter.split_text(loaded_doc.content, metadata)
             
-            logger.info(f"Indexed {len(chunks)} chunks for knowledge item {knowledge_id}")
-            
+                if not chunks:
+                    return IndexingResult(
+                        success=False,
+                        chunks_indexed=0,
+                        content_hash=loaded_doc.content_hash,
+                        error="No content to index"
+                    )
+                    
+                # Prepare data for ChromaDB
+                ids = [f"kb_{knowledge_id}_chunk_{i}" for i in range(len(chunks))]
+                documents = [chunk.content for chunk in chunks]
+                metadatas = [
+                    {
+                        **metadata,
+                        "chunk_index": chunk.chunk_index,
+                        "start_index": chunk.start_index
+                    }
+                    for chunk in chunks
+                ]
+                
+                # Add to collection
+                self.collection.add(
+                    ids=ids,
+                    documents=documents,
+                    metadatas=metadatas
+                )
+                
+                logger.info(f"Indexed {len(chunks)} chunks for knowledge item {knowledge_id}")
+                
             return IndexingResult(
-                success=True,
-                chunks_indexed=len(chunks),
-                content_hash=loaded_doc.content_hash
+                    success=True,
+                    chunks_indexed=len(chunks),
+                    content_hash=loaded_doc.content_hash
             )
             
         except FileNotFoundError as e:
@@ -213,7 +219,7 @@ class RAGService:
         category: Optional[str] = None,
         tags: Optional[list[str]] = None,
         knowledge_ids: Optional[list[int]] = None
-    ) -> list[SearchResult]:
+    ) -> List[SearchResult]:
         """
         Search the knowledge base for relevant content.
         
@@ -292,6 +298,51 @@ class RAGService:
             "collection_name": self.collection_name,
             "embedding_model": "all-MiniLM-L6-v2"
         }
+
+
+    def process_directory(self,
+        docs_dir: str = None,
+        chunk_size: int = 5000,
+        overlap: int = 200,
+        min_chunk_size: int = 1000  ,
+    ) -> List[str]:
+        """
+        Process all markdown files in the given directory.
+
+        Args:
+            docs_dir: Directory containing markdown files
+            chunk_size: Size of each chunk
+            overlap: Overlap between chunks
+            min_chunk_size: Minimum size of each chunk
+
+        Returns:
+            List of all chunk documents
+        """
+        if docs_dir is None:
+            docs_dir = Path(__file__).parent
+        else:
+            docs_dir = Path(docs_dir)
+
+        all_chunks = []
+        processed_count = 0
+
+        # Process all .md files except README.md
+        for md_file in docs_dir.glob("*.md"):
+            if md_file.name == "README.md":
+                continue
+
+            print(f"Processing: {md_file.name}")
+            chunks = self._process_document(md_file, chunk_size, overlap, min_chunk_size)
+            all_chunks.extend(chunks)
+            processed_count += 1
+
+            if chunks:
+                print(f"  → Generated {len(chunks)} chunks")
+
+        logger.info(
+            f"\nTotal: Processed {processed_count} documents, generated {len(all_chunks)} chunks"
+        )
+        return all_chunks
 
 
 # Global RAG service instance

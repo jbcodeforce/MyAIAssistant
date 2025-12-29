@@ -1,6 +1,20 @@
 # [MyAIAssistant: Intelligent Todo and Knowledge Management](https://jbcodeforce.github.io/MyAIAssistant)
 
-An intelligent personal productivity and knowledge management tool that integrates task management with a semantic knowledge base using local LLM.
+An intelligent personal productivity and knowledge management tool that integrates task management with a semantic knowledge base using LLM, GraphRAG.
+
+[Read the documentation online](https://jbcodeforce.github.io/MyAIAssistan).
+
+## Core Features
+
+| Feature | Status | Description |
+| ------- | ------ | ----------- |
+| Kanban-style Todo Management | Completed | Todos categorized by Importance/Urgency (Eisenhower Matrix) |
+| Organization Management | Completed | Track organizations with stakeholders, team, strategy |
+| Project Management | Completed | Manage projects with status lifecycle (Draft, Active, On Hold, Completed, Cancelled) linked to organizations |
+| Knowledge Base | Completed | Metadata storage referencing documents, notes, and website links |
+| Semantic Search (RAG) | Completed | AI-powered search across the knowledge base using embeddings |
+| LLM Chat Support | Completed | AI chat for task planning and knowledge base queries |
+| Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
 
 ## Quick Start
 
@@ -15,8 +29,6 @@ An intelligent personal productivity and knowledge management tool that integrat
     docker-compose up -d
     # User interface - Web Application main pages: http://localhost:80
     ```
-
-* If you are on Mac, use the new `container` CLI
 
 ### For local development
 

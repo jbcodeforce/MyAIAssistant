@@ -11,7 +11,6 @@ from app.db import crud
 from app.rag.service import get_rag_service, RAGService
 from app.api.schemas.knowledge import KnowledgeUpdate
 from app.api.schemas.rag import (
-    IndexKnowledgeRequest,
     IndexKnowledgeResponse,
     IndexAllResponse,
     SearchRequest,
@@ -46,7 +45,7 @@ async def index_knowledge_item(
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge item not found")
     
-    # Index the document
+    # Index the document or folder  
     result = await rag.index_knowledge(
         knowledge_id=knowledge.id,
         title=knowledge.title,

@@ -3,6 +3,7 @@ import Dashboard from '@/views/Dashboard.vue'
 import Unclassified from '@/views/Unclassified.vue'
 import ArchivedTodos from '@/views/ArchivedTodos.vue'
 import Projects from '@/views/Projects.vue'
+import ProjectTodos from '@/views/ProjectTodos.vue'
 import Organizations from '@/views/Organizations.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Documentation from '@/views/Documentation.vue'
@@ -38,6 +39,14 @@ const routes = [
     component: Projects,
     meta: {
       title: 'Projects - MyAIAssistant'
+    }
+  },
+  {
+    path: '/projects/:id/todos',
+    name: 'ProjectTodos',
+    component: ProjectTodos,
+    meta: {
+      title: 'Project Tasks - MyAIAssistant'
     }
   },
   {

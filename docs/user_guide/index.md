@@ -2,11 +2,27 @@
 
 This guide covers how to use the main features of MyAIAssistant. As a web application, the configuration is set using a `config.yaml`, to specify where to access the database for the main entities, like tasks, organizations, documents, and where to access the vector store to keep document chunks and embeddings.
 
-As of now this tool should run locally. LLM is done locally, or remotely using one of the existing service.
+As of now this tool should run locally. LLM is done locally, or remotely using one of the existing AI service (OpenAI, Anthropic, Mistral, Openrouter.ai, Huggingface).
 
 ## Setup
 
-### configuration
+Once this project is cloned via `git clone`.
+
+### Prerequisites
+
+#### For Docker Deployment
+
+- Docker 20.10 or higher
+- Docker Compose 2.0 or higher
+- Ports 80 and 8000 available
+
+#### For Local Development
+
+- Python 3.12+
+- Node.js 18+
+- uv package manager (recommended)
+
+### Configuration
 
 There is a `config.yaml` to set access to the database and vector DB used. There is no need to change anything for first utilisation. There is a default database to support this user guide.
 
@@ -25,35 +41,131 @@ chroma_collection_name: "km-db"
 * `chroma_persist_directory:`: the reference to the folder to persiste vector store and document chunks
 * `chroma_collection_name`: chrome collection name. From now there is one collection. It may be relevant in the future to support adding more collection and to query at the collection level.
 
+### Launch the Application
 
-### Launch the application
+#### Docker Compose (Recommended)
 
-* If you have docker and docker compose:
-   ```bash
-   docker-compose up -d
-   ```
+The fastest way to run the full application:
 
-* If you are on Mac with MacOS Tahoe, and use the [container cli](https://github.com/apple/container): TBD
+```bash
+docker-compose up -d
+```
 
-* Run with python and nodes:
-      * Backend:
-         ```bash
-         cd backend
-         uv sync
-         uv run uvicorn app.main:app --reload
-         ```
-      * Frontend:
-         ```bash
-         cd frontend
-         npm install
-         npm run dev
-         ```
+Access points:
 
-* The application access points:
-      - Frontend: [http://localhost:80](http://localhost:80)
-      - Backend API: http://localhost:8000
-      - API Documentation: http://localhost:8000/docs
+| Service | URL | Description |
+| ------- | --- | ----------- |
+| **Frontend** | [http://localhost:80](http://localhost:80) | Vue.js application. For user. |
+| Backend API | http://localhost:8000 | FastAPI server. During this app development.|
+| API Docs | http://localhost:8000/docs | Interactive Swagger UI. During this app development. |
 
+#### Local Development
+
+For development with hot reload:
+
+=== "Backend"
+
+    ```bash
+    cd backend
+    uv sync
+    uv run uvicorn app.main:app --reload
+    ```
+
+=== "Frontend"
+
+    ```bash
+    cd frontend
+    npm install
+    npm run dev
+    ```
+
+
+---
+
+## Organization Management
+
+The goal is to potentially link tasks to a project, and projects to an organization. An organization can be a customer, a university or a non-profit organization. 
+
+It is not mandatory to use org and project to manage to do tasks, but it helps when you are engaged with different projects and want to classify tasks per project. An organization may also being fictive, just here to help organize work.
+
+* From the left Navigation, select Organizations
+   ![](./images/org_mgt.png)
+* Create a new org:
+   ![](./images/new_org.png)
+
+   *Only the organization name is mandatory*. The rest may be updated later via the edit button. `Related Products` is to track the interests the org may have to our own products. This will be an interesting metrics to report on.
+
+* Once one project is added to the organization it will be possible to navigate from the Orgranization tile, via the `View Projects` button, to the project view.
+
+
+## Project Management
+
+Project is here to group related tasks. It has a simple life cycle:
+
+![](./images/proj_state.drawio.png)
+
+
+* From the left Navigation, select Project
+   ![](./images/proj_mgt.png)
+
+* Create new project:
+   ![](./images/new_proj.png)
+   
+   *The tasks list section is NOT the tasks* that will be managed by the task manager. It is just an entry field for small tasks, or tasks related to other people for this project, or high level things to address. This is an optional field.
+
+* Within the project home page, it is possible to filter the project per organizations, or status.
+   ![](./images/proj_view.png)
+
+
+## Todo Management
+
+### The Eisenhower Matrix
+
+The Dashboard displays todos in a 2x2 matrix based on urgency and importance:
+
+| | Urgent | Not Urgent |
+|---|--------|------------|
+| **Important** | Do First | Schedule |
+| **Not Important** | Delegate | Eliminate |
+
+![](./images/task_dashboard.png)
+
+### Creating Todos
+
+1. Click **+ New Todo**
+2. Enter the todo title and optional description (which support markdown syntax)
+3. Set urgency and importance levels. If kept unclassified, the task is created and user will need to update from the `Unclassified view`.
+3. Optional, specify a project and a Due Date
+4. Click **Create**
+
+![](./images/new_task.png)
+
+### Moving Todos
+
+Drag and drop todos between quadrants to change their priority classification.
+
+### Completing Todos
+
+Update the todo card to mark it complete. Completed todos move to the archive.
+
+### Unclassified Todos
+
+Todos without urgency/importance settings appear in the **Unclassified** view. Assign them to quadrants to include them in the matrix.
+
+![](./images/unclassified_tasks.png)
+---
+
+## Chat with Todos
+
+From the Dashboard, you can chat with the AI about specific tasks:
+
+1. Click the chat icon (smiley) on any todo card
+2. Ask questions about how to approach the task
+3. The AI uses your knowledge base to provide relevant context and suggestions
+
+This helps when planning complex tasks by connecting your reference materials to your action items.
+
+---
 
 ## Knowledge Base
 
@@ -144,50 +256,6 @@ The chat maintains conversation history within a session. You can:
 - Request more detail on specific points
 
 The conversation resets when you close the chat window.
-
----
-
-## Todo Management
-
-### The Eisenhower Matrix
-
-The Dashboard displays todos in a 2x2 matrix based on urgency and importance:
-
-| | Urgent | Not Urgent |
-|---|--------|------------|
-| **Important** | Do First | Schedule |
-| **Not Important** | Delegate | Eliminate |
-
-### Creating Todos
-
-1. Click **+ Add Todo** or click in any quadrant
-2. Enter the todo title and optional description
-3. Set urgency and importance levels
-4. Click **Create**
-
-### Moving Todos
-
-Drag and drop todos between quadrants to change their priority classification.
-
-### Completing Todos
-
-Click the checkbox on a todo card to mark it complete. Completed todos move to the archive.
-
-### Unclassified Todos
-
-Todos without urgency/importance settings appear in the **Unclassified** view. Assign them to quadrants to include them in the matrix.
-
----
-
-## Chat with Todos
-
-From the Dashboard, you can chat with the AI about specific tasks:
-
-1. Click the chat icon on any todo card
-2. Ask questions about how to approach the task
-3. The AI uses your knowledge base to provide relevant context and suggestions
-
-This helps when planning complex tasks by connecting your reference materials to your action items.
 
 
 --- 

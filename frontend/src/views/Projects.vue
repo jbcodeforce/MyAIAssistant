@@ -115,6 +115,13 @@
               </svg>
               {{ formatDate(project.created_at) }}
             </span>
+            <router-link :to="`/projects/${project.id}/todos`" class="view-tasks-link">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              View Tasks
+            </router-link>
           </div>
         </div>
       </div>
@@ -195,9 +202,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { projectsApi, organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
+
+const route = useRoute()
 
 const projects = ref([])
 const organizations = ref([])
@@ -241,8 +251,25 @@ const isFormValid = computed(() => {
 
 onMounted(async () => {
   await loadOrganizations()
+  
+  // Check for organization query parameter
+  if (route.query.organization) {
+    filterOrganizationId.value = route.query.organization
+  }
+  
   await loadProjects()
 })
+
+// Watch for route query changes
+watch(
+  () => route.query.organization,
+  (newOrgId) => {
+    if (newOrgId !== undefined) {
+      filterOrganizationId.value = newOrgId || ''
+      loadProjects()
+    }
+  }
+)
 
 async function loadOrganizations() {
   try {
@@ -757,6 +784,36 @@ function truncate(text, maxLength) {
   gap: 0.375rem;
   font-size: 0.75rem;
   color: #9ca3af;
+}
+
+.view-tasks-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-left: auto;
+  padding: 0.375rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #2563eb;
+  text-decoration: none;
+  background: #eff6ff;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.view-tasks-link:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+:global(.dark) .view-tasks-link {
+  background: rgba(37, 99, 235, 0.15);
+  color: #60a5fa;
+}
+
+:global(.dark) .view-tasks-link:hover {
+  background: rgba(37, 99, 235, 0.25);
+  color: #93c5fd;
 }
 
 .load-more {

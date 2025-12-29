@@ -4,24 +4,9 @@ The Retrieval-Augmented Generation (RAG) system enables semantic search across t
 
 ## Architecture
 
-```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│ Document Source │ ──▶ │ Document Loader  │ ──▶ │  Text Splitter  │
-│ (file/website)  │     │                  │     │                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                                          │
-                                                          ▼
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  Search Query   │ ──▶ │   Embedding      │ ◀── │   Text Chunks   │
-│                 │     │   Generation     │     │                 │
-└─────────────────┘     └──────────────────┘     └─────────────────┘
-                                │
-                                ▼
-                        ┌──────────────────┐
-                        │    ChromaDB      │
-                        │  Vector Store    │
-                        └──────────────────┘
-```
+Classical RAG architecture supported by the Code.
+
+![](./images/docu_mgt.drawio.png)
 
 ## Components
 

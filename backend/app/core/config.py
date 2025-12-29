@@ -42,6 +42,7 @@ class YamlConfigSettingsSource(PydanticBaseSettingsSource):
     Loads in order (later values override earlier):
     1. Default app/config.yaml (shipped with the app)
     2. User config from CONFIG_FILE environment variable (optional)
+    3. Settings in the database
     """
 
     _yaml_data: dict[str, Any] | None = None
@@ -133,6 +134,7 @@ class Settings(BaseSettings):
     chunk_size: int = 1000
     overlap: int = 200
     min_chunk_size: int = 100
+    embedding_model: str = "all-MiniLM-L6-v2"
 
     # Logging settings
     log_level: str = "INFO"

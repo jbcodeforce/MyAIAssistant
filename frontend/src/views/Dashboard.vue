@@ -10,6 +10,20 @@
     </div>
 
     <div v-else class="dashboard-content">
+      <div class="dashboard-header">
+        <div>
+          <h2>Dashboard</h2>
+          <p class="view-description">Organize tasks by urgency and importance</p>
+        </div>
+        <button class="btn-new-todo" @click="uiStore.openCreateModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 5v14"/>
+            <path d="M5 12h14"/>
+          </svg>
+          New Todo
+        </button>
+      </div>
+
       <TodoCanvas
         :urgent-important-todos="todoStore.urgentImportant"
         :urgent-not-important-todos="todoStore.urgentNotImportant"
@@ -221,6 +235,56 @@ defineExpose({
 
 .dashboard-content {
   width: 100%;
+}
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 2rem 2rem 1rem;
+}
+
+.dashboard-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.875rem;
+  font-weight: 700;
+  color: #111827;
+}
+
+:global(.dark) .dashboard-header h2 {
+  color: #f1f5f9;
+}
+
+.view-description {
+  margin: 0;
+  color: #6b7280;
+  font-size: 1rem;
+}
+
+.btn-new-todo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-new-todo:hover {
+  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
+}
+
+.btn-new-todo svg {
+  width: 18px;
+  height: 18px;
 }
 
 .loading-state,

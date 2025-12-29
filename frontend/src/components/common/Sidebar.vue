@@ -85,15 +85,6 @@
       </router-link>
     </nav>
 
-    <div class="sidebar-footer">
-      <button class="new-todo-btn" @click="emit('create')" :title="collapsed ? 'New Todo' : ''">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M12 5v14"/>
-          <path d="M5 12h14"/>
-        </svg>
-        <span class="nav-label">New Todo</span>
-      </button>
-    </div>
   </aside>
 </template>
 
@@ -108,7 +99,7 @@ const props = defineProps({
   }
 })
 
-const emit = defineEmits(['create', 'toggle'])
+const emit = defineEmits(['toggle'])
 const route = useRoute()
 
 const tasksExpanded = ref(true)
@@ -325,43 +316,6 @@ const isTasksActive = computed(() => {
 
 .sidebar.collapsed .sidebar-header {
   justify-content: center;
-}
-
-.sidebar-footer {
-  padding: 0.5rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.new-todo-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-size: 0.8125rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.new-todo-btn:hover {
-  background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.35);
-}
-
-.sidebar.collapsed .new-todo-btn {
-  padding: 0.5rem;
-}
-
-.new-todo-btn svg {
-  width: 16px;
-  height: 16px;
 }
 
 @media (max-width: 768px) {
