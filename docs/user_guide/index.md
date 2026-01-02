@@ -6,7 +6,33 @@ As of now this tool should run locally. LLM is done locally, or remotely using o
 
 ## Setup
 
-Once this project is cloned via `git clone`.
+### Option 1: One-line Install (No Clone Required)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jbcodeforce/MyAIAssistant/main/install.sh | bash
+```
+
+This script:
+- Checks for Docker and offers to install it if missing
+- Downloads `docker-compose.yml`, creates a default `config.yaml` and scripts for database management
+- Sets up the installation in `~/myaiassistant` (override with `MYAIASSISTANT_DIR`)
+
+After installation:
+```bash
+cd ~/myaiassistant
+docker-compose up -d
+# Web UI: http://localhost:80
+```
+
+### Option 2: Clone and Run
+
+```sh
+git clone https://github.com/jbcodeforce/MyAIAssistant.git
+cd MyAIAssistant
+docker-compose up -d
+# Web UI: http://localhost:80
+```
+
 
 ### Prerequisites
 

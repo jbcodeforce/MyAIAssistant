@@ -18,17 +18,32 @@ An intelligent personal productivity and knowledge management tool that integrat
 
 ## Quick Start
 
-* Clone this project:
-    ```sh
-    git clone https://github.com/jbcodeforce/MyAIAssistant.git
-    ```
+### Option 1: One-line Install (No Clone Required)
 
-* If you have docker and docker compose:
-    ```bash
-    # Using Docker Compose (recommended)
-    docker-compose up -d
-    # User interface - Web Application main pages: http://localhost:80
-    ```
+```bash
+curl -fsSL https://raw.githubusercontent.com/jbcodeforce/MyAIAssistant/main/install.sh | bash
+```
+
+This script:
+- Checks for Docker and offers to install it if missing
+- Downloads `docker-compose.yml` and creates a default `config.yaml`
+- Sets up the installation in `~/myaiassistant` (override with `MYAIASSISTANT_DIR`)
+
+After installation:
+```bash
+cd ~/myaiassistant
+docker compose up -d
+# Web UI: http://localhost:80
+```
+
+### Option 2: Clone and Run
+
+```sh
+git clone https://github.com/jbcodeforce/MyAIAssistant.git
+cd MyAIAssistant
+docker compose up -d
+# Web UI: http://localhost:80
+```
 
 ### For local development
 
