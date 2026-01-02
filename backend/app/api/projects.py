@@ -101,6 +101,15 @@ async def update_project(
         if not organization:
             raise HTTPException(status_code=404, detail="Organization not found")
     
+    # Check if trying to complete the project
+    if project_update.status == "Completed":
+        active_todos_count = await crud.count_active_todos_for_project(db=db, project_id=project_id)
+        if active_todos_count > 0:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Cannot complete project: {active_todos_count} active task(s) still associated with this project"
+            )
+    
     project = await crud.update_project(
         db=db, project_id=project_id, project_update=project_update
     )

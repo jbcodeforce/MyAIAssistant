@@ -1,0 +1,1 @@
+   docker exec -it myaiassistant-postgres psql -U postgres myaiassistant

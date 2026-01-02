@@ -10,6 +10,13 @@ Set environment variable for the config.yaml
 # Install dependencies
 uv sync
 
+# Start PostgreSQL (using Docker)
+docker run -d --name postgres -p 5432:5432 \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=myaiassistant \
+  postgres:16-alpine
+
 # Run development server
 uv run uvicorn app.main:app --reload
 ```
@@ -47,8 +54,8 @@ To use different database and vector store locations:
 # Create your config file (copy from config.example.yaml)
 cp config.example.yaml /path/to/my_config.yaml
 
-# Edit with your paths (use absolute paths for clarity)
-# database_url: "sqlite+aiosqlite:////data/myapp/assistant.db"
+# Edit with your PostgreSQL connection string
+# database_url: "postgresql+asyncpg://user:password@localhost:5432/mydb"
 # chroma_persist_directory: "/data/myapp/vectorstore"
 
 # Run with custom config
@@ -62,19 +69,21 @@ curl http://localhost:8000/debug/config
 
 | Setting | Description | Default |
 | ------- | ----------- | ------- |
-| `database_url` | SQLite connection string | `sqlite+aiosqlite:///./myaiassistant.db` |
+| `database_url` | PostgreSQL connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant` |
 | `chroma_persist_directory` | ChromaDB storage path | `./data/chroma` |
 | `chroma_collection_name` | Vector store collection name | `knowledge_base` |
 
-Note: Relative paths are resolved from the current working directory when the app starts.
+Note: For Docker Compose deployments, use `postgres` as the hostname (the service name).
 
 ## Testing
 
+Tests use an in-memory SQLite database for isolation:
+
 ```bash
+uv sync --all-extras  # Install dev dependencies including aiosqlite
 uv run pytest
 ```
 
 ## Documentation
 
 See [full documentation](../docs/) for detailed implementation guides.
-

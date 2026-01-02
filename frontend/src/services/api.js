@@ -192,6 +192,40 @@ export const chatApi = {
   }
 }
 
+export const metricsApi = {
+  /**
+   * Get project metrics grouped by status
+   */
+  getProjects() {
+    return api.get('/metrics/projects')
+  },
+
+  /**
+   * Get task metrics grouped by status
+   */
+  getTasks() {
+    return api.get('/metrics/tasks')
+  },
+
+  /**
+   * Get task completion over time
+   * @param {string} period - 'daily', 'weekly', or 'monthly'
+   * @param {number} days - Number of days to look back (1-365)
+   */
+  getTaskCompletion(period = 'daily', days = 30) {
+    return api.get('/metrics/tasks/completion', { params: { period, days } })
+  },
+
+  /**
+   * Get all dashboard metrics in one call
+   * @param {string} period - 'daily', 'weekly', or 'monthly'
+   * @param {number} days - Number of days to look back (1-365)
+   */
+  getDashboard(period = 'daily', days = 30) {
+    return api.get('/metrics/dashboard', { params: { period, days } })
+  }
+}
+
 export const settingsApi = {
   /**
    * Get application settings (without sensitive api_key)

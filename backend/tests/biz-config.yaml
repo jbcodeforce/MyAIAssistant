@@ -1,14 +1,14 @@
-# Default configuration for MyAIAssistant Backend
+# Configuration for Biz workspace
 # These values are used unless overridden by:
 # 1. User config file (set CONFIG_FILE environment variable)
 # 2. Environment variables
 # 3. .env file
 
-# Database settings
-database_url: "sqlite+aiosqlite:////users/jerome/Documents/Code/MyAIAssistant/workspaces/biz-db/flink-assistant.db"
+# Database settings (PostgreSQL)
+database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/flink_assistant"
 
 # Knowledge base / Vector store settings
-chroma_persist_directory: "/users/jerome/Documents/Code/MyAIAssistant/workspaces/biz-db/chroma"
+chroma_persist_directory: "/Users/jerome/Documents/Code/MyAIAssistant/workspaces/biz-db/chroma"
 chroma_collection_name: "biz-kb"
 
 # CORS settings (list of allowed origins)

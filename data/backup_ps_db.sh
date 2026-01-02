@@ -1,0 +1,1 @@
+docker exec myaiassistant-postgres pg_dump -U postgres myaiassistant > ./backup.sql

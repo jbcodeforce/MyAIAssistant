@@ -90,7 +90,7 @@ class OrganizationNotesImporter:
         self,
         ollama_base_url: str = "http://localhost:11434",
         backend_base_url: str = "http://localhost:8000",
-        model: str = "llama3.1",
+        model: str = "gpt-oss:20b",
         temperature: float = 0.1
     ):
         self.ollama_base_url = ollama_base_url

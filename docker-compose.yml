@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: myaiassistant-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: myaiassistant
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     image: jbcodeforce/myaiassistant-backend:latest
     container_name: myaiassistant-backend
@@ -9,6 +27,9 @@ services:
     volumes:
       - ./data:/app/data
       - ./config.yaml:/workspace/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   frontend:
@@ -23,5 +44,4 @@ services:
     restart: unless-stopped
 
 volumes:
-  backend-data:
-
+  postgres-data:

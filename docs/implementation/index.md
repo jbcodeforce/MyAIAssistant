@@ -25,7 +25,7 @@ MyAIAssistant is built with a modular architecture separating concerns across di
                           │                              │
                           ▼                              ▼
                ┌──────────────────┐           ┌──────────────────────┐
-               │     SQLite       │           │      ChromaDB        │
+               │     Postgresql   │           │      ChromaDB        │
                │  (Relational DB) │           │   (Vector Store)     │
                └──────────────────┘           └──────────────────────┘
 ```
@@ -66,7 +66,7 @@ Retrieval-Augmented Generation for semantic search across the knowledge base.
 
 [Learn more about RAG System](rag.md)
 
-### Chat (Planned)
+### Chat
 
 LLM-powered chat interface for intelligent interactions.
 
@@ -83,12 +83,13 @@ MyAIAssistant/
 ├── backend/
 │   ├── app/
 │   │   ├── api/           # API endpoints (todos, knowledge, rag)
+│   │       └── schemas/   # Pydantic request/response schemas
 │   │   ├── core/          # Configuration management
 │   │   ├── db/            # Database models and CRUD operations
 │   │   ├── rag/           # RAG service components
-│   │   └── schemas/       # Pydantic request/response schemas
+
 │   ├── tests/             # Test suite
-│   └── data/              # ChromaDB persistence
+├── data/                  # chroma VB persistence
 ├── frontend/
 │   ├── src/
 │   │   ├── components/    # Vue components

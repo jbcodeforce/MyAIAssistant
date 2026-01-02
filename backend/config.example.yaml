@@ -6,11 +6,12 @@
 # Then verify your config is loaded correctly:
 #   curl http://localhost:8000/debug/config
 
-# Database path (change to use a different SQLite database)
-# Use ABSOLUTE paths to avoid confusion with working directory
-database_url: "sqlite+aiosqlite:////absolute/path/to/my_custom.db"
-# Or relative (resolved from current working directory when app starts):
-# database_url: "sqlite+aiosqlite:///./my_custom.db"
+# Database settings (PostgreSQL)
+# Format: postgresql+asyncpg://user:password@host:port/database
+database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+
+# For Docker Compose, use the service name as host:
+# database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
 
 # Knowledge base storage (change to use a different ChromaDB location)
 # Use ABSOLUTE paths for predictable behavior

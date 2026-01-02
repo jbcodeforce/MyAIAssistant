@@ -4,8 +4,8 @@
 # 2. Environment variables
 # 3. .env file
 
-# Database settings
-database_url: "sqlite+aiosqlite:////Users/jerome/Documents/Code/MyAIAssistant/data/myaiassistant.db"
+# Database settings (PostgreSQL)
+database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
 # Knowledge base / Vector store settings
 chroma_persist_directory: "/Users/jerome/Documents/Code/MyAIAssistant/data/chroma"

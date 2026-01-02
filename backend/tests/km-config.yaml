@@ -1,11 +1,11 @@
-# Default configuration for MyAIAssistant Backend
+# Configuration for KM workspace
 # These values are used unless overridden by:
 # 1. User config file (set CONFIG_FILE environment variable)
 # 2. Environment variables
 # 3. .env file
 
-# Database settings
-database_url: "sqlite+aiosqlite:///Users/jerome/Documents/Code/MyAIAssistant/workspaces/km-db/km-assistant.db"
+# Database settings (PostgreSQL)
+database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/km_assistant"
 
 # Knowledge base / Vector store settings
 chroma_persist_directory: "/Users/jerome/Documents/Code/MyAIAssistant/workspaces/km-db/chroma"

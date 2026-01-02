@@ -1,0 +1,1 @@
+   docker exec -i myaiassistant-postgres psql -U postgres myaiassistant < ./backup.sql

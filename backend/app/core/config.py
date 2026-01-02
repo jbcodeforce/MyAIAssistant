@@ -115,7 +115,7 @@ class Settings(BaseSettings):
     app_version: str = "0.1.0"
 
     # Database settings
-    database_url: str = "sqlite+aiosqlite:///./myaiassistant.db"
+    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
     # Knowledge base settings
     chroma_persist_directory: str = "./data/chroma"
@@ -248,14 +248,8 @@ def get_config_info() -> dict[str, Any]:
     """
     settings = get_settings()
     
-    # Resolve the actual database path from the URL
-    db_url = settings.database_url
-    if db_url.startswith("sqlite"):
-        # Extract path from sqlite URL: sqlite+aiosqlite:///./path.db
-        db_path = db_url.split("///")[-1]
-        resolved_db_path = str(Path(db_path).resolve())
-    else:
-        resolved_db_path = db_url
+    # For PostgreSQL, just return the URL (no path resolution needed)
+    resolved_db_path = settings.database_url
     
     # Resolve chroma directory
     resolved_chroma_path = str(Path(settings.chroma_persist_directory).resolve())

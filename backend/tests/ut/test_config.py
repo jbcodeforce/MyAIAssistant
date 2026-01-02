@@ -26,7 +26,7 @@ class TestYamlConfigOverrides:
             settings = config_module.Settings()
             
             # Default from app/config.yaml
-            assert settings.database_url == "sqlite+aiosqlite:///./myaiassistant.db"
+            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
     def test_yaml_config_overrides_database_url(self):
         """Test that CONFIG_FILE yaml properly overrides database_url."""
@@ -58,7 +58,7 @@ class TestYamlConfigOverrides:
 
     def test_yaml_config_partial_override(self):
         """Test that CONFIG_FILE only overrides specified values, keeping defaults."""
-        custom_db_url = "sqlite+aiosqlite:///./custom_override.db"
+        custom_db_url = "postgresql+asyncpg://custom:test@localhost/custom_override"
         
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False
@@ -125,7 +125,7 @@ class TestYamlConfigOverrides:
             settings = config_module.Settings()
             
             # Should use default from app/config.yaml
-            assert settings.database_url == "sqlite+aiosqlite:///./myaiassistant.db"
+            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
     def test_yaml_config_overrides_multiple_fields(self):
         """Test that multiple fields can be overridden via YAML."""
@@ -232,7 +232,7 @@ class TestSettingsDefaults:
             # Verify key defaults
             assert settings.app_name == "MyAIAssistant Backend"
             assert settings.app_version == "0.1.0"
-            assert settings.database_url == "sqlite+aiosqlite:///./myaiassistant.db"
+            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
             assert settings.chroma_persist_directory == "./data/chroma"
             assert settings.llm_provider == "ollama"
             assert settings.llm_max_tokens == 2048
@@ -327,7 +327,8 @@ class TestSingletonPattern:
         assert "resolved_chroma_path" in info
         assert "chroma_collection_name" in info
         
-        # Resolved paths should be absolute
-        assert Path(info["resolved_database_path"]).is_absolute()
+        # Resolved chroma path should be absolute
+        # For PostgreSQL, resolved_database_path is the connection URL
         assert Path(info["resolved_chroma_path"]).is_absolute()
+        assert "postgresql" in info["resolved_database_path"]
 

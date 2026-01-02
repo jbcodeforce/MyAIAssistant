@@ -10,13 +10,13 @@ Once this project is cloned via `git clone`.
 
 ### Prerequisites
 
-#### For Docker Deployment
+#### For Docker Deployment - User
 
 - Docker 20.10 or higher
 - Docker Compose 2.0 or higher
 - Ports 80 and 8000 available
 
-#### For Local Development
+#### For Local Development - Developer
 
 - Python 3.12+
 - Node.js 18+
@@ -64,7 +64,12 @@ Access points:
 For development with hot reload:
 
 === "Backend"
+   First start postgresql DB
+   ```sh
+   docker-compose up postgres -d
+   ```
 
+   Then the backend:
     ```bash
     cd backend
     uv sync
@@ -117,11 +122,11 @@ Project is here to group related tasks. It has a simple life cycle:
    ![](./images/proj_view.png)
 
 
-## Todo Management
+## Task Management
 
 ### The Eisenhower Matrix
 
-The Dashboard displays todos in a 2x2 matrix based on urgency and importance:
+The Dashboard displays Todos/Tasks in a 2x2 matrix based on urgency and importance:
 
 | | Urgent | Not Urgent |
 |---|--------|------------|
@@ -130,7 +135,11 @@ The Dashboard displays todos in a 2x2 matrix based on urgency and importance:
 
 ![](./images/task_dashboard.png)
 
-### Creating Todos
+The state of a task is described in the diagram below:
+
+![](./images/task_state.drawio.png)
+
+### Creating Task
 
 1. Click **+ New Todo**
 2. Enter the todo title and optional description (which support markdown syntax)
@@ -140,30 +149,40 @@ The Dashboard displays todos in a 2x2 matrix based on urgency and importance:
 
 ![](./images/new_task.png)
 
-### Moving Todos
+### Moving Task
 
 Drag and drop todos between quadrants to change their priority classification.
 
-### Completing Todos
+### Completing Task
 
 Update the todo card to mark it complete. Completed todos move to the archive.
 
-### Unclassified Todos
+### Unclassified Tasks
 
 Todos without urgency/importance settings appear in the **Unclassified** view. Assign them to quadrants to include them in the matrix.
 
 ![](./images/unclassified_tasks.png)
----
 
-## Chat with Todos
+### Chat with Task
 
 From the Dashboard, you can chat with the AI about specific tasks:
 
-1. Click the chat icon (smiley) on any todo card
+1. Click the chat icon (smiley) on any task card
+      ![](./images/chat_task.png)
+
 2. Ask questions about how to approach the task
-3. The AI uses your knowledge base to provide relevant context and suggestions
+3. The AI may use your knowledge base to provide relevant context and suggestions (set the toggle on)
+4. The result is a task plan that may be saved to the database and linked to the selected task
 
 This helps when planning complex tasks by connecting your reference materials to your action items.
+
+The response can build a plan, that may be saved in the database as task_plan.
+
+### Task plan
+
+At the task level, it is possible to access to a plan, elaborated by the AI. At the task tile, select the document icon, then the task plan is displayed using markdown layout, and can be edited.
+
+![](./images/task_plan.png)
 
 ---
 
@@ -176,22 +195,22 @@ The Knowledge Base stores references to documents and web resources that you wan
 1. Navigate to the **Knowledge** page from the main navigation
 2. Click **+ Add Knowledge** in the top right
 3. Fill in the form:
-   - **Title**: A descriptive name for the document
-   - **Description**: Optional summary of the content
-   - **Document Type**: Choose between Markdown or Website
-   - **Source**: For Markdown, enter a local file path or URL. For websites, enter the URL
-   - **Category**: Optional grouping (e.g., "Documentation", "Reference")
-   - **Tags**: Comma-separated keywords for filtering
+      - **Title**: A descriptive name for the document
+      - **Description**: Optional summary of the content
+      - **Document Type**: Choose between Markdown or Website
+      - **Source**: For Markdown, enter a local file path or URL. For websites, enter the URL
+      - **Category**: Optional grouping (e.g., "Documentation", "Reference")
+      - **Tags**: Comma-separated keywords for filtering
 4. Click **Create** to save
 
 ### Indexing Documents
 
-Before you can search or chat with your knowledge base, documents must be indexed:
+Before you can search or chat with your knowledge base, documents must be chunked,  indexed and embbedded:
 
 - **Index a single item**: Click the index button (magnifying glass with plus) on any row
 - **Index all items**: Click **Index All** in the header to index all active/pending items
 
-Indexing extracts text from documents and creates vector embeddings for semantic search.
+Indexing function, extracts text from documents and creates vector embeddings for semantic search.
 
 ### Filtering Knowledge Items
 
@@ -257,6 +276,11 @@ The chat maintains conversation history within a session. You can:
 
 The conversation resets when you close the chat window.
 
+---
+
+## Metrics
+
+The metrics view presents a set of task and project metrics.
 
 --- 
 

@@ -8,8 +8,8 @@
 app_name: MyAIAssistant Backend
 app_version: "0.1.0"
 
-# Database settings
-database_url: "sqlite+aiosqlite:///./myaiassistant.db"
+# Database settings (PostgreSQL)
+database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
 # Knowledge base / Vector store settings
 chroma_persist_directory: "./data/chroma"

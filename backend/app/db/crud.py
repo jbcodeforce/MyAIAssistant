@@ -495,6 +495,16 @@ async def get_todos_by_project(
     return todos, total
 
 
+async def count_active_todos_for_project(db: AsyncSession, project_id: int) -> int:
+    """Count active todos (Open or Started) for a project."""
+    query = select(func.count()).where(
+        Todo.project_id == project_id,
+        Todo.status.in_(["Open", "Started"])
+    )
+    result = await db.execute(query)
+    return result.scalar_one()
+
+
 # Settings CRUD operations
 
 async def get_settings_from_db(db: AsyncSession) -> Optional[Settings]:
