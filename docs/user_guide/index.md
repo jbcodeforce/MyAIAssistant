@@ -4,6 +4,18 @@ This guide covers how to use the main features of MyAIAssistant. As a web applic
 
 As of now this tool should run locally. LLM is done locally, or remotely using one of the existing AI service (OpenAI, Anthropic, Mistral, Openrouter.ai, Huggingface).
 
+## Architecture of the solution
+
+The following figure illustrates the components of this repository and how they work together:
+
+![](./images/architecture.drawio.png)
+
+* The **backend server**, exposes API to be able to manage Organizations, Projects, Tasks,TaskPlan, and knowledge references.
+* The **frontend single page application**, runs in a Web browser and interacts with the backend to manage day to day user interactions
+* the **ai_assist** CLI, helps to manage workspace and other interesting commands to manage content.
+
+The backend uses database server, Postgresql, a vector database, ChromaDN, and a local LLM server, ollama.
+
 ## Setup
 
 ### Option 1: One-line Install (No Clone Required)

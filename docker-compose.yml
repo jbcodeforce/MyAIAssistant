@@ -43,5 +43,16 @@ services:
       - API_URL=http://backend:8000
     restart: unless-stopped
 
+  ollama:
+    image: ollama/ollama:latest
+    container_name: myaiassistant-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+      - ./models:/models
+    restart: unless-stopped
+
 volumes:
   postgres-data:
+  ollama-data:

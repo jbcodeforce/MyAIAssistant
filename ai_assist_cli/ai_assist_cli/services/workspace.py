@@ -263,9 +263,6 @@ When researching topics:
             # Database settings
             "database_path": "data/db/assistant.db",
             "database_url": f"postgresql+asyncpg://postgres:postgres@{name}:5432/biz_assistant",
-            # Vector store settings
-            "chroma_persist_directory": "data/chroma",
-            "chroma_collection_name": "knowledge-base",
             # LLM settings
             "llm_provider": "ollama",
             "llm_model": "gpt-oss:20b",

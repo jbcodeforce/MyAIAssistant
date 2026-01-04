@@ -44,7 +44,6 @@ def init_command(
     - <workspace>/: Local workspace directory
       - config.yaml: Workspace configuration
       - data/chroma/: Vector database
-      - data/db/: SQLite database
       - prompts/: Local prompt templates
       - tools/: Local tool definitions
       - history/: Chat history
