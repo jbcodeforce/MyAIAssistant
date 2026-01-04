@@ -188,6 +188,28 @@ export const chatApi = {
   }
 }
 
+export const slpAssessmentsApi = {
+  list(params = {}) {
+    return api.get('/slp-assessments/', { params })
+  },
+
+  get(id) {
+    return api.get(`/slp-assessments/${id}`)
+  },
+
+  create(assessment) {
+    return api.post('/slp-assessments/', assessment)
+  },
+
+  update(id, assessment) {
+    return api.put(`/slp-assessments/${id}`, assessment)
+  },
+
+  delete(id) {
+    return api.delete(`/slp-assessments/${id}`)
+  }
+}
+
 export const metricsApi = {
   /**
    * Get project metrics grouped by status

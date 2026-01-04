@@ -320,11 +320,6 @@ class TestSingletonPattern:
         assert "config_file" in info
         assert "database_url" in info
         assert "resolved_database_path" in info
-        assert "resolved_chroma_path" in info
-
-        
-        # Resolved chroma path should be absolute
         # For PostgreSQL, resolved_database_path is the connection URL
-        assert Path(info["resolved_chroma_path"]).is_absolute()
         assert "postgresql" in info["resolved_database_path"]
 

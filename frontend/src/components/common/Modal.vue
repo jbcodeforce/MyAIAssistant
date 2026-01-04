@@ -1,7 +1,7 @@
 <template>
   <Transition name="modal">
     <div v-if="show" class="modal-overlay" @click.self="$emit('close')">
-      <div class="modal-container" :class="{ 'modal-wide': wide }">
+      <div class="modal-container" :class="[{ 'modal-wide': wide }, size !== 'default' ? `modal-${size}` : '']">
         <div class="modal-header">
           <slot name="header">
             <h3>{{ title }}</h3>
@@ -32,6 +32,11 @@ defineProps({
   wide: {
     type: Boolean,
     default: false
+  },
+  size: {
+    type: String,
+    default: 'default',
+    validator: (value) => ['default', 'wide', 'large', 'fullscreen'].includes(value)
   }
 })
 
@@ -64,6 +69,15 @@ defineEmits(['close'])
 
 .modal-container.modal-wide {
   max-width: 800px;
+}
+
+.modal-container.modal-large {
+  max-width: 1000px;
+}
+
+.modal-container.modal-fullscreen {
+  max-width: 95vw;
+  max-height: 95vh;
 }
 
 .modal-header {

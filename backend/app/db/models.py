@@ -1,13 +1,18 @@
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func
+from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
 class Base(AsyncAttrs, DeclarativeBase):
     pass
+
+
+# Type alias for Dimension JSON structure
+# Dimension contains: {"importance": int (0-10), "time_spent": int (0-10)}
+DimensionType = dict[str, int]
 
 
 class Organization(Base):
@@ -209,3 +214,49 @@ class TaskPlan(Base):
 
     def __repr__(self) -> str:
         return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
+
+
+class SLPassessment(Base):
+    """Strategic Life Plan Assessment entity.
+    
+    Each dimension field stores a JSON object with:
+    - importance: integer 0-10
+    - time_spent: integer 0-10
+    """
+    __tablename__ = "slp_assessments"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    
+    # Life dimensions - each stored as JSON with importance and time_spent
+    partner: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    family: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    friends: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    physical_health: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    mental_health: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    spirituality: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    community: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    societal: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    job_task: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    learning: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    finance: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    hobbies: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    online_entertainment: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    offline_entertainment: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    physiological_needs: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    daily_activities: Mapped[DimensionType] = mapped_column(JSON, nullable=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    def __repr__(self) -> str:
+        return f"SLPassessment(id={self.id!r}, created_at={self.created_at!r})"

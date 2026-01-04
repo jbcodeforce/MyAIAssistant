@@ -82,6 +82,15 @@
         <span class="nav-label">Metrics</span>
       </router-link>
 
+      <!-- Life Portfolio -->
+      <router-link to="/life-portfolio" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 6v6l4 2"/>
+        </svg>
+        <span class="nav-label">Life Portfolio</span>
+      </router-link>
+
       <!-- Documentation (external) -->
       <a href="https://jbcodeforce.github.io/MyAIAssistant" target="_blank" rel="noopener noreferrer" class="nav-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

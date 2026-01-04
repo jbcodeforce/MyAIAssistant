@@ -7,6 +7,7 @@ import ProjectTodos from '@/views/ProjectTodos.vue'
 import Organizations from '@/views/Organizations.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Metrics from '@/views/Metrics.vue'
+import SLPAssessments from '@/views/SLPAssessments.vue'
 
 const routes = [
   {
@@ -71,6 +72,14 @@ const routes = [
     component: Metrics,
     meta: {
       title: 'Metrics - MyAIAssistant'
+    }
+  },
+  {
+    path: '/life-portfolio',
+    name: 'SLPAssessments',
+    component: SLPAssessments,
+    meta: {
+      title: 'Life Portfolio - MyAIAssistant'
     }
   }
 ]

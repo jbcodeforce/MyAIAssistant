@@ -52,6 +52,14 @@ from app.db.crud.project import (
     get_project_by_name_and_organization,
 )
 
+from app.db.crud.slp_assessment import (
+    create_slp_assessment,
+    get_slp_assessment,
+    get_slp_assessments,
+    update_slp_assessment,
+    delete_slp_assessment,
+)
+
 __all__ = [
     # Todo
     "create_todo",
@@ -91,5 +99,11 @@ __all__ = [
     "update_project",
     "delete_project",
     "get_project_by_name_and_organization",
+    # SLP Assessment
+    "create_slp_assessment",
+    "get_slp_assessment",
+    "get_slp_assessments",
+    "update_slp_assessment",
+    "delete_slp_assessment",
 ]
 
