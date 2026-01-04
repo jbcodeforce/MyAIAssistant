@@ -3,10 +3,8 @@
 from .chat import (
     ChatMessageInput,
     ChatRequest,
-    RagChatRequest,
     ContextItem,
     ChatResponse,
-    ChatConfigResponse,
 )
 from .organization import (
     OrganizationBase,
@@ -55,10 +53,8 @@ __all__ = [
     # Chat
     "ChatMessageInput",
     "ChatRequest",
-    "RagChatRequest",
     "ContextItem",
     "ChatResponse",
-    "ChatConfigResponse",
     # Organization
     "OrganizationBase",
     "OrganizationCreate",

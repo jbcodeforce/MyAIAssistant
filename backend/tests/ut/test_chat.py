@@ -5,19 +5,6 @@ from httpx import AsyncClient
 
 
 @pytest.mark.asyncio
-async def test_chat_config(client: AsyncClient):
-    """Test getting chat configuration."""
-    response = await client.get("/api/chat/config")
-    assert response.status_code == 200
-    data = response.json()
-    assert "provider" in data
-    assert "model" in data
-    assert "max_tokens" in data
-    assert "temperature" in data
-    assert "rag_enabled" in data
-
-
-@pytest.mark.asyncio
 async def test_chat_health(client: AsyncClient):
     """Test chat health check."""
     response = await client.get("/api/chat/health")
@@ -120,3 +107,18 @@ async def test_chat_invalid_history_role(client: AsyncClient):
     # Should be a validation error
     assert response.status_code == 422
 
+@pytest.mark.asyncio
+async def test_generic_chat_api(client: AsyncClient):
+    """Test /api/chat endpoint (generic model chat endpoint) with minimal payload."""
+    response = await client.post(
+        "/api/chat/generic",
+        json={"message": "Hello, who are you?"}
+    )
+    # Should not get a validation error
+    assert response.status_code != 422
+    # If missing API key, may get 401/403 or 500; just verify not 422
+    # Optionally check response is JSON
+    assert response.headers["content-type"].startswith("application/json")
+    # Optionally, ensure schema of response (error or not) has "detail" or "result/message" fields
+    data = response.json()
+    assert isinstance(data, dict)

@@ -5,6 +5,7 @@
 #
 # This script:
 # - Checks for Docker and Docker Compose
+# - Optionally installs the ai_assist CLI tool
 # - Downloads docker-compose.yml and config.yaml
 # - Creates necessary directories
 # - Provides instructions to get started
@@ -13,6 +14,7 @@ set -e
 
 REPO_URL="https://raw.githubusercontent.com/jbcodeforce/MyAIAssistant/main"
 INSTALL_DIR="${MYAIASSISTANT_DIR:-$HOME/myaiassistant}"
+CLI_INSTALL="${AI_ASSIST_CLI:-true}"
 
 # Colors for output
 RED='\033[0;31m'
@@ -177,6 +179,80 @@ download_file() {
     fi
 }
 
+check_uv() {
+    if command -v uv &> /dev/null; then
+        UV_VERSION=$(uv --version | cut -d ' ' -f2)
+        print_success "uv found: $UV_VERSION"
+        return 0
+    else
+        return 1
+    fi
+}
+
+install_uv() {
+    print_info "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    # Source the env to get uv in path
+    if [ -f "$HOME/.local/bin/env" ]; then
+        source "$HOME/.local/bin/env"
+    elif [ -f "$HOME/.cargo/env" ]; then
+        source "$HOME/.cargo/env"
+    fi
+    export PATH="$HOME/.local/bin:$PATH"
+}
+
+install_cli() {
+    print_info "Installing ai_assist CLI tool..."
+    
+    # Check for uv
+    if ! check_uv; then
+        print_warning "uv not found."
+        read -p "Would you like to install uv (recommended Python package manager)? [Y/n] " -n 1 -r
+        echo ""
+        if [[ ! $REPLY =~ ^[Nn]$ ]]; then
+            install_uv
+            if ! check_uv; then
+                print_error "uv installation failed. Skipping CLI installation."
+                return 1
+            fi
+        else
+            print_warning "Skipping CLI installation (requires uv or pip)."
+            return 1
+        fi
+    fi
+    
+    # Download CLI package
+    CLI_DIR="$INSTALL_DIR/cli"
+    mkdir -p "$CLI_DIR"
+    
+    print_info "Downloading CLI package..."
+    download_file "$REPO_URL/ai_assist_cli/pyproject.toml" "$CLI_DIR/pyproject.toml"
+    
+    mkdir -p "$CLI_DIR/ai_assist_cli/commands"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/__init__.py" "$CLI_DIR/ai_assist_cli/__init__.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/cli.py" "$CLI_DIR/ai_assist_cli/cli.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/workspace.py" "$CLI_DIR/ai_assist_cli/workspace.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/__init__.py" "$CLI_DIR/ai_assist_cli/commands/__init__.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/init.py" "$CLI_DIR/ai_assist_cli/commands/init.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/config.py" "$CLI_DIR/ai_assist_cli/commands/config.py"
+    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/workspace.py" "$CLI_DIR/ai_assist_cli/commands/workspace.py"
+    
+    print_info "Installing CLI with uv..."
+    cd "$CLI_DIR"
+    uv pip install --system -e .
+    cd "$INSTALL_DIR"
+    
+    if command -v ai_assist &> /dev/null; then
+        print_success "ai_assist CLI installed successfully"
+        return 0
+    else
+        print_warning "CLI installed but may require adding ~/.local/bin to PATH"
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+        echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc 2>/dev/null || true
+        return 0
+    fi
+}
+
 create_config() {
     cat > "$INSTALL_DIR/config.yaml" << 'EOF'
 # MyAIAssistant Configuration
@@ -273,6 +349,14 @@ main() {
         print_success "scripts directory created"
     fi
 
+    # Install CLI tool
+    echo ""
+    if [ "$CLI_INSTALL" = "true" ]; then
+        install_cli || print_warning "CLI installation skipped or failed."
+    else
+        print_info "Skipping CLI installation (AI_ASSIST_CLI=false)"
+    fi
+
     echo ""
     echo -e "${GREEN}============================================${NC}"
     echo -e "${GREEN}  Installation Complete${NC}"
@@ -284,10 +368,20 @@ main() {
     echo "  - docker-compose.yml"
     echo "  - config.yaml"
     echo "  - data/ (for persistent storage)"
+    if [ "$CLI_INSTALL" = "true" ]; then
+        echo "  - cli/ (ai_assist CLI tool)"
+    fi
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
     echo ""
-    echo "1. Review and customize config.yaml:"
+    if command -v ai_assist &> /dev/null; then
+        echo "1. Initialize a workspace:"
+        echo -e "   ${YELLOW}ai_assist init /path/to/my-workspace${NC}"
+        echo ""
+        echo "2. Or use the Docker-based deployment:"
+    else
+        echo "1. Review and customize config.yaml:"
+    fi
     echo -e "   ${YELLOW}code $INSTALL_DIR/config.yaml${NC}"
     echo ""
     echo "2. Configure your LLM provider in config.yaml:"
@@ -304,7 +398,16 @@ main() {
     echo "5. Stop MyAIAssistant:"
     echo -e "   ${YELLOW}cd $INSTALL_DIR && $COMPOSE_CMD down${NC}"
     echo ""
-    echo "For more information, visit:"`echo -e "${YELLOW}https://jbcodeforce.github.io/MyAIAssistant/user_guide/${NC}"`
+    if command -v ai_assist &> /dev/null; then
+        echo -e "${BLUE}CLI Commands:${NC}"
+        echo "  ai_assist init [path]        - Initialize a new workspace"
+        echo "  ai_assist workspace status   - Show workspace status"
+        echo "  ai_assist config show        - Display configuration"
+        echo "  ai_assist --help             - Show all commands"
+        echo ""
+    fi
+    echo "For more information, visit:"
+    echo -e "  ${YELLOW}https://jbcodeforce.github.io/MyAIAssistant/user_guide/${NC}"
     echo ""
 }
 

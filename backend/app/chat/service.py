@@ -4,10 +4,12 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-import httpx
+from agent_core import LLMClient, LLMConfig, Message as LLMMessage
 
 from app.core.config import get_settings
-from app.rag.service import RAGService, get_rag_service
+from agent_core.services.rag.service import RAGService, get_rag_service
+from agent_core.agents.query_classifier import QueryIntent
+from agent_core.agents.agent_router import AgentRouter, RoutedResponse, get_agent_router
 
 logger = logging.getLogger(__name__)
 
@@ -24,8 +26,10 @@ class ChatResponse:
     """Response from the chat service."""
     message: str
     context_used: list[dict]  # RAG context that was used
-    model: str
-    provider: str
+    # Optional routing metadata
+    intent: Optional[str] = None
+    agent_type: Optional[str] = None
+    classification_confidence: Optional[float] = None
 
 
 class ChatService:
@@ -33,6 +37,8 @@ class ChatService:
     Service for LLM-powered chat with RAG integration.
     
     Supports multiple providers: OpenAI, Anthropic, and Ollama.
+    Uses agent_core.LLMClient for LLM integration.
+    Now includes agent routing for intelligent query handling.
     """
 
     def __init__(
@@ -54,14 +60,18 @@ class ChatService:
         self.temperature = temperature or settings.llm_temperature
         self.rag_service = rag_service or get_rag_service()
         
-        # Set default base URLs
-        if not self.base_url:
-            if self.provider == "openai":
-                self.base_url = "https://api.openai.com/v1"
-            elif self.provider == "anthropic":
-                self.base_url = "https://api.anthropic.com/v1"
-            elif self.provider == "ollama":
-                self.base_url = "http://localhost:11434"
+        # Create LLM client configuration
+        self._llm_config = LLMConfig(
+            provider=self.provider,
+            model=self.model,
+            api_key=self.api_key,
+            base_url=self.base_url,
+            max_tokens=self.max_tokens,
+            temperature=self.temperature
+        )
+        
+        # Create LLM client
+        self._llm_client = LLMClient(self._llm_config)
 
     async def chat_with_todo(
         self,
@@ -114,22 +124,20 @@ class ChatService:
         )
         
         # Build messages
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [LLMMessage(role="system", content=system_prompt)]
         
         if conversation_history:
             for msg in conversation_history:
-                messages.append({"role": msg.role, "content": msg.content})
+                messages.append(LLMMessage(role=msg.role, content=msg.content))
         
-        messages.append({"role": "user", "content": user_message})
+        messages.append(LLMMessage(role="user", content=user_message))
         
         # Call the LLM
-        response_text = await self._call_llm(messages)
+        response = await self._llm_client.chat_async(messages)
         
         return ChatResponse(
-            message=response_text,
-            context_used=context_used,
-            model=self.model,
-            provider=self.provider
+            message=response.content,
+            context_used=context_used
         )
 
     async def chat_with_rag(
@@ -174,22 +182,69 @@ class ChatService:
         system_prompt = self._build_rag_system_prompt(context=context_text)
         
         # Build messages
-        messages = [{"role": "system", "content": system_prompt}]
+        messages = [LLMMessage(role="system", content=system_prompt)]
         
         if conversation_history:
             for msg in conversation_history:
-                messages.append({"role": msg.role, "content": msg.content})
+                messages.append(LLMMessage(role=msg.role, content=msg.content))
         
-        messages.append({"role": "user", "content": user_message})
+        messages.append(LLMMessage(role="user", content=user_message))
         
         # Call the LLM
-        response_text = await self._call_llm(messages)
+        response = await self._llm_client.chat_async(messages)
         
         return ChatResponse(
-            message=response_text,
+            message=response.content,
             context_used=context_used,
             model=self.model,
             provider=self.provider
+        )
+
+    async def chat_with_routing(
+        self,
+        user_message: str,
+        conversation_history: list[ChatMessage] = None,
+        context: dict = None,
+        force_intent: QueryIntent = None
+    ) -> ChatResponse:
+        """
+        Chat with intelligent query classification and agent routing.
+        
+        This method classifies the user's query to determine intent,
+        then routes to the appropriate specialized agent.
+        
+        Args:
+            user_message: The user's message/question
+            conversation_history: Previous messages in the conversation
+            context: Additional context (task info, etc.)
+            force_intent: Override automatic classification with specific intent
+            
+        Returns:
+            ChatResponse with the assistant's reply and routing metadata
+        """
+        # Convert conversation history to dict format
+        history_dicts = []
+        if conversation_history:
+            for msg in conversation_history:
+                history_dicts.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+        
+        # Route through agent workflow
+        routed_response: RoutedResponse = get_agent_router().route(
+            query=user_message,
+            conversation_history=history_dicts,
+            context=context or {},
+            force_intent=force_intent
+        )
+        
+        return ChatResponse(
+            message=routed_response.message,
+            context_used=routed_response.context_used,
+            intent=routed_response.intent.value,
+            agent_type=routed_response.agent_type,
+            classification_confidence=routed_response.confidence
         )
 
     def _build_system_prompt(
@@ -267,97 +322,6 @@ class ChatService:
         
         return "\n".join(prompt_parts)
 
-    async def _call_llm(self, messages: list[dict]) -> str:
-        """Call the LLM API based on the configured provider."""
-        if self.provider == "openai":
-            return await self._call_openai(messages)
-        elif self.provider == "anthropic":
-            return await self._call_anthropic(messages)
-        elif self.provider == "ollama":
-            return await self._call_ollama(messages)
-        else:
-            raise ValueError(f"Unsupported LLM provider: {self.provider}")
-
-    async def _call_openai(self, messages: list[dict]) -> str:
-        """Call OpenAI API."""
-        if not self.api_key:
-            raise ValueError("OpenAI API key is required. Set LLM_API_KEY environment variable.")
-        
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{self.base_url}/chat/completions",
-                headers={
-                    "Authorization": f"Bearer {self.api_key}",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "max_tokens": self.max_tokens,
-                    "temperature": self.temperature
-                }
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["choices"][0]["message"]["content"]
-
-    async def _call_anthropic(self, messages: list[dict]) -> str:
-        """Call Anthropic API."""
-        if not self.api_key:
-            raise ValueError("Anthropic API key is required. Set LLM_API_KEY environment variable.")
-        
-        # Convert messages format for Anthropic
-        system_content = ""
-        anthropic_messages = []
-        
-        for msg in messages:
-            if msg["role"] == "system":
-                system_content = msg["content"]
-            else:
-                anthropic_messages.append({
-                    "role": msg["role"],
-                    "content": msg["content"]
-                })
-        
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(
-                f"{self.base_url}/messages",
-                headers={
-                    "x-api-key": self.api_key,
-                    "anthropic-version": "2023-06-01",
-                    "Content-Type": "application/json"
-                },
-                json={
-                    "model": self.model,
-                    "system": system_content,
-                    "messages": anthropic_messages,
-                    "max_tokens": self.max_tokens,
-                    "temperature": self.temperature
-                }
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["content"][0]["text"]
-
-    async def _call_ollama(self, messages: list[dict]) -> str:
-        """Call Ollama API (local LLM)."""
-        async with httpx.AsyncClient(timeout=120.0) as client:
-            response = await client.post(
-                f"{self.base_url}/api/chat",
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "stream": False,
-                    "options": {
-                        "num_predict": self.max_tokens,
-                        "temperature": self.temperature
-                    }
-                }
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["message"]["content"]
-
 
 # Global chat service instance
 _chat_service: Optional[ChatService] = None
@@ -369,4 +333,3 @@ def get_chat_service() -> ChatService:
     if _chat_service is None:
         _chat_service = ChatService()
     return _chat_service
-

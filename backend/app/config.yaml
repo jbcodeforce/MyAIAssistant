@@ -11,10 +11,6 @@ app_version: "0.1.0"
 # Database settings (PostgreSQL)
 database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
-# Knowledge base / Vector store settings
-chroma_persist_directory: "./data/chroma"
-chroma_collection_name: "knowledge_base"
-
 # CORS settings (list of allowed origins)
 cors_origins:
   - "http://localhost:5173"

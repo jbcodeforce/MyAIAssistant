@@ -32,16 +32,19 @@
               </svg>
             </div>
             <h3>Query Your Knowledge Base</h3>
-            <p>Ask questions about your indexed documents. The AI will search through your knowledge base and provide answers based on the content.</p>
+            <p>Ask questions about your indexed documents or to your other agents for help. The AI will search through your knowledge base and agents and provide answers based on the content.</p>
             <div class="suggested-prompts">
-              <button @click="sendSuggested('What topics are covered in my knowledge base?')">
+              <button @click="sendSuggested('What topics are covered in my knowledge base?', 'knowledge_search')">
                 What topics are covered?
               </button>
-              <button @click="sendSuggested('Summarize the main points from my documents')">
+              <button @click="sendSuggested('Summarize the main points from my documents', 'knowledge_search')">
                 Summarize main points
               </button>
-              <button @click="sendSuggested('What are the key concepts I should know?')">
+              <button @click="sendSuggested('What are the key concepts I should know?', 'knowledge_search')">
                 Key concepts
+              </button>
+              <button @click="sendSuggested('Help me with a deep research project for the following subject: ', 'research')">
+                Research
               </button>
             </div>
           </div>
@@ -156,6 +159,7 @@ const emit = defineEmits(['close'])
 
 const messages = ref([])
 const inputMessage = ref('')
+const contextField = ref('')
 const isLoading = ref(false)
 const error = ref(null)
 const messagesContainer = ref(null)
@@ -175,6 +179,7 @@ watch(() => props.show, (newVal) => {
   if (!newVal) {
     messages.value = []
     inputMessage.value = ''
+    contextField.value = ''
     error.value = null
   }
 })
@@ -210,14 +215,16 @@ function formatMessage(content) {
 async function sendMessage() {
   const message = inputMessage.value.trim()
   if (!message || isLoading.value) return
-
+  const context = contextField.value.trim() || ''
   // Add user message
   messages.value.push({
     role: 'user',
-    content: message
+    content: message,
+    context: context
   })
   
   inputMessage.value = ''
+  contextField.value = ''
   scrollToBottom()
   
   isLoading.value = true
@@ -251,8 +258,9 @@ async function sendMessage() {
   }
 }
 
-function sendSuggested(prompt) {
+function sendSuggested(prompt, context) {
   inputMessage.value = prompt
+  contextField.value = context
   sendMessage()
 }
 </script>

@@ -209,37 +209,3 @@ class TaskPlan(Base):
 
     def __repr__(self) -> str:
         return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
-
-
-class Settings(Base):
-    __tablename__ = "settings"
-
-    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    
-    # LLM Configuration
-    llm_provider: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    llm_name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    llm_api_endpoint: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
-    api_key: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
-    default_temperature: Mapped[Optional[float]] = mapped_column(Float, nullable=True, default=0.7)
-    
-    # RAG Configuration
-    chunk_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=1000)
-    overlap: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=200)
-    min_chunk_size: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, default=100)
-    
-    # Timestamps
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        nullable=False,
-        server_default=func.now(),
-        onupdate=func.now()
-    )
-
-    def __repr__(self) -> str:
-        return f"Settings(id={self.id!r}, llm_name={self.llm_name!r})"

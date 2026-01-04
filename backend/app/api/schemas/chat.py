@@ -1,8 +1,19 @@
 """Schemas for chat functionality."""
 
-from typing import Optional
+from typing import Optional, Literal
 
 from pydantic import BaseModel, Field
+
+
+# Valid query intents for routing
+QueryIntentType = Literal[
+    "knowledge_search",
+    "task_planning", 
+    "task_status",
+    "general_chat",
+    "code_help",
+    "unclear"
+]
 
 
 class ChatMessageInput(BaseModel):
@@ -19,18 +30,13 @@ class ChatRequest(BaseModel):
         description="Previous messages in the conversation"
     )
     use_rag: bool = Field(default=True, description="Whether to use RAG for context")
+    context: Optional[dict] = Field(None, description="Additional context may be needed for routing to agent")
     rag_query: Optional[str] = Field(None, description="Custom query for RAG search")
-
-
-class RagChatRequest(BaseModel):
-    """Request to chat using the RAG knowledge base."""
-    message: str = Field(..., min_length=1, max_length=4000, description="User's message")
-    conversation_history: list[ChatMessageInput] = Field(
-        default=[],
-        description="Previous messages in the conversation"
-    )
     n_results: int = Field(default=5, ge=1, le=10, description="Number of RAG results to use")
-
+    force_intent: Optional[QueryIntentType] = Field(
+        None,
+        description="Override automatic classification with specific intent"
+    )
 
 class ContextItem(BaseModel):
     """A piece of context retrieved from the knowledge base."""
@@ -47,15 +53,3 @@ class ChatResponse(BaseModel):
         default=[],
         description="Knowledge base context used for the response"
     )
-    model: str = Field(..., description="LLM model used")
-    provider: str = Field(..., description="LLM provider used")
-
-
-class ChatConfigResponse(BaseModel):
-    """Current chat configuration."""
-    provider: str
-    model: str
-    max_tokens: int
-    temperature: float
-    rag_enabled: bool
-

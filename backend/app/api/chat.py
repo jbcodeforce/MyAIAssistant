@@ -10,10 +10,15 @@ from app.core.config import get_settings
 from app.api.schemas.chat import (
     ChatRequest,
     ChatResponse,
-    ContextItem,
-    ChatConfigResponse,
-    RagChatRequest,
+    ContextItem
 )
+from agent_core.agents.query_classifier import QueryIntent
+from agent_core.agents.agent_router import AgentRouter, RoutedResponse, WorkflowState, get_agent_router
+from agent_core.agents.base_agent import BaseAgent
+from agent_core.agents.rag_agent import RAGAgent
+from agent_core.agents.task_agent import TaskAgent
+from agent_core.agents.general_agent import GeneralAgent
+from agent_core.agents.code_agent import CodeAgent
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -29,7 +34,7 @@ async def chat_about_todo(
     todo_id: int,
     request: ChatRequest,
     db: AsyncSession = Depends(get_db),
-    chat: ChatService = Depends(get_chat)
+    chat_service: ChatService = Depends(get_chat)
 ):
     """
     Chat with an AI assistant about a specific todo task.
@@ -50,7 +55,7 @@ async def chat_about_todo(
     
     try:
         # Call the chat service
-        response = await chat.chat_with_todo(
+        response = await chat_service.chat_with_todo(
             todo_title=todo.title,
             todo_description=todo.description,
             user_message=request.message,
@@ -69,9 +74,7 @@ async def chat_about_todo(
                     snippet=ctx["snippet"]
                 )
                 for ctx in response.context_used
-            ],
-            model=response.model,
-            provider=response.provider
+            ]
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -85,30 +88,52 @@ async def chat_about_todo(
         )
 
 
-@router.post("/rag", response_model=ChatResponse)
-async def chat_with_rag(
-    request: RagChatRequest,
-    chat: ChatService = Depends(get_chat)
+@router.post("/generic", response_model=ChatResponse)
+async def generic_chat(
+    request: ChatRequest,
+    chat_service: ChatService = Depends(get_chat)
 ):
     """
-    Chat using the RAG knowledge base for context.
+    Chat using the knowledge base for context.
     
-    This endpoint allows querying the knowledge base without 
+    This endpoint allows querying the general knowledge base without 
     being tied to a specific todo task. Useful for general 
-    questions about indexed documents.
+    questions about indexed documents and using a query routing system.
+    This endpoint classifies the user's query to determine intent,
+    then routes to the appropriate specialized agent:
+    
+    - **knowledge_search**: RAG-based knowledge base search
+    - **task_planning**: Task breakdown and planning assistance
+    - **task_status**: Task status queries
+    - **code_help**: Programming and technical assistance
+    - **general_chat**: General conversation
+    - **research**: Deep research assistance
+    
+    The response includes classification metadata showing which
+    agent handled the request and the confidence of classification.
     """
     # Convert conversation history
     history = [
         ChatMessage(role=msg.role, content=msg.content)
         for msg in request.conversation_history
     ]
-    
+    force_intent = None
+    if request.force_intent:
+        try:
+            force_intent = QueryIntent(request.force_intent)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid intent: {request.force_intent}"
+            )
     try:
-        response = await chat.chat_with_rag(
+        response = await chat_service.chat_with_routing(
             user_message=request.message,
             conversation_history=history,
-            n_results=request.n_results
+            context=request.context,
+            force_intent=force_intent
         )
+        
         
         return ChatResponse(
             message=response.message,
@@ -120,9 +145,7 @@ async def chat_with_rag(
                     snippet=ctx["snippet"]
                 )
                 for ctx in response.context_used
-            ],
-            model=response.model,
-            provider=response.provider
+            ]
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -133,24 +156,6 @@ async def chat_with_rag(
             status_code=500,
             detail=f"Failed to get response from LLM: {str(e)}"
         )
-
-
-@router.get("/config", response_model=ChatConfigResponse)
-async def get_chat_config():
-    """
-    Get the current chat configuration.
-    
-    Returns information about the LLM provider and settings.
-    """
-    settings = get_settings()
-    return ChatConfigResponse(
-        provider=settings.llm_provider,
-        model=settings.llm_model,
-        max_tokens=settings.llm_max_tokens,
-        temperature=settings.llm_temperature,
-        rag_enabled=True
-    )
-
 
 @router.get("/health")
 async def chat_health_check(chat: ChatService = Depends(get_chat)):

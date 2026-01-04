@@ -176,15 +176,11 @@ export const chatApi = {
    * @param {number} nResults - Number of RAG results to use (1-10)
    */
   ragChat(message, conversationHistory = [], nResults = 5) {
-    return api.post('/chat/rag', {
+    return api.post('/chat/generic', {
       message,
       conversation_history: conversationHistory,
       n_results: nResults
     })
-  },
-
-  getConfig() {
-    return api.get('/chat/config')
   },
 
   healthCheck() {
@@ -223,30 +219,6 @@ export const metricsApi = {
    */
   getDashboard(period = 'daily', days = 30) {
     return api.get('/metrics/dashboard', { params: { period, days } })
-  }
-}
-
-export const settingsApi = {
-  /**
-   * Get application settings (without sensitive api_key)
-   */
-  get() {
-    return api.get('/settings/')
-  },
-
-  /**
-   * Get full application settings (including api_key)
-   */
-  getFull() {
-    return api.get('/settings/full')
-  },
-
-  /**
-   * Update application settings
-   * @param {Object} settings - Settings to update (partial update supported)
-   */
-  update(settings) {
-    return api.put('/settings/', settings)
   }
 }
 

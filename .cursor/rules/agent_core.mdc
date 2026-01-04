@@ -1,0 +1,411 @@
+---
+alwaysApply: false
+description: Agent Core library - LLM client, agent framework, query classification, and RAG services
+globs:
+  - agent_core/**
+---
+
+# Agent Core
+
+A library for building agentic AI applications with unified LLM integration. Provides both synchronous and asynchronous APIs, an agent framework, query classification, agent routing, and RAG services.
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Python | Python | >=3.12 |
+| HTTP Client | httpx | >=0.27.0 |
+| Validation | Pydantic | >=2.0.0 |
+| Vector Store | ChromaDB | >=0.5.0 |
+| Embeddings | sentence-transformers | >=3.0.0 |
+| HTML Parsing | beautifulsoup4 | >=4.12.0 |
+| Package Manager | uv | - |
+| Testing | pytest + pytest-asyncio | >=8.0.0 |
+
+## Project Structure
+
+```
+agent_core/
+├── agent_core/
+│   ├── __init__.py          # Public exports
+│   ├── client.py            # LLMClient - unified LLM interface
+│   ├── config.py            # LLMConfig dataclass
+│   ├── types.py             # Message, LLMResponse, LLMError
+│   ├── agents/
+│   │   ├── __init__.py      # Agent framework exports
+│   │   ├── base_agent.py    # BaseAgent ABC, AgentResponse
+│   │   ├── query_classifier.py  # QueryClassifier, QueryIntent
+│   │   ├── agent_router.py  # AgentRouter, RoutedResponse
+│   │   ├── rag_agent.py     # RAG-based agent
+│   │   ├── code_agent.py    # Code assistance agent
+│   │   ├── task_agent.py    # Task planning agent
+│   │   └── general_agent.py # General chat agent
+│   ├── providers/
+│   │   ├── base.py          # LLMProvider ABC
+│   │   ├── openai.py        # OpenAI provider
+│   │   ├── anthropic.py     # Anthropic provider
+│   │   └── ollama.py        # Ollama provider
+│   └── services/
+│       └── rag/
+│           ├── service.py       # RAGService, SearchResult
+│           ├── document_loader.py
+│           └── text_splitter.py
+├── tests/
+│   └── ...
+└── pyproject.toml
+```
+
+## Core Types
+
+### LLMConfig
+
+```python
+from agent_core import LLMConfig
+
+config = LLMConfig(
+    provider="openai",      # "openai", "anthropic", "ollama"
+    model="gpt-4",          # Model name
+    api_key="...",          # API key (not needed for Ollama)
+    base_url=None,          # Custom base URL (optional)
+    max_tokens=2048,        # Max response tokens
+    temperature=0.7,        # Sampling temperature
+    timeout=60.0,           # Request timeout in seconds
+    response_format=None,   # Optional: {"type": "json_object"}
+)
+```
+
+### Message and LLMResponse
+
+```python
+from agent_core import Message, LLMResponse
+
+# Create messages
+messages = [
+    Message(role="system", content="You are a helpful assistant."),
+    Message(role="user", content="Hello!")
+]
+
+# Response properties
+response: LLMResponse
+response.content       # Response text
+response.model         # Model used
+response.provider      # Provider used
+response.usage         # Token usage dict
+response.total_tokens  # Convenience property
+```
+
+## LLM Client
+
+### Async API (for FastAPI/async applications)
+
+```python
+from agent_core import LLMClient, LLMConfig, Message
+
+config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+client = LLMClient(config)
+
+messages = [Message(role="user", content="Hello!")]
+response = await client.chat_async(messages)
+print(response.content)
+```
+
+### Sync API (for CLI/scripts)
+
+```python
+from agent_core import LLMClient, LLMConfig, Message
+
+config = LLMConfig(provider="ollama", model="llama2")
+client = LLMClient(config)
+
+response = client.chat(messages)
+print(response.content)
+```
+
+### Simple Completion API
+
+```python
+# Async
+response = await client.complete_async(
+    prompt="Explain quantum computing",
+    system_prompt="You are a physics teacher."
+)
+
+# Sync
+response = client.complete(prompt, system_prompt)
+```
+
+## Agent Framework
+
+### BaseAgent Abstract Class
+
+All agents inherit from `BaseAgent` and must implement:
+- `execute(query, conversation_history, context)` - async execution
+- `build_system_prompt(context)` - build the system prompt
+
+```python
+from agent_core import BaseAgent, AgentResponse, LLMConfig
+
+class MyAgent(BaseAgent):
+    agent_type = "my_agent"
+    
+    async def execute(self, query, conversation_history=None, context=None):
+        system_prompt = self.build_system_prompt(context)
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": query}
+        ]
+        response = await self._call_llm(messages)
+        return AgentResponse(
+            message=response,
+            model=self.model,
+            provider=self.provider,
+            agent_type=self.agent_type
+        )
+    
+    def build_system_prompt(self, context=None):
+        return "You are a specialized assistant."
+
+# Initialize with config
+agent = MyAgent(llm_config=config)
+
+# Or with individual parameters
+agent = MyAgent(provider="openai", model="gpt-4", api_key="...")
+
+# Or with pre-built client (shared across agents)
+agent = MyAgent(llm_client=client)
+```
+
+### AgentResponse
+
+```python
+from agent_core.agents import AgentResponse
+
+@dataclass
+class AgentResponse:
+    message: str                      # Response text
+    context_used: list[dict] = []     # RAG context (if any)
+    model: str = ""                   # Model used
+    provider: str = ""                # Provider used
+    agent_type: str = ""              # Agent that handled request
+    metadata: dict = {}               # Additional metadata
+```
+
+## Query Classification
+
+Classify user intent before routing to specialized agents:
+
+```python
+from agent_core import QueryClassifier, QueryIntent, LLMConfig
+
+config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+classifier = QueryClassifier(llm_config=config)
+
+result = await classifier.classify("How do I implement OAuth?")
+print(result.intent)      # QueryIntent.CODE_HELP
+print(result.confidence)  # 0.95
+print(result.entities)    # {"topic": "OAuth", "keywords": ["auth"]}
+```
+
+### QueryIntent Enum
+
+```python
+from agent_core.agents import QueryIntent
+
+QueryIntent.KNOWLEDGE_SEARCH  # Information retrieval from knowledge base
+QueryIntent.TASK_PLANNING     # Task breakdown and planning
+QueryIntent.TASK_STATUS       # Status of existing tasks
+QueryIntent.CODE_HELP         # Programming assistance
+QueryIntent.GENERAL_CHAT      # General conversation
+QueryIntent.UNCLEAR           # Ambiguous queries needing clarification
+```
+
+## Agent Router
+
+Route queries to specialized agents based on intent:
+
+```python
+from agent_core.agents import AgentRouter, QueryClassifier, QueryIntent
+
+# Create specialized agents
+rag_agent = RAGAgent(llm_config=config)
+code_agent = CodeAgent(llm_config=config)
+general_agent = GeneralAgent(llm_config=config)
+
+# Create router
+router = AgentRouter(
+    classifier=QueryClassifier(llm_config=config),
+    agents={
+        "rag": rag_agent,
+        "code": code_agent,
+        "general": general_agent,
+    },
+    intent_mapping={
+        QueryIntent.KNOWLEDGE_SEARCH: "rag",
+        QueryIntent.CODE_HELP: "code",
+        QueryIntent.GENERAL_CHAT: "general",
+    }
+)
+
+# Route queries
+response = await router.route("How do I implement OAuth?")
+print(response.message)      # Response from code_agent
+print(response.intent)       # QueryIntent.CODE_HELP
+print(response.agent_type)   # "code"
+```
+
+### RoutedResponse
+
+```python
+from agent_core.agents import RoutedResponse
+
+@dataclass
+class RoutedResponse:
+    message: str
+    intent: QueryIntent
+    agent_type: str
+    context_used: list[dict]
+    confidence: float
+    model: str
+    provider: str
+```
+
+### Singleton Router
+
+```python
+from agent_core.agents import get_agent_router
+
+# Get configured router (uses settings from environment/config)
+router = get_agent_router()
+response = await router.route(query)
+```
+
+## RAG Service
+
+### Initialization
+
+```python
+from agent_core.services.rag.service import RAGService, get_rag_service
+
+# Singleton access (recommended)
+rag = get_rag_service()
+
+# Or manual initialization
+rag = RAGService(
+    persist_directory="./data/chroma",
+    collection_name="knowledge_base",
+    chunk_size=1000,
+    chunk_overlap=200,
+    embedding_model="all-MiniLM-L6-v2"
+)
+```
+
+### Indexing Documents
+
+```python
+result = await rag.index_knowledge(
+    knowledge_id=123,
+    title="OAuth Guide",
+    uri="/path/to/document.md",
+    document_type="markdown",
+    category="security",
+    tags="auth,oauth,security"
+)
+print(result.success)
+print(result.chunks_indexed)
+```
+
+### Searching
+
+```python
+results = await rag.search(
+    query="How to implement OAuth?",
+    n_results=5,
+    category=None  # Optional filter
+)
+
+for result in results:
+    print(result.content)
+    print(result.score)
+    print(result.knowledge_id)
+```
+
+### SearchResult
+
+```python
+from agent_core.services.rag.service import SearchResult
+
+@dataclass
+class SearchResult:
+    content: str
+    knowledge_id: int
+    title: str
+    uri: str
+    score: float
+    chunk_index: int
+```
+
+## Provider Implementation
+
+Custom providers implement the `LLMProvider` protocol:
+
+```python
+from agent_core.providers.base import LLMProvider
+from agent_core import Message, LLMConfig, LLMResponse
+
+class CustomProvider(LLMProvider):
+    async def chat_async(
+        self,
+        messages: list[Message],
+        config: LLMConfig
+    ) -> LLMResponse:
+        # Implement async chat
+        ...
+    
+    def chat_sync(
+        self,
+        messages: list[Message],
+        config: LLMConfig
+    ) -> LLMResponse:
+        # Implement sync chat
+        ...
+
+# Register the provider
+from agent_core import LLMClient
+LLMClient.register_provider("custom", CustomProvider)
+```
+
+## Environment Variables
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHROMA_PERSIST_DIRECTORY` | `./data/chroma` | ChromaDB storage path |
+| `CHROMA_COLLECTION_NAME` | `knowledge_base` | Vector collection name |
+| `CHUNK_SIZE` | `1000` | Text chunk size |
+| `OVERLAP` | `200` | Chunk overlap |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence transformer model |
+
+## Development Commands
+
+```bash
+# Install as editable (from MyAIAssistant root)
+uv pip install -e agent_core/
+
+# Run tests
+cd agent_core && uv run pytest
+
+# Run specific test
+uv run pytest tests/test_query_classifier.py -v
+```
+
+## Best Practices
+
+1. **Use dataclasses** for data structures (Message, LLMConfig, etc.)
+2. **Provide both sync and async APIs** for flexibility
+3. **Use type hints everywhere** with `Optional[type]` for nullable
+4. **Implement ABC properly** - mark abstract methods with `@abstractmethod`
+5. **Handle errors with LLMError** - include provider and status code
+6. **Use lazy initialization** for expensive resources (providers, clients)
+7. **Prefer composition** - pass in dependencies via constructor
+8. **Export public API from __init__.py** - hide implementation details
+9. **Write comprehensive tests** - test both sync and async paths
+10. **Document with docstrings** - include examples in class docstrings

@@ -5,7 +5,7 @@
 
 MyAIAssistant helps users organize tasks, reference subject-matter knowledge, and leverage AI for semantic search, note summarization, task extraction and recommandation. The tool links knowledge artifacts to tasks to provide better context when addressing work.
 
-Based on Stephen Covey's "7 Habits of Highly Effective People," the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
+Based on [Stephen Covey's "7 Habits of Highly Effective People"](https://jbcodeforce.github.io/leadership/7_habits/) the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
 
 ![](./images/aia_dashboard.png)
 
@@ -14,6 +14,20 @@ With a drag-and-drop user interface it is easy to continuously re-prioritize tas
 [Access the webApp local once started](http://localhost:80).
 
 It also helps to manage organizations for which a user works with, and the related projects for one organisation. The term organisation was selected instead of client or customer, as the tool can be used by students or non-profit organizations.
+
+## Why I built this?
+
+There are ton of to do apps, why sort of new one? The main drivers for creating this app:
+
+* How I can augment myself and my day-to-day outcomes?
+* Address what are the things I can do more, related ot what I value? I think the answer is learning, but how to organize time for it, and how to really track, learning activities? 
+* I used paper or digital notes based Eisenhower matrix to track my tasks, but I think with AI can enhance the plannification, the decomposition and the semantic search of my current knowledge.
+* Address how to maximize my time on desired activities and minimize time on overhead?
+* While tracking task with app, it is easy to build weekly report, an essential tool for management. 
+* NotebookLM, Glean, RAG, GraphRAG... are excellent tools to start managing knowledge and query it, but they are not related to my work directly. I think it may be possible to fill this gap.
+* The tool should also helps to address the efficient use of AI, by helping the step of clear thinking (getting a clear statement of the problem), clear writing (by formalizing in simple sentences the problem, to explain what you want to do), to build prompts for more efficient AI.
+* Apply agentic architecture for a simple day-to-day application, as a learning experience.
+
 
 ## Core Features
 

@@ -3,21 +3,20 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db import crud
-from app.rag.service import get_rag_service, RAGService
-from app.api.schemas.knowledge import KnowledgeUpdate
-from app.api.schemas.rag import (
+from app.db.crud.knowledge import create_knowledge, get_knowledge, get_knowledges, update_knowledge, delete_knowledge, get_knowledge_by_uri
+from agent_core.services.rag.service import get_rag_service, RAGService
+from app.api.schemas import (
     IndexKnowledgeResponse,
     IndexAllResponse,
-    SearchRequest,
-    SearchResultItem,
     SearchResponse,
     RAGStatsResponse,
+     SearchRequest, SearchResultItem
 )
+from app.api.schemas.knowledge import KnowledgeUpdate
 
 
 router = APIRouter(prefix="/rag", tags=["rag"])
@@ -41,7 +40,7 @@ async def index_knowledge_item(
     and stores them in ChromaDB for semantic search.
     """
     # Get the knowledge item
-    knowledge = await crud.get_knowledge(db, knowledge_id)
+    knowledge = await get_knowledge(db, knowledge_id)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge item not found")
     
@@ -58,7 +57,7 @@ async def index_knowledge_item(
     # Update the knowledge item with indexing results
     if result.success:
         now = datetime.now(timezone.utc)
-        await crud.update_knowledge(
+        await update_knowledge(
             db,
             knowledge_id,
             KnowledgeUpdate(
@@ -69,7 +68,7 @@ async def index_knowledge_item(
             )
         )
     else:
-        await crud.update_knowledge(
+        await update_knowledge(
             db,
             knowledge_id,
             KnowledgeUpdate(status="error")
@@ -96,7 +95,7 @@ async def index_all_knowledge(
     This is useful for initial setup or reindexing after changes.
     """
     # Get all knowledge items
-    items, total = await crud.get_knowledges(db, limit=1000, status=status)
+    items, total = await get_knowledges(db, limit=1000, status=status)
     
     results = []
     successful = 0
@@ -125,7 +124,7 @@ async def index_all_knowledge(
         if result.success:
             successful += 1
             now = datetime.now(timezone.utc)
-            await crud.update_knowledge(
+            await update_knowledge(
                 db,
                 item.id,
                 KnowledgeUpdate(
@@ -137,7 +136,7 @@ async def index_all_knowledge(
             )
         else:
             failed += 1
-            await crud.update_knowledge(
+            await update_knowledge(
                 db,
                 item.id,
                 KnowledgeUpdate(status="error")
@@ -163,7 +162,7 @@ async def remove_knowledge_index(
     This removes all chunks associated with the knowledge item.
     """
     # Verify the knowledge item exists
-    knowledge = await crud.get_knowledge(db, knowledge_id)
+    knowledge = await get_knowledge(db, knowledge_id)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge item not found")
     

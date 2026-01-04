@@ -80,8 +80,6 @@ class TestYamlConfigOverrides:
                 
                 # Other settings should retain defaults from app/config.yaml
                 assert settings.app_name == "MyAIAssistant Backend"
-                assert settings.llm_provider == "ollama"
-                assert settings.chroma_collection_name == "knowledge_base"
         finally:
             os.unlink(tmp_file_path)
 
@@ -233,7 +231,6 @@ class TestSettingsDefaults:
             assert settings.app_name == "MyAIAssistant Backend"
             assert settings.app_version == "0.1.0"
             assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
-            assert settings.chroma_persist_directory == "./data/chroma"
             assert settings.llm_provider == "ollama"
             assert settings.llm_max_tokens == 2048
             assert settings.llm_temperature == 0.1
@@ -323,9 +320,8 @@ class TestSingletonPattern:
         assert "config_file" in info
         assert "database_url" in info
         assert "resolved_database_path" in info
-        assert "chroma_persist_directory" in info
         assert "resolved_chroma_path" in info
-        assert "chroma_collection_name" in info
+
         
         # Resolved chroma path should be absolute
         # For PostgreSQL, resolved_database_path is the connection URL

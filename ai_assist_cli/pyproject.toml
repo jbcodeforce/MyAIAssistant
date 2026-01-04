@@ -1,0 +1,26 @@
+[project]
+name = "ai-assist-cli"
+version = "0.1.0"
+description = "CLI tool to manage AI Assistant workspaces"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.15.0",
+    "rich>=13.0.0",
+    "pyyaml>=6.0.0",
+    "agent-core",
+]
+
+[project.scripts]
+ai_assist = "ai_assist_cli.cli:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["ai_assist_cli"]
+
+[tool.uv.sources]
+agent-core = { path = "../agent_core", editable = true }
+

@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sess
 from app.main import app
 from app.db.database import get_db
 from app.db.models import Base
-from app.rag.service import RAGService, get_rag_service
+from agent_core.services.rag.service import RAGService, get_rag_service
 from app.api.rag import get_rag
 
 

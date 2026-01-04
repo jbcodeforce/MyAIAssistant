@@ -117,10 +117,6 @@ class Settings(BaseSettings):
     # Database settings
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 
-    # Knowledge base settings
-    chroma_persist_directory: str = "./data/chroma"
-    chroma_collection_name: str = "knowledge_base"
-
     # CORS settings
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
@@ -191,7 +187,6 @@ def get_settings() -> Settings:
         logger.info("Initializing settings singleton...")
         _settings = Settings()
         logger.info(f"Settings initialized - database: {_settings.database_url}")
-        logger.info(f"Settings initialized - chroma: {_settings.chroma_persist_directory}")
     return _settings
 
 
@@ -244,15 +239,12 @@ def get_config_info() -> dict[str, Any]:
     Get information about the current configuration for debugging.
     
     Returns:
-        Dict with config file path, database path, and vector store path.
+        Dict with config file path and database path.
     """
     settings = get_settings()
     
     # For PostgreSQL, just return the URL (no path resolution needed)
     resolved_db_path = settings.database_url
-    
-    # Resolve chroma directory
-    resolved_chroma_path = str(Path(settings.chroma_persist_directory).resolve())
     
     # Resolve log file path if specified
     resolved_log_path = None
@@ -263,9 +255,6 @@ def get_config_info() -> dict[str, Any]:
         "config_file": _loaded_config_file,
         "database_url": settings.database_url,
         "resolved_database_path": resolved_db_path,
-        "chroma_persist_directory": settings.chroma_persist_directory,
-        "resolved_chroma_path": resolved_chroma_path,
-        "chroma_collection_name": settings.chroma_collection_name,
         "log_level": settings.log_level,
         "log_file": settings.log_file,
         "resolved_log_path": resolved_log_path,

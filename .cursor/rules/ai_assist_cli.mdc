@@ -1,0 +1,342 @@
+---
+alwaysApply: false
+description: AI Assist CLI - Typer-based command-line tool for workspace and agent management
+globs:
+  - ai_assist_cli/**
+---
+
+# AI Assist CLI
+
+A command-line tool built with Typer for managing AI Assistant workspaces, global resources, and agent configurations.
+
+## Technology Stack
+
+| Component | Technology | Version |
+|-----------|------------|---------|
+| Python | Python | >=3.11 |
+| CLI Framework | Typer | >=0.15.0 |
+| Rich Output | Rich | >=13.0.0 |
+| Config Format | PyYAML | >=6.0.0 |
+| LLM/RAG | agent-core | local package |
+| Package Manager | uv | - |
+
+## Project Structure
+
+```
+ai_assist_cli/
+├── ai_assist_cli/
+│   ├── __init__.py
+│   ├── cli.py              # Main entry point, Typer app
+│   ├── commands/           # Command implementations
+│   │   ├── __init__.py
+│   │   ├── init.py         # ai_assist init
+│   │   ├── config.py       # ai_assist config *
+│   │   ├── workspace.py    # ai_assist workspace *
+│   │   └── global_cmd.py   # ai_assist global *
+│   └── services/           # Business logic
+│       ├── __init__.py
+│       └── workspace.py    # WorkspaceManager class
+├── pyproject.toml
+└── README.md
+```
+
+## Command Structure
+
+```
+ai_assist
+├── init [path]              # Initialize workspace
+├── config                   # Configuration management
+│   ├── show                 # Show all config
+│   ├── get <key>            # Get specific value
+│   ├── set <key> <value>    # Set value
+│   └── edit                 # Open in editor
+├── workspace                # Workspace management
+│   ├── status               # Show workspace status
+│   ├── list                 # List all workspaces
+│   └── clean                # Clean history/cache
+└── global                   # Global resources
+    ├── status               # Show global home status
+    ├── config               # Show global config
+    ├── prompts              # List global prompts
+    ├── agents               # List global agents
+    ├── tools                # List global tools
+    └── tree                 # Show directory tree
+```
+
+## Core Patterns
+
+### Typer App Structure
+
+Main CLI entry point in `cli.py`:
+
+```python
+import typer
+from rich.console import Console
+
+from ai_assist_cli.commands import init, config, workspace, global_cmd
+
+app = typer.Typer(
+    name="ai_assist",
+    help="CLI tool to manage AI Assistant workspaces.",
+    no_args_is_help=True,
+)
+
+console = Console()
+
+# Register subcommand groups
+app.add_typer(workspace.app, name="workspace", help="Workspace management commands")
+app.add_typer(config.app, name="config", help="Configuration management commands")
+app.add_typer(global_cmd.app, name="global", help="Global resources management")
+
+# Register top-level commands
+app.command(name="init")(init.init_command)
+```
+
+### Command Module Pattern
+
+Each command module creates its own Typer app:
+
+```python
+"""Workspace management commands."""
+
+from pathlib import Path
+from typing import Optional
+
+import typer
+from rich.console import Console
+from rich.table import Table
+
+from ai_assist_cli.services.workspace import WorkspaceManager
+
+app = typer.Typer(help="Workspace management commands.")
+console = Console()
+
+
+@app.command("status")
+def status(
+    path: Optional[Path] = typer.Argument(
+        None,
+        help="Path to workspace. Defaults to current directory.",
+    ),
+):
+    """Show workspace status and configuration summary."""
+    workspace_path = (path or Path.cwd()).resolve()
+    manager = WorkspaceManager(workspace_path)
+    
+    if not manager.is_initialized():
+        console.print(f"[red]No workspace found at {workspace_path}[/red]")
+        raise typer.Exit(1)
+    
+    # ... render output with Rich
+```
+
+### Service Layer Pattern
+
+Business logic in `services/` directory:
+
+```python
+class WorkspaceManager:
+    """Manages AI Assistant workspace structure and configuration."""
+    
+    GLOBAL_HOME = Path.home() / ".ai_assist"
+    CONFIG_FILE = "config.yaml"
+    
+    def __init__(self, path: Path):
+        self.path = path.resolve()
+    
+    def is_initialized(self) -> bool:
+        """Check if workspace is initialized."""
+        return (self.path / self.CONFIG_FILE).exists()
+    
+    def load_config(self) -> dict[str, Any]:
+        """Load workspace configuration."""
+        config_file = self.path / self.CONFIG_FILE
+        with open(config_file) as f:
+            return yaml.safe_load(f) or {}
+```
+
+### Rich Output Formatting
+
+Use Rich for formatted terminal output:
+
+```python
+from rich.console import Console
+from rich.table import Table
+from rich.panel import Panel
+
+console = Console()
+
+# Tables
+table = Table(title="Configuration")
+table.add_column("Setting", style="cyan")
+table.add_column("Value", style="green")
+table.add_row("Name", config.get("name", "N/A"))
+console.print(table)
+
+# Colored text
+console.print(f"[bold blue]Status[/bold blue]")
+console.print(f"[red]Error: Not found[/red]")
+console.print(f"[green]Success![/green]")
+console.print(f"[dim]Path: {path}[/dim]")
+
+# Panels
+console.print(Panel("Content", title="Title"))
+```
+
+### Argument and Option Patterns
+
+```python
+@app.command("example")
+def example_command(
+    # Positional argument with default
+    path: Optional[Path] = typer.Argument(
+        None,
+        help="Path to workspace. Defaults to current directory.",
+    ),
+    # Required positional
+    name: str = typer.Argument(..., help="Name is required."),
+    # Optional flag
+    confirm: bool = typer.Option(
+        False,
+        "--yes", "-y",
+        help="Skip confirmation prompt.",
+    ),
+    # Option with default
+    count: int = typer.Option(
+        10,
+        "--count", "-n",
+        help="Number of items.",
+    ),
+):
+    """Command docstring becomes help text."""
+    ...
+```
+
+### Confirmation Prompts
+
+```python
+if not confirm:
+    confirm = typer.confirm("This will delete data. Continue?")
+    if not confirm:
+        console.print("[yellow]Cancelled.[/yellow]")
+        raise typer.Abort()
+```
+
+### Exit Codes
+
+```python
+# Error exit
+console.print(f"[red]Error message[/red]")
+raise typer.Exit(1)
+
+# User abort
+raise typer.Abort()
+
+# Success (implicit exit 0)
+return
+```
+
+## Directory Conventions
+
+### Global Home (`~/.ai_assist`)
+
+Cross-workspace resources:
+
+```
+~/.ai_assist/
+├── config.yaml          # Global defaults
+├── workspaces.json      # Registry of known workspaces
+├── prompts/             # Shared prompt templates
+├── agents/              # Agent definitions (YAML)
+├── tools/               # Tool definitions
+├── models/              # Model configurations
+└── cache/               # Shared cache
+```
+
+### Workspace Directory
+
+Per-workspace structure:
+
+```
+workspace/
+├── config.yaml          # Workspace configuration
+├── data/
+│   ├── chroma/          # Vector database
+│   └── db/              # SQLite database
+├── prompts/             # Local prompt templates
+├── tools/               # Local tool definitions
+├── history/             # Chat history
+├── summaries/           # Conversation summaries
+└── notes/               # Documents for RAG
+```
+
+## Configuration Files
+
+### Workspace config.yaml
+
+```yaml
+name: my-workspace
+version: "1.0"
+
+# Database
+database_path: data/db/assistant.db
+database_url: postgresql+asyncpg://postgres:postgres@my-workspace:5432/biz_assistant
+
+# Vector store
+chroma_persist_directory: data/chroma
+chroma_collection_name: knowledge-base
+
+# LLM settings
+llm_provider: ollama
+llm_model: gpt-oss:20b
+llm_api_key: null
+llm_base_url: http://localhost:11434
+llm_max_tokens: 2048
+llm_temperature: 0.1
+
+# RAG settings
+embedding_model: all-MiniLM-L6-v2
+chunk_size: 1000
+chunk_overlap: 200
+```
+
+### Agent Definition (YAML)
+
+```yaml
+name: coder
+description: Software development assistant
+system_prompt: coding_assistant.md
+tools:
+  - file_reader
+  - code_executor
+temperature: 0.3
+max_tokens: 4096
+```
+
+## Development Commands
+
+```bash
+# Install as editable
+cd ai_assist_cli
+uv pip install -e .
+
+# Run CLI
+uv run ai_assist --help
+
+# Development with uv
+uv sync
+uv run ai_assist workspace status
+```
+
+## Best Practices
+
+1. **Separate commands from services** - commands handle CLI, services handle logic
+2. **Use Rich for all output** - consistent formatting with colors and tables
+3. **Provide sensible defaults** - default to current directory for paths
+4. **Always validate inputs** - check workspace exists before operations
+5. **Use type hints** - Typer uses them for argument parsing
+6. **Document with docstrings** - becomes command help text
+7. **Handle errors gracefully** - print colored error and exit with code 1
+8. **Support --yes flags** - allow non-interactive usage
+9. **Use Path objects** - pathlib for all file operations
+10. **Keep commands thin** - delegate to service classes

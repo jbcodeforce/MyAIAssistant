@@ -4,3 +4,4 @@ workspaces/
 index_customer_notes.sh
 index_km_notes.sh
 data/pg/
+**/.venv

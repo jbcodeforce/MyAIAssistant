@@ -82,8 +82,8 @@
         <span class="nav-label">Metrics</span>
       </router-link>
 
-      <!-- Documentation -->
-      <router-link to="/documentation" class="nav-item" active-class="active">
+      <!-- Documentation (external) -->
+      <a href="https://jbcodeforce.github.io/MyAIAssistant" target="_blank" rel="noopener noreferrer" class="nav-item">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
           <polyline points="14 2 14 8 20 8"/>
@@ -92,7 +92,12 @@
           <line x1="10" x2="8" y1="9" y2="9"/>
         </svg>
         <span class="nav-label">Docs</span>
-      </router-link>
+        <svg class="external-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+          <polyline points="15 3 21 3 21 9"/>
+          <line x1="10" x2="21" y1="14" y2="3"/>
+        </svg>
+      </a>
     </nav>
 
   </aside>
@@ -304,6 +309,12 @@ const isTasksActive = computed(() => {
 .nav-label {
   white-space: nowrap;
   overflow: hidden;
+}
+
+.external-icon {
+  margin-left: auto;
+  opacity: 0.5;
+  flex-shrink: 0;
 }
 
 .sidebar.collapsed .nav-label,
