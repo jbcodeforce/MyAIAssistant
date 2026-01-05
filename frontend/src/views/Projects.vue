@@ -96,13 +96,30 @@
             {{ getOrganizationName(project.organization_id) }}
           </p>
 
-          <p class="project-description" v-if="project.description">
-            {{ truncate(project.description, 100) }}
-          </p>
+          <div class="project-sections">
+            <div 
+              v-if="project.description" 
+              class="section-chip"
+              @click="openSectionViewer(project, 'description')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Description
+            </div>
 
-          <div class="project-tasks" v-if="project.tasks">
-            <h4>Tasks</h4>
-            <div class="tasks-preview" v-html="renderTasks(project.tasks)"></div>
+            <div 
+              v-if="project.tasks" 
+              class="section-chip"
+              @click="openSectionViewer(project, 'tasks')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 11l3 3L22 4"/>
+                <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+              </svg>
+              Tasks
+            </div>
           </div>
 
           <div class="project-meta">
@@ -120,7 +137,7 @@
                 <path d="M9 11l3 3L22 4"/>
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
               </svg>
-              View Tasks
+              View Todos
             </router-link>
           </div>
         </div>
@@ -133,8 +150,24 @@
       </div>
     </div>
 
+    <!-- Section Viewer Modal -->
+    <Modal 
+      :show="showSectionViewer" 
+      :title="sectionViewerTitle" 
+      size="fullscreen" 
+      @close="closeSectionViewer"
+    >
+      <div class="section-viewer-content">
+        <div class="markdown-preview view-mode" v-html="renderedSectionContent"></div>
+      </div>
+      <template #footer>
+        <button type="button" class="btn-secondary" @click="closeSectionViewer">Close</button>
+        <button type="button" class="btn-primary" @click="editFromViewer">Edit</button>
+      </template>
+    </Modal>
+
     <!-- Create/Edit Modal -->
-    <Modal :show="showModal" :title="isEditing ? 'Edit Project' : 'New Project'" @close="closeModal">
+    <Modal :show="showModal" :title="isEditing ? 'Edit Project' : 'New Project'" @close="closeModal" size="fullscreen">
       <form @submit.prevent="handleSubmit" class="project-form">
         <div class="form-group">
           <label for="name">Project Name *</label>
@@ -145,16 +178,6 @@
             required 
             placeholder="Enter project name"
           />
-        </div>
-
-        <div class="form-group">
-          <label for="description">Description</label>
-          <textarea 
-            id="description" 
-            v-model="formData.description" 
-            rows="3"
-            placeholder="Project description and goals"
-          ></textarea>
         </div>
 
         <div class="form-row">
@@ -179,15 +202,83 @@
         </div>
 
         <div class="form-group">
-          <label for="tasks">Tasks (Bullet List)</label>
-          <textarea 
-            id="tasks" 
-            v-model="formData.tasks" 
-            rows="5"
-            placeholder="- Task 1&#10;- Task 2&#10;- Task 3"
-            class="tasks-input"
-          ></textarea>
-          <span class="form-hint">Use markdown-style bullet points (- item)</span>
+          <label>Description</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: descriptionTab === 'write' }]"
+                @click="descriptionTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: descriptionTab === 'preview' }]"
+                @click="descriptionTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="descriptionTab === 'write'"
+              v-model="formData.description" 
+              class="markdown-textarea"
+              rows="8"
+              placeholder="## Project Overview
+
+Describe the project goals, scope, and key deliverables.
+
+### Objectives
+- Objective 1
+- Objective 2
+
+### Timeline
+- **Phase 1**: Discovery (2 weeks)
+- **Phase 2**: Implementation (4 weeks)"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedDescription"></div>
+          </div>
+          <span class="form-hint">Project description and goals (supports Markdown)</span>
+        </div>
+
+        <div class="form-group">
+          <label>Tasks</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: tasksTab === 'write' }]"
+                @click="tasksTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: tasksTab === 'preview' }]"
+                @click="tasksTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="tasksTab === 'write'"
+              v-model="formData.tasks" 
+              class="markdown-textarea"
+              rows="8"
+              placeholder="## Current Tasks
+
+### In Progress
+- [ ] Task 1 - assignee
+- [ ] Task 2 - assignee
+
+### Completed
+- [x] Initial setup
+- [x] Requirements gathering"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedTasks"></div>
+          </div>
+          <span class="form-hint">Project tasks and action items (supports Markdown)</span>
         </div>
       </form>
 
@@ -204,6 +295,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
+import { marked } from 'marked'
 import { projectsApi, organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
@@ -233,6 +325,15 @@ const formData = ref({
   tasks: ''
 })
 
+// Editor tabs
+const descriptionTab = ref('write')
+const tasksTab = ref('write')
+
+// Section viewer modal state
+const showSectionViewer = ref(false)
+const viewingProject = ref(null)
+const viewingSection = ref('')
+
 const activeCount = computed(() => {
   return projects.value.filter(p => p.status === 'Active').length
 })
@@ -247,6 +348,27 @@ const hasMore = computed(() => {
 
 const isFormValid = computed(() => {
   return formData.value.name && formData.value.name.trim().length > 0
+})
+
+// Rendered markdown for form fields
+const renderedDescription = computed(() => marked(formData.value.description || ''))
+const renderedTasks = computed(() => marked(formData.value.tasks || ''))
+
+// Section viewer computeds
+const sectionLabels = {
+  description: 'Description',
+  tasks: 'Tasks'
+}
+
+const sectionViewerTitle = computed(() => {
+  if (!viewingProject.value) return ''
+  return `${viewingProject.value.name} - ${sectionLabels[viewingSection.value] || ''}`
+})
+
+const renderedSectionContent = computed(() => {
+  if (!viewingProject.value || !viewingSection.value) return ''
+  const content = viewingProject.value[viewingSection.value] || ''
+  return marked(content)
 })
 
 onMounted(async () => {
@@ -330,6 +452,7 @@ function openCreateModal() {
     status: 'Draft',
     tasks: ''
   }
+  resetTabs()
   showModal.value = true
 }
 
@@ -343,13 +466,39 @@ function openEditModal(project) {
     status: project.status,
     tasks: project.tasks || ''
   }
+  resetTabs()
   showModal.value = true
+}
+
+function resetTabs() {
+  descriptionTab.value = 'write'
+  tasksTab.value = 'write'
 }
 
 function closeModal() {
   showModal.value = false
   isEditing.value = false
   editingId.value = null
+}
+
+function openSectionViewer(project, section) {
+  viewingProject.value = project
+  viewingSection.value = section
+  showSectionViewer.value = true
+}
+
+function closeSectionViewer() {
+  showSectionViewer.value = false
+  viewingProject.value = null
+  viewingSection.value = ''
+}
+
+function editFromViewer() {
+  const project = viewingProject.value
+  closeSectionViewer()
+  if (project) {
+    openEditModal(project)
+  }
 }
 
 async function handleSubmit() {
@@ -397,23 +546,6 @@ function statusClass(status) {
   return status.toLowerCase().replace(' ', '-')
 }
 
-function renderTasks(tasks) {
-  if (!tasks) return ''
-  // Convert markdown-style bullets to HTML list
-  const lines = tasks.split('\n').filter(line => line.trim())
-  const items = lines.map(line => {
-    const text = line.replace(/^[-*]\s*/, '').trim()
-    return text ? `<li>${escapeHtml(text)}</li>` : ''
-  }).filter(Boolean)
-  return items.length ? `<ul>${items.join('')}</ul>` : ''
-}
-
-function escapeHtml(text) {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
-
 function formatDate(dateString) {
   const date = new Date(dateString)
   return date.toLocaleDateString('en-US', {
@@ -421,12 +553,6 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric'
   })
-}
-
-function truncate(text, maxLength) {
-  if (!text) return ''
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
 }
 </script>
 
@@ -584,15 +710,15 @@ function truncate(text, maxLength) {
 
 .projects-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1rem;
 }
 
 .project-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  padding: 1.25rem;
+  padding: 1rem;
   transition: all 0.2s;
 }
 
@@ -603,7 +729,7 @@ function truncate(text, maxLength) {
 
 .project-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .project-card.completed {
@@ -630,14 +756,14 @@ function truncate(text, maxLength) {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .status-badge {
   display: inline-block;
-  padding: 0.25rem 0.625rem;
+  padding: 0.1875rem 0.5rem;
   border-radius: 9999px;
-  font-size: 0.6875rem;
+  font-size: 0.625rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.025em;
@@ -670,14 +796,14 @@ function truncate(text, maxLength) {
 
 .project-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.125rem;
 }
 
 .btn-icon {
-  padding: 0.375rem;
+  padding: 0.25rem;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: #9ca3af;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
@@ -685,7 +811,7 @@ function truncate(text, maxLength) {
 
 .btn-icon:hover {
   background: #f3f4f6;
-  color: #111827;
+  color: #374151;
 }
 
 :global(.dark) .btn-icon:hover {
@@ -699,8 +825,8 @@ function truncate(text, maxLength) {
 }
 
 .project-name {
-  margin: 0 0 0.5rem 0;
-  font-size: 1.125rem;
+  margin: 0 0 0.375rem 0;
+  font-size: 1rem;
   font-weight: 600;
   color: #111827;
 }
@@ -712,65 +838,62 @@ function truncate(text, maxLength) {
 .project-organization {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
+  gap: 0.25rem;
+  margin: 0 0 0.625rem 0;
+  font-size: 0.75rem;
   color: #6b7280;
 }
 
 .project-organization svg {
   color: #9ca3af;
+  width: 12px;
+  height: 12px;
 }
 
-.project-description {
-  margin: 0 0 1rem 0;
-  font-size: 0.875rem;
-  color: #6b7280;
-  line-height: 1.5;
+.project-sections {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.375rem;
+  margin-bottom: 0.75rem;
 }
 
-.project-tasks {
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: #f9fafb;
-  border-radius: 8px;
+.section-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  border-radius: 4px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-:global(.dark) .project-tasks {
-  background: #0f172a;
+.section-chip:hover {
+  background: #dbeafe;
+  color: #1e40af;
 }
 
-.project-tasks h4 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
-}
-
-.tasks-preview {
-  font-size: 0.8125rem;
-  color: #374151;
-}
-
-:global(.dark) .tasks-preview {
+:global(.dark) .section-chip {
+  background: #334155;
   color: #94a3b8;
 }
 
-.tasks-preview :deep(ul) {
-  margin: 0;
-  padding-left: 1.25rem;
+:global(.dark) .section-chip:hover {
+  background: #1e3a5f;
+  color: #60a5fa;
 }
 
-.tasks-preview :deep(li) {
-  margin-bottom: 0.25rem;
+.section-chip svg {
+  opacity: 0.7;
 }
 
 .project-meta {
   display: flex;
-  gap: 1rem;
-  padding-top: 0.75rem;
+  gap: 0.75rem;
+  padding-top: 0.625rem;
   border-top: 1px solid #f3f4f6;
 }
 
@@ -781,23 +904,28 @@ function truncate(text, maxLength) {
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  font-size: 0.6875rem;
   color: #9ca3af;
+}
+
+.meta-item svg {
+  width: 12px;
+  height: 12px;
 }
 
 .view-tasks-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
+  gap: 0.25rem;
   margin-left: auto;
-  padding: 0.375rem 0.625rem;
-  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: #2563eb;
   text-decoration: none;
   background: #eff6ff;
-  border-radius: 6px;
+  border-radius: 4px;
   transition: all 0.15s;
 }
 
@@ -814,6 +942,11 @@ function truncate(text, maxLength) {
 :global(.dark) .view-tasks-link:hover {
   background: rgba(37, 99, 235, 0.25);
   color: #93c5fd;
+}
+
+.view-tasks-link svg {
+  width: 12px;
+  height: 12px;
 }
 
 .load-more {
@@ -866,6 +999,11 @@ function truncate(text, maxLength) {
   background-color: #334155;
 }
 
+/* Section Viewer */
+.section-viewer-content {
+  min-height: 200px;
+}
+
 /* Form styles */
 .project-form {
   display: flex;
@@ -890,7 +1028,6 @@ function truncate(text, maxLength) {
 }
 
 .form-group input,
-.form-group textarea,
 .form-group select {
   padding: 0.625rem 0.75rem;
   border: 1px solid #d1d5db;
@@ -900,7 +1037,6 @@ function truncate(text, maxLength) {
 }
 
 :global(.dark) .form-group input,
-:global(.dark) .form-group textarea,
 :global(.dark) .form-group select {
   background: #1e293b;
   border-color: #334155;
@@ -908,22 +1044,10 @@ function truncate(text, maxLength) {
 }
 
 .form-group input:focus,
-.form-group textarea:focus,
 .form-group select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.form-group textarea {
-  resize: vertical;
-  min-height: 80px;
-}
-
-.tasks-input {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.875rem !important;
-  line-height: 1.6;
 }
 
 .form-row {
@@ -935,6 +1059,196 @@ function truncate(text, maxLength) {
 .form-hint {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+/* Markdown Editor */
+.markdown-editor-container {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:global(.dark) .markdown-editor-container {
+  border-color: #334155;
+}
+
+.editor-tabs {
+  display: flex;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .editor-tabs {
+  background: #0f172a;
+  border-bottom-color: #334155;
+}
+
+.tab-btn {
+  padding: 0.5rem 0.875rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+:global(.dark) .tab-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: white;
+}
+
+:global(.dark) .tab-btn.active {
+  background: #1e293b;
+  color: #60a5fa;
+}
+
+.markdown-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 150px;
+  background: white;
+}
+
+:global(.dark) .markdown-textarea {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.markdown-textarea:focus {
+  outline: none;
+}
+
+.markdown-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.markdown-preview {
+  padding: 0.75rem;
+  min-height: 150px;
+  max-height: 400px;
+  overflow-y: auto;
+  background: white;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+:global(.dark) .markdown-preview {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.markdown-preview.view-mode {
+  min-height: 200px;
+  max-height: 600px;
+}
+
+.markdown-preview :deep(h1) {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .markdown-preview :deep(h1) {
+  border-bottom-color: #334155;
+}
+
+.markdown-preview :deep(h2) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: #1e40af;
+}
+
+:global(.dark) .markdown-preview :deep(h2) {
+  color: #60a5fa;
+}
+
+.markdown-preview :deep(h3) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.375rem 0;
+}
+
+.markdown-preview :deep(p) {
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview :deep(ul),
+.markdown-preview :deep(ol) {
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.markdown-preview :deep(li) {
+  margin: 0.125rem 0;
+}
+
+.markdown-preview :deep(strong) {
+  font-weight: 600;
+}
+
+.markdown-preview :deep(code) {
+  background: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+:global(.dark) .markdown-preview :deep(code) {
+  background: #334155;
+}
+
+.markdown-preview :deep(pre) {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-preview :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.markdown-preview :deep(blockquote) {
+  border-left: 3px solid #2563eb;
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  color: #4b5563;
+  font-style: italic;
+}
+
+:global(.dark) .markdown-preview :deep(blockquote) {
+  color: #94a3b8;
+}
+
+.markdown-preview :deep(input[type="checkbox"]) {
+  margin-right: 0.375rem;
 }
 
 @media (max-width: 768px) {

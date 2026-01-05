@@ -114,8 +114,10 @@ class Settings(BaseSettings):
     app_name: str = "MyAIAssistant Backend"
     app_version: str = "0.1.0"
 
-    # Database settings
-    database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+    # Database settings (SQLite default for local, PostgreSQL for production)
+    # SQLite: sqlite+aiosqlite:///./data/app.db (relative) or sqlite+aiosqlite:////absolute/path
+    # PostgreSQL: postgresql+asyncpg://user:pass@host:5432/database
+    database_url: str = "sqlite+aiosqlite:///./data/app.db"
 
     # CORS settings
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
@@ -136,6 +138,9 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     log_file: Optional[str] = None  # None = console only, or path like "./logs/app.log"
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+    # Meeting notes storage
+    notes_root: str = "docs/meetings"  # Root folder for meeting notes
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -243,8 +248,17 @@ def get_config_info() -> dict[str, Any]:
     """
     settings = get_settings()
     
-    # For PostgreSQL, just return the URL (no path resolution needed)
+    # Resolve database path for SQLite, keep URL for PostgreSQL
     resolved_db_path = settings.database_url
+    if settings.database_url.startswith("sqlite"):
+        # Extract and resolve SQLite file path
+        if ":///" in settings.database_url:
+            path_part = settings.database_url.split(":///", 1)[1]
+            if path_part and path_part != ":memory:":
+                db_path = Path(path_part)
+                if not db_path.is_absolute():
+                    db_path = Path.cwd() / path_part
+                resolved_db_path = str(db_path.resolve())
     
     # Resolve log file path if specified
     resolved_log_path = None

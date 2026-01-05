@@ -6,10 +6,12 @@
 # Then verify your config is loaded correctly:
 #   curl http://localhost:8000/debug/config
 
-# Database settings (PostgreSQL)
-# Format: postgresql+asyncpg://user:password@host:port/database
-database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+# Database settings
+# SQLite (default for local deployments):
+database_url: "sqlite+aiosqlite:///./data/app.db"
 
+# PostgreSQL (for production or multi-user):
+# database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
 # For Docker Compose, use the service name as host:
 # database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
 

@@ -44,15 +44,19 @@
             <div class="organization-avatar">
               {{ getInitials(organization.name) }}
             </div>
+            <div class="organization-info">
+              <h3 class="organization-name">{{ organization.name }}</h3>
+              <span class="meta-date">{{ formatDate(organization.created_at) }}</span>
+            </div>
             <div class="organization-actions">
               <button class="btn-icon" @click="openEditModal(organization)" title="Edit">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                   <path d="m15 5 4 4"/>
                 </svg>
               </button>
               <button class="btn-icon danger" @click="handleDelete(organization)" title="Delete">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M3 6h18"/>
                   <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                   <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
@@ -61,75 +65,68 @@
             </div>
           </div>
 
-          <h3 class="organization-name">{{ organization.name }}</h3>
-
-          <div class="organization-details">
-            <div class="detail-section" v-if="organization.stakeholders">
-              <h4>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Stakeholders
-              </h4>
-              <p>{{ truncate(organization.stakeholders, 80) }}</p>
+          <div class="organization-sections">
+            <div 
+              v-if="organization.stakeholders" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'stakeholders')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Stakeholders
             </div>
 
-            <div class="detail-section" v-if="organization.team">
-              <h4>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                </svg>
-                Team
-              </h4>
-              <p>{{ truncate(organization.team, 80) }}</p>
+            <div 
+              v-if="organization.team" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'team')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Team
             </div>
 
-            <div class="detail-section" v-if="organization.description">
-              <h4>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
-                  <polyline points="14 2 14 8 20 8"/>
-                </svg>
-                Strategy
-              </h4>
-              <p>{{ truncate(organization.description, 120) }}</p>
+            <div 
+              v-if="organization.description" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'description')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              Strategy
             </div>
 
-            <div class="detail-section" v-if="organization.related_products">
-              <h4>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="m7.5 4.27 9 5.15"/>
-                  <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
-                  <path d="m3.3 7 8.7 5 8.7-5"/>
-                  <path d="M12 22V12"/>
-                </svg>
-                Products
-              </h4>
-              <p>{{ truncate(organization.related_products, 80) }}</p>
+            <div 
+              v-if="organization.related_products" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'related_products')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m7.5 4.27 9 5.15"/>
+                <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                <path d="m3.3 7 8.7 5 8.7-5"/>
+                <path d="M12 22V12"/>
+              </svg>
+              Products
             </div>
           </div>
 
-          <div class="organization-meta">
-            <span class="meta-item">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
-                <line x1="16" x2="16" y1="2" y2="6"/>
-                <line x1="8" x2="8" y1="2" y2="6"/>
-                <line x1="3" x2="21" y1="10" y2="10"/>
-              </svg>
-              Added {{ formatDate(organization.created_at) }}
-            </span>
+          <div class="organization-footer">
             <router-link 
               :to="{ path: '/projects', query: { organization: organization.id } }" 
               class="view-projects-link"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
               View Projects
@@ -145,8 +142,29 @@
       </div>
     </div>
 
+    <!-- Section Viewer Modal -->
+    <Modal 
+      :show="showSectionViewer" 
+      :title="sectionViewerTitle" 
+      size="fullscreen" 
+      @close="closeSectionViewer"
+    >
+      <div class="section-viewer-content">
+        <div class="markdown-preview view-mode" v-html="renderedSectionContent"></div>
+      </div>
+      <template #footer>
+        <button type="button" class="btn-secondary" @click="closeSectionViewer">Close</button>
+        <button type="button" class="btn-primary" @click="editFromViewer">Edit</button>
+      </template>
+    </Modal>
+
     <!-- Create/Edit Modal -->
-    <Modal :show="showModal" :title="isEditing ? 'Edit Organization' : 'New Organization'" @close="closeModal">
+    <Modal 
+      :show="showModal" 
+      :title="isEditing ? 'Edit Organization' : 'New Organization'" 
+      size="fullscreen" 
+      @close="closeModal"
+    >
       <form @submit.prevent="handleSubmit" class="organization-form">
         <div class="form-group">
           <label for="name">Organization Name *</label>
@@ -160,47 +178,141 @@
         </div>
 
         <div class="form-group">
-          <label for="stakeholders">Stakeholders</label>
-          <textarea 
-            id="stakeholders" 
-            v-model="formData.stakeholders" 
-            rows="2"
-            placeholder="Key contacts: John Doe (CTO), Jane Smith (PM)"
-          ></textarea>
-          <span class="form-hint">Key decision makers and contacts</span>
+          <label>Stakeholders</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: stakeholdersTab === 'write' }]"
+                @click="stakeholdersTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: stakeholdersTab === 'preview' }]"
+                @click="stakeholdersTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="stakeholdersTab === 'write'"
+              v-model="formData.stakeholders" 
+              class="markdown-textarea"
+              rows="4"
+              placeholder="## Key Contacts
+- **John Doe** - CTO, decision maker
+- **Jane Smith** - PM, technical lead"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedStakeholders"></div>
+          </div>
+          <span class="form-hint">Key decision makers and contacts (supports Markdown)</span>
         </div>
 
         <div class="form-group">
-          <label for="team">Team</label>
-          <textarea 
-            id="team" 
-            v-model="formData.team" 
-            rows="2"
-            placeholder="Internal team members working with this organization"
-          ></textarea>
-          <span class="form-hint">Your team members assigned to this organization</span>
+          <label>Team</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: teamTab === 'write' }]"
+                @click="teamTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: teamTab === 'preview' }]"
+                @click="teamTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="teamTab === 'write'"
+              v-model="formData.team" 
+              class="markdown-textarea"
+              rows="4"
+              placeholder="## Internal Team
+- **Account Manager**: Alex Johnson
+- **Technical Lead**: Sarah Chen"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedTeam"></div>
+          </div>
+          <span class="form-hint">Your team members assigned to this organization (supports Markdown)</span>
         </div>
 
         <div class="form-group">
-          <label for="description">Strategy / Notes</label>
-          <textarea 
-            id="description" 
-            v-model="formData.description" 
-            rows="4"
-            placeholder="Organization strategy, goals, and important notes"
-          ></textarea>
-          <span class="form-hint">Overall strategy and relationship notes</span>
+          <label>Strategy / Notes</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: descriptionTab === 'write' }]"
+                @click="descriptionTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: descriptionTab === 'preview' }]"
+                @click="descriptionTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="descriptionTab === 'write'"
+              v-model="formData.description" 
+              class="markdown-textarea"
+              rows="6"
+              placeholder="## Account Strategy
+
+### Goals
+- Expand platform adoption
+- Upsell enterprise features
+
+### Notes
+- Q1 budget approved
+- Decision timeline: March 2026"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedDescription"></div>
+          </div>
+          <span class="form-hint">Overall strategy and relationship notes (supports Markdown)</span>
         </div>
 
         <div class="form-group">
-          <label for="related_products">Related Products</label>
-          <textarea 
-            id="related_products" 
-            v-model="formData.related_products" 
-            rows="2"
-            placeholder="Products or services used by this organization"
-          ></textarea>
-          <span class="form-hint">Products, services, or solutions relevant to this organization</span>
+          <label>Related Products</label>
+          <div class="markdown-editor-container">
+            <div class="editor-tabs">
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: productsTab === 'write' }]"
+                @click="productsTab = 'write'"
+              >
+                Write
+              </button>
+              <button 
+                type="button" 
+                :class="['tab-btn', { active: productsTab === 'preview' }]"
+                @click="productsTab = 'preview'"
+              >
+                Preview
+              </button>
+            </div>
+            <textarea 
+              v-if="productsTab === 'write'"
+              v-model="formData.related_products" 
+              class="markdown-textarea"
+              rows="4"
+              placeholder="## Products in Use
+- **Flink SQL** - Production
+- **Kafka Streams** - Evaluation"
+            ></textarea>
+            <div v-else class="markdown-preview" v-html="renderedProducts"></div>
+          </div>
+          <span class="form-hint">Products, services, or solutions relevant to this organization (supports Markdown)</span>
         </div>
       </form>
 
@@ -216,6 +328,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
@@ -238,12 +351,48 @@ const formData = ref({
   related_products: ''
 })
 
+// Editor tabs for each section
+const stakeholdersTab = ref('write')
+const teamTab = ref('write')
+const descriptionTab = ref('write')
+const productsTab = ref('write')
+
+// Section viewer modal state
+const showSectionViewer = ref(false)
+const viewingOrganization = ref(null)
+const viewingSection = ref('')
+
 const hasMore = computed(() => {
   return organizations.value.length < totalCount.value
 })
 
 const isFormValid = computed(() => {
   return formData.value.name && formData.value.name.trim().length > 0
+})
+
+// Rendered markdown for form fields
+const renderedStakeholders = computed(() => marked(formData.value.stakeholders || ''))
+const renderedTeam = computed(() => marked(formData.value.team || ''))
+const renderedDescription = computed(() => marked(formData.value.description || ''))
+const renderedProducts = computed(() => marked(formData.value.related_products || ''))
+
+// Section viewer computeds
+const sectionLabels = {
+  stakeholders: 'Stakeholders',
+  team: 'Team',
+  description: 'Strategy / Notes',
+  related_products: 'Related Products'
+}
+
+const sectionViewerTitle = computed(() => {
+  if (!viewingOrganization.value) return ''
+  return `${viewingOrganization.value.name} - ${sectionLabels[viewingSection.value] || ''}`
+})
+
+const renderedSectionContent = computed(() => {
+  if (!viewingOrganization.value || !viewingSection.value) return ''
+  const content = viewingOrganization.value[viewingSection.value] || ''
+  return marked(content)
 })
 
 onMounted(async () => {
@@ -295,6 +444,7 @@ function openCreateModal() {
     description: '',
     related_products: ''
   }
+  resetTabs()
   showModal.value = true
 }
 
@@ -308,13 +458,41 @@ function openEditModal(organization) {
     description: organization.description || '',
     related_products: organization.related_products || ''
   }
+  resetTabs()
   showModal.value = true
+}
+
+function resetTabs() {
+  stakeholdersTab.value = 'write'
+  teamTab.value = 'write'
+  descriptionTab.value = 'write'
+  productsTab.value = 'write'
 }
 
 function closeModal() {
   showModal.value = false
   isEditing.value = false
   editingId.value = null
+}
+
+function openSectionViewer(organization, section) {
+  viewingOrganization.value = organization
+  viewingSection.value = section
+  showSectionViewer.value = true
+}
+
+function closeSectionViewer() {
+  showSectionViewer.value = false
+  viewingOrganization.value = null
+  viewingSection.value = ''
+}
+
+function editFromViewer() {
+  const org = viewingOrganization.value
+  closeSectionViewer()
+  if (org) {
+    openEditModal(org)
+  }
 }
 
 async function handleSubmit() {
@@ -359,12 +537,6 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric'
   })
-}
-
-function truncate(text, maxLength) {
-  if (!text) return ''
-  if (text.length <= maxLength) return text
-  return text.substring(0, maxLength) + '...'
 }
 </script>
 
@@ -471,15 +643,15 @@ function truncate(text, maxLength) {
 
 .organizations-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  gap: 1.25rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
 }
 
 .organization-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 10px;
   border: 1px solid #e5e7eb;
-  padding: 1.5rem;
+  padding: 1rem;
   transition: all 0.2s;
 }
 
@@ -490,40 +662,67 @@ function truncate(text, maxLength) {
 
 .organization-card:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-2px);
+  transform: translateY(-1px);
 }
 
 .organization-header {
   display: flex;
-  justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .organization-avatar {
-  width: 48px;
-  height: 48px;
-  border-radius: 12px;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
   background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.8125rem;
   letter-spacing: -0.025em;
+  flex-shrink: 0;
+}
+
+.organization-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.organization-name {
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #111827;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.dark) .organization-name {
+  color: #f1f5f9;
+}
+
+.meta-date {
+  font-size: 0.6875rem;
+  color: #9ca3af;
 }
 
 .organization-actions {
   display: flex;
-  gap: 0.25rem;
+  gap: 0.125rem;
+  flex-shrink: 0;
 }
 
 .btn-icon {
-  padding: 0.375rem;
+  padding: 0.25rem;
   border: none;
   background: transparent;
-  color: #6b7280;
+  color: #9ca3af;
   border-radius: 4px;
   cursor: pointer;
   transition: all 0.15s;
@@ -531,7 +730,7 @@ function truncate(text, maxLength) {
 
 .btn-icon:hover {
   background: #f3f4f6;
-  color: #111827;
+  color: #374151;
 }
 
 :global(.dark) .btn-icon:hover {
@@ -544,82 +743,66 @@ function truncate(text, maxLength) {
   color: #dc2626;
 }
 
-.organization-name {
-  margin: 0 0 1rem 0;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #111827;
-}
-
-:global(.dark) .organization-name {
-  color: #f1f5f9;
-}
-
-.organization-details {
+.organization-sections {
   display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-  margin-bottom: 1rem;
-}
-
-.detail-section h4 {
-  display: flex;
-  align-items: center;
+  flex-wrap: wrap;
   gap: 0.375rem;
-  margin: 0 0 0.25rem 0;
+  margin-bottom: 0.75rem;
+}
+
+.section-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  border-radius: 4px;
   font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: #6b7280;
+  font-weight: 500;
+  color: #4b5563;
+  cursor: pointer;
+  transition: all 0.15s;
 }
 
-.detail-section h4 svg {
-  color: #9ca3af;
+.section-chip:hover {
+  background: #e0e7ff;
+  color: #3730a3;
 }
 
-.detail-section p {
-  margin: 0;
-  font-size: 0.8125rem;
-  color: #374151;
-  line-height: 1.5;
-}
-
-:global(.dark) .detail-section p {
+:global(.dark) .section-chip {
+  background: #334155;
   color: #94a3b8;
 }
 
-.organization-meta {
-  display: flex;
-  gap: 1rem;
-  padding-top: 0.75rem;
+:global(.dark) .section-chip:hover {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
+.section-chip svg {
+  opacity: 0.7;
+}
+
+.organization-footer {
+  padding-top: 0.625rem;
   border-top: 1px solid #f3f4f6;
 }
 
-:global(.dark) .organization-meta {
+:global(.dark) .organization-footer {
   border-top-color: #334155;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  font-size: 0.75rem;
-  color: #9ca3af;
 }
 
 .view-projects-link {
   display: inline-flex;
   align-items: center;
-  gap: 0.375rem;
-  margin-left: auto;
-  padding: 0.375rem 0.625rem;
-  font-size: 0.75rem;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.6875rem;
   font-weight: 500;
   color: #7c3aed;
   text-decoration: none;
   background: #f5f3ff;
-  border-radius: 6px;
+  border-radius: 4px;
   transition: all 0.15s;
 }
 
@@ -688,6 +871,11 @@ function truncate(text, maxLength) {
   background-color: #334155;
 }
 
+/* Section Viewer */
+.section-viewer-content {
+  min-height: 200px;
+}
+
 /* Form styles */
 .organization-form {
   display: flex;
@@ -711,9 +899,7 @@ function truncate(text, maxLength) {
   color: #94a3b8;
 }
 
-.form-group input,
-.form-group textarea,
-.form-group select {
+.form-group input {
   padding: 0.625rem 0.75rem;
   border: 1px solid #d1d5db;
   border-radius: 6px;
@@ -721,30 +907,207 @@ function truncate(text, maxLength) {
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-:global(.dark) .form-group input,
-:global(.dark) .form-group textarea,
-:global(.dark) .form-group select {
+:global(.dark) .form-group input {
   background: #1e293b;
   border-color: #334155;
   color: #f1f5f9;
 }
 
-.form-group input:focus,
-.form-group textarea:focus,
-.form-group select:focus {
+.form-group input:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.form-group textarea {
-  resize: vertical;
-  min-height: 60px;
-}
-
 .form-hint {
   font-size: 0.75rem;
   color: #6b7280;
+}
+
+/* Markdown Editor */
+.markdown-editor-container {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:global(.dark) .markdown-editor-container {
+  border-color: #334155;
+}
+
+.editor-tabs {
+  display: flex;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .editor-tabs {
+  background: #0f172a;
+  border-bottom-color: #334155;
+}
+
+.tab-btn {
+  padding: 0.5rem 0.875rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-btn:hover {
+  color: #374151;
+  background: rgba(0, 0, 0, 0.02);
+}
+
+:global(.dark) .tab-btn:hover {
+  color: #f1f5f9;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tab-btn.active {
+  color: #2563eb;
+  border-bottom-color: #2563eb;
+  background: white;
+}
+
+:global(.dark) .tab-btn.active {
+  background: #1e293b;
+  color: #60a5fa;
+}
+
+.markdown-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: none;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 100px;
+  background: white;
+}
+
+:global(.dark) .markdown-textarea {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.markdown-textarea:focus {
+  outline: none;
+}
+
+.markdown-textarea::placeholder {
+  color: #9ca3af;
+}
+
+.markdown-preview {
+  padding: 0.75rem;
+  min-height: 100px;
+  max-height: 300px;
+  overflow-y: auto;
+  background: white;
+  line-height: 1.6;
+  font-size: 0.875rem;
+}
+
+:global(.dark) .markdown-preview {
+  background: #1e293b;
+  color: #f1f5f9;
+}
+
+.markdown-preview.view-mode {
+  min-height: 150px;
+  max-height: 500px;
+}
+
+.markdown-preview :deep(h1) {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+  padding-bottom: 0.375rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .markdown-preview :deep(h1) {
+  border-bottom-color: #334155;
+}
+
+.markdown-preview :deep(h2) {
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem 0;
+  color: #1e40af;
+}
+
+:global(.dark) .markdown-preview :deep(h2) {
+  color: #60a5fa;
+}
+
+.markdown-preview :deep(h3) {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0.75rem 0 0.375rem 0;
+}
+
+.markdown-preview :deep(p) {
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview :deep(ul),
+.markdown-preview :deep(ol) {
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+
+.markdown-preview :deep(li) {
+  margin: 0.125rem 0;
+}
+
+.markdown-preview :deep(strong) {
+  font-weight: 600;
+}
+
+.markdown-preview :deep(code) {
+  background: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8125em;
+}
+
+:global(.dark) .markdown-preview :deep(code) {
+  background: #334155;
+}
+
+.markdown-preview :deep(pre) {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 6px;
+  overflow-x: auto;
+  margin: 0.75rem 0;
+}
+
+.markdown-preview :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.markdown-preview :deep(blockquote) {
+  border-left: 3px solid #2563eb;
+  padding-left: 0.75rem;
+  margin: 0.75rem 0;
+  color: #4b5563;
+  font-style: italic;
+}
+
+:global(.dark) .markdown-preview :deep(blockquote) {
+  color: #94a3b8;
 }
 
 @media (max-width: 768px) {
@@ -767,4 +1130,3 @@ function truncate(text, maxLength) {
   }
 }
 </style>
-

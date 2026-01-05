@@ -9,6 +9,13 @@ PUSH="${3:-false}"
 
 echo "Building Docker images with tag: $TAG for platforms: $PLATFORMS"
 
+# Build agent_core wheel first
+echo "Building agent_core library..."
+cd agent_core
+uv build --wheel
+cp dist/agent_core-*.whl ../backend/
+cd ..
+
 # Ensure buildx builder exists and is ready
 if ! docker buildx inspect multiarch-builder > /dev/null 2>&1; then
     echo "Creating buildx builder for multi-arch builds..."
@@ -31,6 +38,9 @@ fi
 
 echo "Building backend image..."
 docker buildx build ${BUILD_ARGS} -t "${IMAGE_PREFIX}-backend:${TAG}" -f backend/Dockerfile backend/
+
+# Cleanup agent_core wheel from backend directory
+rm -f backend/agent_core-*.whl
 
 echo "Building frontend image..."
 mkdocs build

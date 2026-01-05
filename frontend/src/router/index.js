@@ -6,6 +6,7 @@ import Projects from '@/views/Projects.vue'
 import ProjectTodos from '@/views/ProjectTodos.vue'
 import Organizations from '@/views/Organizations.vue'
 import Knowledge from '@/views/Knowledge.vue'
+import Meetings from '@/views/Meetings.vue'
 import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
 
@@ -64,6 +65,14 @@ const routes = [
     component: Knowledge,
     meta: {
       title: 'Knowledge Base - MyAIAssistant'
+    }
+  },
+  {
+    path: '/meetings',
+    name: 'Meetings',
+    component: Meetings,
+    meta: {
+      title: 'Meeting Notes - MyAIAssistant'
     }
   },
   {

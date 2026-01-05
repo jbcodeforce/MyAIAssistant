@@ -18,6 +18,7 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 test_engine = create_async_engine(
     TEST_DATABASE_URL,
     echo=False,
+    connect_args={"check_same_thread": False},
 )
 
 test_async_session_maker = async_sessionmaker(

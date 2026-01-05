@@ -1,0 +1,1 @@
+ALTER TABLE projects ADD COLUMN organization_id INTEGER REFERENCES organizations(id);

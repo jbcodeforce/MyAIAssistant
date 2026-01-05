@@ -216,6 +216,45 @@ class TaskPlan(Base):
         return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
 
 
+class MeetingRef(Base):
+    """Meeting note reference entity.
+    
+    Stores references to meeting notes with optional links to projects and organizations.
+    The actual content is stored in the file system, referenced by file_ref.
+    """
+    __tablename__ = "meeting_refs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    meeting_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True
+    )
+    org_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True
+    )
+    file_ref: Mapped[str] = mapped_column(String(2048), nullable=False)
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project", backref="meeting_refs")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", backref="meeting_refs")
+
+    def __repr__(self) -> str:
+        return f"MeetingRef(id={self.id!r}, meeting_id={self.meeting_id!r}, file_ref={self.file_ref!r})"
+
+
 class SLPassessment(Base):
     """Strategic Life Plan Assessment entity.
     

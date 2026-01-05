@@ -4,9 +4,11 @@
 # 2. Environment variables
 # 3. .env file
 
-# Database settings (PostgreSQL)
-# In Docker Compose, use the service name 'postgres' as host
-database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
+# Database settings
+# SQLite (default for local deployments):
+database_url: "sqlite+aiosqlite:///./data/app.db"
+# PostgreSQL (for docker-compose.postgres.yml or production):
+# database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
 
 # Knowledge base / Vector store settings
 chroma_persist_directory: "/app/data/chroma"

@@ -210,6 +210,36 @@ export const slpAssessmentsApi = {
   }
 }
 
+export const meetingRefsApi = {
+  list(params = {}) {
+    return api.get('/meeting-refs/', { params })
+  },
+
+  get(id) {
+    return api.get(`/meeting-refs/${id}`)
+  },
+
+  getContent(id) {
+    return api.get(`/meeting-refs/${id}/content`)
+  },
+
+  getByMeetingId(meetingId) {
+    return api.get('/meeting-refs/search/by-meeting-id', { params: { meeting_id: meetingId } })
+  },
+
+  create(meetingRef) {
+    return api.post('/meeting-refs/', meetingRef)
+  },
+
+  update(id, meetingRef) {
+    return api.put(`/meeting-refs/${id}`, meetingRef)
+  },
+
+  delete(id) {
+    return api.delete(`/meeting-refs/${id}`)
+  }
+}
+
 export const metricsApi = {
   /**
    * Get project metrics grouped by status

@@ -29,6 +29,7 @@
                 v-for="todo in urgentImportantTodos"
                 :key="todo.id"
                 :todo="todo"
+                :projects="projects"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
                 @chat="$emit('chat', todo)"
@@ -49,6 +50,21 @@
                       <StatusIndicator :status="todo.status" />
                     </td>
                     <td class="todo-title-cell">{{ todo.title }}</td>
+                    <td class="todo-project-cell">
+                      <span 
+                        v-if="todo.project_id && getProjectName(todo.project_id)"
+                        :title="'Project: ' + getProjectName(todo.project_id)"
+                        class="project-tooltip-wrapper"
+                      >
+                        <router-link 
+                          :to="`/projects/${todo.project_id}/todos`"
+                          class="project-link"
+                          @click.stop
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        </router-link>
+                      </span>
+                    </td>
                     <td class="todo-due-cell">
                       <span v-if="todo.due_date" :class="getDueDateClass(todo.due_date)">
                         {{ formatDueDate(todo.due_date) }}
@@ -96,6 +112,7 @@
                 v-for="todo in notUrgentImportantTodos"
                 :key="todo.id"
                 :todo="todo"
+                :projects="projects"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
                 @chat="$emit('chat', todo)"
@@ -116,6 +133,21 @@
                       <StatusIndicator :status="todo.status" />
                     </td>
                     <td class="todo-title-cell">{{ todo.title }}</td>
+                    <td class="todo-project-cell">
+                      <span 
+                        v-if="todo.project_id && getProjectName(todo.project_id)"
+                        :title="'Project: ' + getProjectName(todo.project_id)"
+                        class="project-tooltip-wrapper"
+                      >
+                        <router-link 
+                          :to="`/projects/${todo.project_id}/todos`"
+                          class="project-link"
+                          @click.stop
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        </router-link>
+                      </span>
+                    </td>
                     <td class="todo-due-cell">
                       <span v-if="todo.due_date" :class="getDueDateClass(todo.due_date)">
                         {{ formatDueDate(todo.due_date) }}
@@ -163,6 +195,7 @@
                 v-for="todo in urgentNotImportantTodos"
                 :key="todo.id"
                 :todo="todo"
+                :projects="projects"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
                 @chat="$emit('chat', todo)"
@@ -183,6 +216,21 @@
                       <StatusIndicator :status="todo.status" />
                     </td>
                     <td class="todo-title-cell">{{ todo.title }}</td>
+                    <td class="todo-project-cell">
+                      <span 
+                        v-if="todo.project_id && getProjectName(todo.project_id)"
+                        :title="'Project: ' + getProjectName(todo.project_id)"
+                        class="project-tooltip-wrapper"
+                      >
+                        <router-link 
+                          :to="`/projects/${todo.project_id}/todos`"
+                          class="project-link"
+                          @click.stop
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        </router-link>
+                      </span>
+                    </td>
                     <td class="todo-due-cell">
                       <span v-if="todo.due_date" :class="getDueDateClass(todo.due_date)">
                         {{ formatDueDate(todo.due_date) }}
@@ -230,6 +278,7 @@
                 v-for="todo in notUrgentNotImportantTodos"
                 :key="todo.id"
                 :todo="todo"
+                :projects="projects"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
                 @chat="$emit('chat', todo)"
@@ -250,6 +299,21 @@
                       <StatusIndicator :status="todo.status" />
                     </td>
                     <td class="todo-title-cell">{{ todo.title }}</td>
+                    <td class="todo-project-cell">
+                      <span 
+                        v-if="todo.project_id && getProjectName(todo.project_id)"
+                        :title="'Project: ' + getProjectName(todo.project_id)"
+                        class="project-tooltip-wrapper"
+                      >
+                        <router-link 
+                          :to="`/projects/${todo.project_id}/todos`"
+                          class="project-link"
+                          @click.stop
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                        </router-link>
+                      </span>
+                    </td>
                     <td class="todo-due-cell">
                       <span v-if="todo.due_date" :class="getDueDateClass(todo.due_date)">
                         {{ formatDueDate(todo.due_date) }}
@@ -308,8 +372,18 @@ const props = defineProps({
   notUrgentNotImportantTodos: {
     type: Array,
     default: () => []
+  },
+  projects: {
+    type: Array,
+    default: () => []
   }
 })
+
+function getProjectName(projectId) {
+  if (!projectId || !props.projects.length) return null
+  const project = props.projects.find(p => p.id === projectId)
+  return project?.name || null
+}
 
 const emit = defineEmits(['update', 'edit', 'delete', 'chat', 'plan'])
 
@@ -556,6 +630,30 @@ function getDueDateClass(dateStr) {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 200px;
+}
+
+.todo-project-cell {
+  padding: 0.5rem;
+  width: 32px;
+  text-align: center;
+}
+
+.project-tooltip-wrapper {
+  display: inline-flex;
+}
+
+.project-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #059669;
+  opacity: 0.7;
+  transition: all 0.15s;
+}
+
+.project-link:hover {
+  opacity: 1;
+  color: #047857;
 }
 
 .todo-due-cell {

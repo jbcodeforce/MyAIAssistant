@@ -29,6 +29,7 @@
         :urgent-not-important-todos="todoStore.urgentNotImportant"
         :not-urgent-important-todos="todoStore.notUrgentImportant"
         :not-urgent-not-important-todos="todoStore.notUrgentNotImportant"
+        :projects="projects"
         @update="handleUpdatePriority"
         @edit="handleEdit"
         @delete="handleDelete"
@@ -47,6 +48,7 @@
             v-for="todo in unclassifiedOpenTodos"
             :key="todo.id"
             :todo="todo"
+            :projects="projects"
             @edit="handleEdit"
             @delete="handleDelete"
             @chat="handleChat"
@@ -101,6 +103,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import { useUiStore } from '@/stores/uiStore'
+import { projectsApi } from '@/services/api'
 import TodoCanvas from '@/components/todo/TodoCanvas.vue'
 import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
@@ -110,6 +113,7 @@ import TaskPlanModal from '@/components/todo/TaskPlanModal.vue'
 
 const todoStore = useTodoStore()
 const uiStore = useUiStore()
+const projects = ref([])
 
 const loading = computed(() => todoStore.loading)
 const error = computed(() => todoStore.error)
@@ -130,8 +134,8 @@ const unclassifiedOpenTodos = computed(() => {
   )
 })
 
-onMounted(() => {
-  loadTodos()
+onMounted(async () => {
+  await Promise.all([loadTodos(), loadProjects()])
 })
 
 async function loadTodos() {
@@ -142,6 +146,15 @@ async function loadTodos() {
     })
   } catch (err) {
     console.error('Failed to load todos:', err)
+  }
+}
+
+async function loadProjects() {
+  try {
+    const response = await projectsApi.list({ limit: 500 })
+    projects.value = response.data.projects
+  } catch (err) {
+    console.error('Failed to load projects:', err)
   }
 }
 

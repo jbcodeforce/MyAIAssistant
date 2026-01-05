@@ -13,6 +13,7 @@ from app.api.organizations import router as organizations_router
 from app.api.projects import router as projects_router
 from app.api.metrics import router as metrics_router
 from app.api.slp_assessments import router as slp_assessments_router
+from app.api.meeting_refs import router as meeting_refs_router
 
 
 @asynccontextmanager
@@ -52,6 +53,7 @@ def create_app() -> FastAPI:
     application.include_router(projects_router, prefix="/api")
     application.include_router(metrics_router, prefix="/api")
     application.include_router(slp_assessments_router, prefix="/api")
+    application.include_router(meeting_refs_router, prefix="/api")
 
     return application
 

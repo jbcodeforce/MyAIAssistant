@@ -8,8 +8,10 @@
 app_name: MyAIAssistant Backend
 app_version: "0.1.0"
 
-# Database settings (PostgreSQL)
-database_url: "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+# Database settings
+# SQLite (default for local): sqlite+aiosqlite:///./data/app.db
+# PostgreSQL (production): postgresql+asyncpg://user:pass@host:5432/database
+database_url: "sqlite+aiosqlite:///./data/app.db"
 
 # CORS settings (list of allowed origins)
 cors_origins:
@@ -23,3 +25,6 @@ llm_api_key: null
 llm_base_url: "http://localhost:11434"
 llm_max_tokens: 2048
 llm_temperature: 0.1
+
+# Meeting notes storage
+notes_root: "docs/meetings"

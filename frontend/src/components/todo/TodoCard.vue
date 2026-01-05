@@ -10,6 +10,17 @@
     <div class="todo-header">
       <StatusIndicator :status="todo.status" />
       <div class="todo-actions">
+        <span v-if="todo.project_id && projectName" :title="'Project: ' + projectName" class="project-tooltip-wrapper">
+          <router-link 
+            :to="`/projects/${todo.project_id}/todos`"
+            class="action-btn project-btn"
+            @click.stop
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </router-link>
+        </span>
         <button 
           class="action-btn chat-btn" 
           @click.stop="$emit('chat', todo)"
@@ -54,9 +65,7 @@
     
     <h4 class="todo-title">{{ todo.title }}</h4>
     
-    <p v-if="todo.description" class="todo-description">
-      {{ truncatedDescription }}
-    </p>
+    <div v-if="todo.description" class="todo-description" v-html="renderedDescription"></div>
     
     <div class="todo-meta">
       <span v-if="todo.category" class="todo-category">
@@ -80,12 +89,17 @@
 
 <script setup>
 import { ref, computed } from 'vue'
+import { marked } from 'marked'
 import StatusIndicator from './StatusIndicator.vue'
 
 const props = defineProps({
   todo: {
     type: Object,
     required: true
+  },
+  projects: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -93,11 +107,34 @@ const emit = defineEmits(['click', 'edit', 'delete', 'chat', 'plan', 'dragstart'
 
 const isDragging = ref(false)
 
-const truncatedDescription = computed(() => {
+const projectName = computed(() => {
+  if (!props.todo.project_id || !props.projects.length) return null
+  const project = props.projects.find(p => p.id === props.todo.project_id)
+  return project?.name || null
+})
+
+const renderedDescription = computed(() => {
   if (!props.todo.description) return ''
-  return props.todo.description.length > 100
-    ? props.todo.description.substring(0, 100) + '...'
-    : props.todo.description
+  // If content is already HTML (starts with < or contains HTML tags), use it directly
+  // Otherwise, treat as markdown
+  const content = props.todo.description
+  const isHtml = content.trim().startsWith('<') || /<[a-z][\s\S]*>/i.test(content)
+  
+  if (isHtml) {
+    // Truncate HTML content (strip tags for length check, but keep rendered)
+    const stripped = content.replace(/<[^>]*>/g, '')
+    if (stripped.length > 120) {
+      // Return truncated version with ellipsis
+      return content.substring(0, 200) + '...'
+    }
+    return content
+  } else {
+    // Parse as markdown
+    const truncated = content.length > 120 
+      ? content.substring(0, 120) + '...'
+      : content
+    return marked(truncated)
+  }
 })
 
 const formattedDueDate = computed(() => {
@@ -145,6 +182,11 @@ function onDragEnd() {
   user-select: none;
 }
 
+:global(.dark) .todo-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
 .todo-card:hover {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   transform: translateY(-2px);
@@ -174,9 +216,26 @@ function onDragEnd() {
   padding: 0.25rem;
   opacity: 0.6;
   transition: opacity 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .action-btn:hover {
+  opacity: 1;
+}
+
+.project-tooltip-wrapper {
+  display: inline-flex;
+}
+
+.action-btn.project-btn {
+  color: #059669;
+}
+
+.action-btn.project-btn:hover {
+  color: #047857;
   opacity: 1;
 }
 
@@ -205,11 +264,74 @@ function onDragEnd() {
   color: #111827;
 }
 
+:global(.dark) .todo-title {
+  color: #f1f5f9;
+}
+
 .todo-description {
   margin: 0 0 0.75rem 0;
-  font-size: 0.875rem;
+  font-size: 0.8125rem;
   color: #6b7280;
-  line-height: 1.4;
+  line-height: 1.5;
+  max-height: 4.5em;
+  overflow: hidden;
+}
+
+:global(.dark) .todo-description {
+  color: #94a3b8;
+}
+
+.todo-description :deep(p) {
+  margin: 0 0 0.25rem 0;
+}
+
+.todo-description :deep(p:last-child) {
+  margin-bottom: 0;
+}
+
+.todo-description :deep(a) {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.todo-description :deep(a:hover) {
+  text-decoration: underline;
+}
+
+.todo-description :deep(ul),
+.todo-description :deep(ol) {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.todo-description :deep(li) {
+  margin: 0.125rem 0;
+}
+
+.todo-description :deep(strong),
+.todo-description :deep(b) {
+  font-weight: 600;
+}
+
+.todo-description :deep(em),
+.todo-description :deep(i) {
+  font-style: italic;
+}
+
+.todo-description :deep(code) {
+  background: #f3f4f6;
+  padding: 0.125rem 0.25rem;
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+}
+
+:global(.dark) .todo-description :deep(code) {
+  background: #334155;
+}
+
+:global(.dark) .todo-description :deep(a) {
+  color: #60a5fa;
 }
 
 .todo-meta {
@@ -226,6 +348,11 @@ function onDragEnd() {
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 500;
+}
+
+:global(.dark) .todo-category {
+  background-color: #334155;
+  color: #94a3b8;
 }
 
 .todo-due-date {
@@ -248,6 +375,11 @@ function onDragEnd() {
 .due-later {
   background-color: #e5e7eb;
   color: #6b7280;
+}
+
+:global(.dark) .due-later {
+  background-color: #334155;
+  color: #94a3b8;
 }
 
 .todo-priority {
@@ -273,4 +405,3 @@ function onDragEnd() {
   color: #3730a3;
 }
 </style>
-

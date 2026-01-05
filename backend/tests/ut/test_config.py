@@ -25,8 +25,8 @@ class TestYamlConfigOverrides:
             reload(config_module)
             settings = config_module.Settings()
             
-            # Default from app/config.yaml
-            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+            # Default from app/config.yaml (SQLite for local deployments)
+            assert settings.database_url == "sqlite+aiosqlite:///./data/app.db"
 
     def test_yaml_config_overrides_database_url(self):
         """Test that CONFIG_FILE yaml properly overrides database_url."""
@@ -122,8 +122,8 @@ class TestYamlConfigOverrides:
             reload(config_module)
             settings = config_module.Settings()
             
-            # Should use default from app/config.yaml
-            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+            # Should use default from app/config.yaml (SQLite for local deployments)
+            assert settings.database_url == "sqlite+aiosqlite:///./data/app.db"
 
     def test_yaml_config_overrides_multiple_fields(self):
         """Test that multiple fields can be overridden via YAML."""
@@ -227,10 +227,10 @@ class TestSettingsDefaults:
             
             settings = config_module.Settings()
             
-            # Verify key defaults
+            # Verify key defaults (SQLite for local deployments)
             assert settings.app_name == "MyAIAssistant Backend"
             assert settings.app_version == "0.1.0"
-            assert settings.database_url == "postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant"
+            assert settings.database_url == "sqlite+aiosqlite:///./data/app.db"
             assert settings.llm_provider == "ollama"
             assert settings.llm_max_tokens == 2048
             assert settings.llm_temperature == 0.1
@@ -320,6 +320,6 @@ class TestSingletonPattern:
         assert "config_file" in info
         assert "database_url" in info
         assert "resolved_database_path" in info
-        # For PostgreSQL, resolved_database_path is the connection URL
-        assert "postgresql" in info["resolved_database_path"]
+        # For SQLite, resolved_database_path should be an absolute path to the db file
+        assert "data" in info["resolved_database_path"] and "app.db" in info["resolved_database_path"]
 

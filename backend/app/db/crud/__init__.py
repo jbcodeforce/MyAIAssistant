@@ -60,6 +60,17 @@ from app.db.crud.slp_assessment import (
     delete_slp_assessment,
 )
 
+from app.db.crud.meeting_ref import (
+    create_meeting_ref,
+    get_meeting_ref,
+    get_meeting_ref_by_meeting_id,
+    get_meeting_refs,
+    update_meeting_ref,
+    delete_meeting_ref,
+    get_meeting_refs_by_project,
+    get_meeting_refs_by_organization,
+)
+
 __all__ = [
     # Todo
     "create_todo",
@@ -105,5 +116,14 @@ __all__ = [
     "get_slp_assessments",
     "update_slp_assessment",
     "delete_slp_assessment",
+    # MeetingRef
+    "create_meeting_ref",
+    "get_meeting_ref",
+    "get_meeting_ref_by_meeting_id",
+    "get_meeting_refs",
+    "update_meeting_ref",
+    "delete_meeting_ref",
+    "get_meeting_refs_by_project",
+    "get_meeting_refs_by_organization",
 ]
 

@@ -440,11 +440,13 @@ function hideTooltip() {
 .bubble {
   cursor: pointer;
   transition: all 0.2s ease;
+  transform-box: fill-box;
+  transform-origin: center;
 }
 
 .bubble:hover {
   filter: url(#bubbleShadow) brightness(1.1);
-  transform: scale(1.1);
+  transform: scale(1.15);
 }
 
 .bubble-label {
