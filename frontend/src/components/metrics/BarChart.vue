@@ -16,16 +16,14 @@
           v-for="(item, index) in data"
           :key="index"
           class="bar-wrapper"
-          :title="`${item.fullDate || item.label}: ${item.value} completed`"
+          :title="`${item.fullDate || item.label}: ${item.value}`"
         >
           <div
             class="bar"
-            :style="{
-              height: getBarHeight(item.value),
-              '--delay': index * 0.03 + 's'
-            }"
+            :class="{ 'custom-color': barColor }"
+            :style="getBarStyle(item.value, index)"
           >
-            <span v-if="item.value > 0" class="bar-value">{{ item.value }}</span>
+            <span v-if="item.value > 0" class="bar-value" :style="barColor ? { color: barColor } : {}">{{ item.value }}</span>
           </div>
           <span class="bar-label">{{ item.label }}</span>
         </div>
@@ -44,6 +42,10 @@ const props = defineProps({
   maxValue: {
     type: Number,
     default: 10
+  },
+  barColor: {
+    type: String,
+    default: null
   }
 })
 
@@ -51,6 +53,17 @@ function getBarHeight(value) {
   if (props.maxValue === 0) return '0%'
   const percentage = (value / props.maxValue) * 100
   return `${Math.max(percentage, value > 0 ? 4 : 0)}%`
+}
+
+function getBarStyle(value, index) {
+  const style = {
+    height: getBarHeight(value),
+    '--delay': index * 0.03 + 's'
+  }
+  if (props.barColor) {
+    style.background = props.barColor
+  }
+  return style
 }
 </script>
 
@@ -156,12 +169,20 @@ function getBarHeight(value) {
   background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
 }
 
+.bar.custom-color:hover {
+  filter: brightness(1.15);
+}
+
 :global(.dark) .bar {
   background: linear-gradient(180deg, #818cf8 0%, #6366f1 100%);
 }
 
 :global(.dark) .bar:hover {
   background: linear-gradient(180deg, #a5b4fc 0%, #818cf8 100%);
+}
+
+:global(.dark) .bar.custom-color:hover {
+  filter: brightness(1.15);
 }
 
 .bar-value {

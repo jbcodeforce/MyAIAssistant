@@ -71,6 +71,16 @@ from app.db.crud.meeting_ref import (
     get_meeting_refs_by_organization,
 )
 
+from app.db.crud.asset import (
+    create_asset,
+    get_asset,
+    get_assets,
+    update_asset,
+    delete_asset,
+    get_assets_by_project,
+    get_assets_by_todo,
+)
+
 __all__ = [
     # Todo
     "create_todo",
@@ -125,5 +135,13 @@ __all__ = [
     "delete_meeting_ref",
     "get_meeting_refs_by_project",
     "get_meeting_refs_by_organization",
+    # Asset
+    "create_asset",
+    "get_asset",
+    "get_assets",
+    "update_asset",
+    "delete_asset",
+    "get_assets_by_project",
+    "get_assets_by_todo",
 ]
 

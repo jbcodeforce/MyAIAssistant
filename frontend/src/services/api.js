@@ -240,6 +240,28 @@ export const meetingRefsApi = {
   }
 }
 
+export const assetsApi = {
+  list(params = {}) {
+    return api.get('/assets/', { params })
+  },
+
+  get(id) {
+    return api.get(`/assets/${id}`)
+  },
+
+  create(asset) {
+    return api.post('/assets/', asset)
+  },
+
+  update(id, asset) {
+    return api.put(`/assets/${id}`, asset)
+  },
+
+  delete(id) {
+    return api.delete(`/assets/${id}`)
+  }
+}
+
 export const metricsApi = {
   /**
    * Get project metrics grouped by status
@@ -271,6 +293,33 @@ export const metricsApi = {
    */
   getDashboard(period = 'daily', days = 30) {
     return api.get('/metrics/dashboard', { params: { period, days } })
+  },
+
+  /**
+   * Get organizations created over time
+   * @param {string} period - 'daily', 'weekly', or 'monthly'
+   * @param {number} days - Number of days to look back (1-365)
+   */
+  getOrganizationsCreated(period = 'daily', days = 30) {
+    return api.get('/metrics/organizations/created', { params: { period, days } })
+  },
+
+  /**
+   * Get meetings created over time
+   * @param {string} period - 'daily', 'weekly', or 'monthly'
+   * @param {number} days - Number of days to look back (1-365)
+   */
+  getMeetingsCreated(period = 'daily', days = 30) {
+    return api.get('/metrics/meetings/created', { params: { period, days } })
+  },
+
+  /**
+   * Get task status over time (Open, Started, Completed, Cancelled)
+   * @param {string} period - 'daily', 'weekly', or 'monthly'
+   * @param {number} days - Number of days to look back (1-365)
+   */
+  getTaskStatusOverTime(period = 'daily', days = 30) {
+    return api.get('/metrics/tasks/status-over-time', { params: { period, days } })
   }
 }
 

@@ -5,9 +5,13 @@ globs:
   - agent_core/**
 ---
 
+# When to use this rule
+
+USE WHEN you work on the agent_core module.
+
 # Agent Core
 
-A library for building agentic AI applications with unified LLM integration. Provides both synchronous and asynchronous APIs, an agent framework, query classification, agent routing, and RAG services.
+A library for building agentic AI applications with unified LLM integration via HuggingFace InferenceClient. Provides both synchronous and asynchronous APIs, an agent framework, query classification, agent routing, and RAG services.
 
 ## Technology Stack
 
@@ -19,6 +23,8 @@ A library for building agentic AI applications with unified LLM integration. Pro
 | Vector Store | ChromaDB | >=0.5.0 |
 | Embeddings | sentence-transformers | >=3.0.0 |
 | HTML Parsing | beautifulsoup4 | >=4.12.0 |
+| HuggingFace | huggingface-hub | >=0.25.0 |
+| Env Loading | python-dotenv | >=1.0.0 |
 | Package Manager | uv | - |
 | Testing | pytest + pytest-asyncio | >=8.0.0 |
 
@@ -42,9 +48,7 @@ agent_core/
 │   │   └── general_agent.py # General chat agent
 │   ├── providers/
 │   │   ├── base.py          # LLMProvider ABC
-│   │   ├── openai.py        # OpenAI provider
-│   │   ├── anthropic.py     # Anthropic provider
-│   │   └── ollama.py        # Ollama provider
+│   │   └── huggingface.py   # HuggingFace Hub and local inference provider
 │   └── services/
 │       └── rag/
 │           ├── service.py       # RAGService, SearchResult
@@ -63,14 +67,14 @@ agent_core/
 from agent_core import LLMConfig
 
 config = LLMConfig(
-    provider="openai",      # "openai", "anthropic", "ollama"
-    model="gpt-4",          # Model name
-    api_key="...",          # API key (not needed for Ollama)
-    base_url=None,          # Custom base URL (optional)
-    max_tokens=2048,        # Max response tokens
-    temperature=0.7,        # Sampling temperature
-    timeout=60.0,           # Request timeout in seconds
-    response_format=None,   # Optional: {"type": "json_object"}
+    provider="huggingface",   # Only "huggingface" is supported
+    model="llama3",           # Model name (HF model ID or local model name)
+    api_key="hf_...",         # HF_TOKEN for remote models (not needed for local)
+    base_url=None,            # Base URL for local inference servers
+    max_tokens=2048,          # Max response tokens
+    temperature=0.7,          # Sampling temperature
+    timeout=60.0,             # Request timeout in seconds
+    response_format=None,     # Optional: {"type": "json_object"}
 )
 ```
 
@@ -96,12 +100,16 @@ response.total_tokens  # Convenience property
 
 ## LLM Client
 
-### Async API (for FastAPI/async applications)
+### Local Inference Server (TGI, vLLM, Ollama)
 
 ```python
 from agent_core import LLMClient, LLMConfig, Message
 
-config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+config = LLMConfig(
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
+)
 client = LLMClient(config)
 
 messages = [Message(role="user", content="Hello!")]
@@ -109,12 +117,17 @@ response = await client.chat_async(messages)
 print(response.content)
 ```
 
-### Sync API (for CLI/scripts)
+### HuggingFace Hub (Remote Models)
 
 ```python
+import os
 from agent_core import LLMClient, LLMConfig, Message
 
-config = LLMConfig(provider="ollama", model="llama2")
+config = LLMConfig(
+    provider="huggingface",
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    api_key=os.getenv("HF_TOKEN")
+)
 client = LLMClient(config)
 
 response = client.chat(messages)
@@ -166,10 +179,12 @@ class MyAgent(BaseAgent):
         return "You are a specialized assistant."
 
 # Initialize with config
+config = LLMConfig(
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
+)
 agent = MyAgent(llm_config=config)
-
-# Or with individual parameters
-agent = MyAgent(provider="openai", model="gpt-4", api_key="...")
 
 # Or with pre-built client (shared across agents)
 agent = MyAgent(llm_client=client)
@@ -197,7 +212,11 @@ Classify user intent before routing to specialized agents:
 ```python
 from agent_core import QueryClassifier, QueryIntent, LLMConfig
 
-config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+config = LLMConfig(
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
+)
 classifier = QueryClassifier(llm_config=config)
 
 result = await classifier.classify("How do I implement OAuth?")
@@ -378,11 +397,14 @@ LLMClient.register_provider("custom", CustomProvider)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
+| `HF_TOKEN` | - | HuggingFace Hub API token (for remote models) |
 | `CHROMA_PERSIST_DIRECTORY` | `./data/chroma` | ChromaDB storage path |
 | `CHROMA_COLLECTION_NAME` | `knowledge_base` | Vector collection name |
 | `CHUNK_SIZE` | `1000` | Text chunk size |
 | `OVERLAP` | `200` | Chunk overlap |
 | `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence transformer model |
+
+Environment variables are automatically loaded from `.env` file using `python-dotenv`.
 
 ## Development Commands
 

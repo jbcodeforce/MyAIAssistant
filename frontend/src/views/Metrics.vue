@@ -72,6 +72,46 @@
             <span class="card-label">Completed ({{ selectedDays }}d)</span>
           </div>
         </div>
+
+        <div class="summary-card orgs-card">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 21h18"/>
+              <path d="M9 8h1"/>
+              <path d="M9 12h1"/>
+              <path d="M9 16h1"/>
+              <path d="M14 8h1"/>
+              <path d="M14 12h1"/>
+              <path d="M14 16h1"/>
+              <rect x="5" y="3" width="14" height="18" rx="2"/>
+            </svg>
+          </div>
+          <div class="card-content">
+            <span class="card-value">{{ metricsStore.totalOrganizationsCreated }}</span>
+            <span class="card-label">Orgs ({{ selectedDays }}d)</span>
+          </div>
+        </div>
+
+        <div class="summary-card meetings-card">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 2v4"/>
+              <path d="M16 2v4"/>
+              <rect width="18" height="18" x="3" y="4" rx="2"/>
+              <path d="M3 10h18"/>
+              <path d="M8 14h.01"/>
+              <path d="M12 14h.01"/>
+              <path d="M16 14h.01"/>
+              <path d="M8 18h.01"/>
+              <path d="M12 18h.01"/>
+              <path d="M16 18h.01"/>
+            </svg>
+          </div>
+          <div class="card-content">
+            <span class="card-value">{{ metricsStore.totalMeetingsCreated }}</span>
+            <span class="card-label">Meetings ({{ selectedDays }}d)</span>
+          </div>
+        </div>
       </div>
 
       <!-- Charts Grid -->
@@ -120,14 +160,40 @@
           </div>
         </div>
 
-        <!-- Task Completion Over Time -->
+        <!-- Task Status Over Time (Multi-line) -->
         <div class="chart-card wide">
-          <h3 class="chart-title">Tasks Completed Over Time</h3>
-          <div class="bar-chart-container" v-if="metricsStore.completionDataPoints.length > 0">
-            <BarChart :data="completionChartData" :maxValue="maxCompletionValue" />
+          <h3 class="chart-title">Task Status Over Time</h3>
+          <div class="line-chart-container" v-if="metricsStore.taskStatusDataPoints.length > 0">
+            <LineChart 
+              :data="metricsStore.taskStatusDataPoints" 
+              :series="taskStatusSeries"
+              :maxValue="maxTaskStatusValue" 
+            />
           </div>
           <div v-else class="empty-chart">
-            <p>No completed tasks in this period</p>
+            <p>No tasks in this period</p>
+          </div>
+        </div>
+
+        <!-- Organizations Created Over Time -->
+        <div class="chart-card">
+          <h3 class="chart-title">Organizations Created Over Time</h3>
+          <div class="bar-chart-container" v-if="metricsStore.organizationsDataPoints.length > 0">
+            <BarChart :data="organizationsChartData" :maxValue="maxOrganizationsValue" :barColor="'#f97316'" />
+          </div>
+          <div v-else class="empty-chart">
+            <p>No organizations created in this period</p>
+          </div>
+        </div>
+
+        <!-- Meetings Created Over Time -->
+        <div class="chart-card">
+          <h3 class="chart-title">Meetings Created Over Time</h3>
+          <div class="bar-chart-container" v-if="metricsStore.meetingsDataPoints.length > 0">
+            <BarChart :data="meetingsChartData" :maxValue="maxMeetingsValue" :barColor="'#06b6d4'" />
+          </div>
+          <div v-else class="empty-chart">
+            <p>No meetings in this period</p>
           </div>
         </div>
       </div>
@@ -140,6 +206,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useMetricsStore } from '@/stores/metricsStore'
 import DonutChart from '@/components/metrics/DonutChart.vue'
 import BarChart from '@/components/metrics/BarChart.vue'
+import LineChart from '@/components/metrics/LineChart.vue'
 
 const metricsStore = useMetricsStore()
 
@@ -151,6 +218,13 @@ const error = computed(() => metricsStore.error)
 
 const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
 const taskColors = ['#6366f1', '#22c55e', '#eab308', '#ef4444']
+
+const taskStatusSeries = [
+  { key: 'open', label: 'Open', color: '#6366f1' },
+  { key: 'started', label: 'Started', color: '#f59e0b' },
+  { key: 'completed', label: 'Completed', color: '#22c55e' },
+  { key: 'cancelled', label: 'Cancelled', color: '#ef4444' }
+]
 
 const projectChartData = computed(() => {
   return metricsStore.projectsByStatus.map(item => ({
@@ -177,6 +251,40 @@ const completionChartData = computed(() => {
 const maxCompletionValue = computed(() => {
   if (metricsStore.completionDataPoints.length === 0) return 0
   return Math.max(...metricsStore.completionDataPoints.map(d => d.count), 1)
+})
+
+const maxTaskStatusValue = computed(() => {
+  if (metricsStore.taskStatusDataPoints.length === 0) return 0
+  const allValues = metricsStore.taskStatusDataPoints.flatMap(d => [
+    d.open || 0, d.started || 0, d.completed || 0, d.cancelled || 0
+  ])
+  return Math.max(...allValues, 1)
+})
+
+const organizationsChartData = computed(() => {
+  return metricsStore.organizationsDataPoints.map(item => ({
+    label: formatDateLabel(item.date),
+    value: item.count,
+    fullDate: item.date
+  }))
+})
+
+const maxOrganizationsValue = computed(() => {
+  if (metricsStore.organizationsDataPoints.length === 0) return 0
+  return Math.max(...metricsStore.organizationsDataPoints.map(d => d.count), 1)
+})
+
+const meetingsChartData = computed(() => {
+  return metricsStore.meetingsDataPoints.map(item => ({
+    label: formatDateLabel(item.date),
+    value: item.count,
+    fullDate: item.date
+  }))
+})
+
+const maxMeetingsValue = computed(() => {
+  if (metricsStore.meetingsDataPoints.length === 0) return 0
+  return Math.max(...metricsStore.meetingsDataPoints.map(d => d.count), 1)
 })
 
 function formatDateLabel(dateStr) {
@@ -386,6 +494,26 @@ onMounted(() => {
   color: #a78bfa;
 }
 
+.orgs-card .card-icon {
+  background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
+  color: #ea580c;
+}
+
+:global(.dark) .orgs-card .card-icon {
+  background: linear-gradient(135deg, #7c2d12 0%, #9a3412 100%);
+  color: #fb923c;
+}
+
+.meetings-card .card-icon {
+  background: linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%);
+  color: #0891b2;
+}
+
+:global(.dark) .meetings-card .card-icon {
+  background: linear-gradient(135deg, #164e63 0%, #155e75 100%);
+  color: #22d3ee;
+}
+
 .card-content {
   display: flex;
   flex-direction: column;
@@ -503,6 +631,11 @@ onMounted(() => {
 
 .bar-chart-container {
   height: 280px;
+  width: 100%;
+}
+
+.line-chart-container {
+  height: 320px;
   width: 100%;
 }
 

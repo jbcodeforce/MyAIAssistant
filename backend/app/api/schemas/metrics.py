@@ -55,6 +55,12 @@ class TaskMetrics(BaseModel):
     )
 
 
+class TimeSeriesDataPoint(BaseModel):
+    """Generic data point for time series data."""
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    count: int = Field(..., description="Count for this date")
+
+
 class TaskCompletionDataPoint(BaseModel):
     """Single data point for task completion over time."""
     date: str = Field(..., description="Date in YYYY-MM-DD format")
@@ -91,11 +97,84 @@ class TaskCompletionOverTime(BaseModel):
     )
 
 
+class TimeSeriesMetrics(BaseModel):
+    """Generic time series metrics response."""
+    period: str = Field(..., description="Time period: daily, weekly, monthly")
+    start_date: str = Field(..., description="Start date of the period")
+    end_date: str = Field(..., description="End date of the period")
+    data_points: list[TimeSeriesDataPoint] = Field(
+        default_factory=list, 
+        description="List of data points"
+    )
+    total: int = Field(..., description="Total count in the period")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "period": "daily",
+                    "start_date": "2025-12-01",
+                    "end_date": "2025-12-31",
+                    "data_points": [
+                        {"date": "2025-12-01", "count": 2},
+                        {"date": "2025-12-02", "count": 1}
+                    ],
+                    "total": 3
+                }
+            ]
+        }
+    )
+
+
+class StatusTimeSeriesDataPoint(BaseModel):
+    """Data point with counts for each status."""
+    date: str = Field(..., description="Date in YYYY-MM-DD format")
+    open: int = Field(0, description="Count of open items")
+    started: int = Field(0, description="Count of started items")
+    completed: int = Field(0, description="Count of completed items")
+    cancelled: int = Field(0, description="Count of cancelled items")
+
+
+class TaskStatusOverTime(BaseModel):
+    """Tasks by status over time."""
+    period: str = Field(..., description="Time period: daily, weekly, monthly")
+    start_date: str = Field(..., description="Start date of the period")
+    end_date: str = Field(..., description="End date of the period")
+    data_points: list[StatusTimeSeriesDataPoint] = Field(
+        default_factory=list,
+        description="List of data points with status counts"
+    )
+    totals: dict[str, int] = Field(
+        default_factory=dict,
+        description="Total counts per status"
+    )
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "period": "daily",
+                    "start_date": "2025-12-01",
+                    "end_date": "2025-12-31",
+                    "data_points": [
+                        {"date": "2025-12-01", "open": 3, "started": 2, "completed": 1, "cancelled": 0},
+                        {"date": "2025-12-02", "open": 2, "started": 3, "completed": 2, "cancelled": 1}
+                    ],
+                    "totals": {"open": 5, "started": 5, "completed": 3, "cancelled": 1}
+                }
+            ]
+        }
+    )
+
+
 class DashboardMetrics(BaseModel):
     """Combined dashboard metrics response."""
     projects: ProjectMetrics = Field(..., description="Project metrics")
     tasks: TaskMetrics = Field(..., description="Task metrics")
     tasks_completion: TaskCompletionOverTime = Field(..., description="Task completion over time")
+    task_status_over_time: TaskStatusOverTime = Field(..., description="Task status changes over time")
+    organizations_created: TimeSeriesMetrics = Field(..., description="Organizations created over time")
+    meetings_created: TimeSeriesMetrics = Field(..., description="Meetings created over time")
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -123,6 +202,33 @@ class DashboardMetrics(BaseModel):
                             {"date": "2025-12-01", "count": 3}
                         ],
                         "total_completed": 3
+                    },
+                    "task_status_over_time": {
+                        "period": "daily",
+                        "start_date": "2025-12-01",
+                        "end_date": "2025-12-31",
+                        "data_points": [
+                            {"date": "2025-12-01", "open": 3, "started": 2, "completed": 1, "cancelled": 0}
+                        ],
+                        "totals": {"open": 3, "started": 2, "completed": 1, "cancelled": 0}
+                    },
+                    "organizations_created": {
+                        "period": "daily",
+                        "start_date": "2025-12-01",
+                        "end_date": "2025-12-31",
+                        "data_points": [
+                            {"date": "2025-12-01", "count": 1}
+                        ],
+                        "total": 1
+                    },
+                    "meetings_created": {
+                        "period": "daily",
+                        "start_date": "2025-12-01",
+                        "end_date": "2025-12-31",
+                        "data_points": [
+                            {"date": "2025-12-01", "count": 2}
+                        ],
+                        "total": 2
                     }
                 }
             ]

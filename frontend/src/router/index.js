@@ -3,10 +3,13 @@ import Dashboard from '@/views/Dashboard.vue'
 import Unclassified from '@/views/Unclassified.vue'
 import ArchivedTodos from '@/views/ArchivedTodos.vue'
 import Projects from '@/views/Projects.vue'
+import ProjectDetail from '@/views/ProjectDetail.vue'
 import ProjectTodos from '@/views/ProjectTodos.vue'
 import Organizations from '@/views/Organizations.vue'
+import OrganizationDetail from '@/views/OrganizationDetail.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Meetings from '@/views/Meetings.vue'
+import Assets from '@/views/Assets.vue'
 import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
 
@@ -44,6 +47,14 @@ const routes = [
     }
   },
   {
+    path: '/projects/:id',
+    name: 'ProjectDetail',
+    component: ProjectDetail,
+    meta: {
+      title: 'Project - MyAIAssistant'
+    }
+  },
+  {
     path: '/projects/:id/todos',
     name: 'ProjectTodos',
     component: ProjectTodos,
@@ -60,6 +71,14 @@ const routes = [
     }
   },
   {
+    path: '/organizations/:id',
+    name: 'OrganizationDetail',
+    component: OrganizationDetail,
+    meta: {
+      title: 'Organization - MyAIAssistant'
+    }
+  },
+  {
     path: '/knowledge',
     name: 'Knowledge',
     component: Knowledge,
@@ -73,6 +92,14 @@ const routes = [
     component: Meetings,
     meta: {
       title: 'Meeting Notes - MyAIAssistant'
+    }
+  },
+  {
+    path: '/assets',
+    name: 'Assets',
+    component: Assets,
+    meta: {
+      title: 'Assets - MyAIAssistant'
     }
   },
   {

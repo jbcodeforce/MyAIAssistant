@@ -119,15 +119,16 @@ class QueryClassifier:
         else:
             # Build config from individual parameters
             # Use low temperature for consistent classification
+            # Default to huggingface with local server
             self._llm_config = LLMConfig(
-                provider=provider or "ollama",
-                model=model or "llama2",
+                provider=provider or "huggingface",
+                model=model or "llama3",
                 api_key=api_key,
-                base_url=base_url,
+                base_url=base_url or "http://localhost:8080",
                 max_tokens=500,
                 temperature=0.1,
                 timeout=30.0,
-                response_format={"type": "json_object"} if provider == "openai" else None
+                response_format=None
             )
             self._llm_client = LLMClient(self._llm_config)
         

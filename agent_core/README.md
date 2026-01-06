@@ -1,10 +1,11 @@
 # Agent Core
 
-A library for building agentic AI applications with unified LLM integration. Provides both synchronous and asynchronous APIs, agent framework components, and intelligent query routing.
+A library for building agentic AI applications with unified LLM integration via HuggingFace InferenceClient. Provides both synchronous and asynchronous APIs, agent framework components, and intelligent query routing.
 
 ## Features
 
-- Unified LLM client supporting OpenAI, Anthropic, and Ollama
+- Unified LLM client using HuggingFace InferenceClient
+- Supports both local inference servers (TGI, vLLM, Ollama) and HuggingFace Hub remote models
 - Both synchronous and asynchronous APIs
 - Agent framework with base classes for specialized agents
 - Query classification for intent detection
@@ -19,15 +20,15 @@ uv pip install -e agent_core/
 
 ## LLM Client Usage
 
-### Async API (for FastAPI/async applications)
+### Local Inference Server (TGI, vLLM, Ollama)
 
 ```python
 from agent_core import LLMClient, LLMConfig, Message
 
 config = LLMConfig(
-    provider="openai",
-    model="gpt-4",
-    api_key="your-api-key"
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
 )
 
 client = LLMClient(config)
@@ -37,22 +38,31 @@ messages = [
     Message(role="user", content="Hello!")
 ]
 
+# Async usage
 response = await client.chat_async(messages)
+print(response.content)
+
+# Sync usage
+response = client.chat(messages)
 print(response.content)
 ```
 
-### Sync API (for CLI/scripts)
+### HuggingFace Hub (Remote Models)
 
 ```python
+import os
 from agent_core import LLMClient, LLMConfig, Message
 
 config = LLMConfig(
-    provider="ollama",
-    model="llama2"
+    provider="huggingface",
+    model="meta-llama/Meta-Llama-3-8B-Instruct",
+    api_key=os.getenv("HF_TOKEN")
 )
 
 client = LLMClient(config)
-response = client.chat(messages)
+response = await client.chat_async([
+    Message(role="user", content="Hello!")
+])
 print(response.content)
 ```
 
@@ -84,11 +94,12 @@ class MyAgent(BaseAgent):
         return "You are a specialized assistant."
 
 # Create agent with config
-config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+config = LLMConfig(
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
+)
 agent = MyAgent(llm_config=config)
-
-# Or with individual parameters
-agent = MyAgent(provider="openai", model="gpt-4", api_key="...")
 ```
 
 ### Query Classification
@@ -96,7 +107,11 @@ agent = MyAgent(provider="openai", model="gpt-4", api_key="...")
 ```python
 from agent_core import QueryClassifier, LLMConfig
 
-config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+config = LLMConfig(
+    provider="huggingface",
+    model="llama3",
+    base_url="http://localhost:8080"
+)
 classifier = QueryClassifier(llm_config=config)
 
 result = await classifier.classify("How do I implement OAuth?")
@@ -143,15 +158,25 @@ print(response.agent_type)   # "code"
 from agent_core import LLMConfig
 
 config = LLMConfig(
-    provider="openai",      # "openai", "anthropic", "ollama"
-    model="gpt-4",          # Model name
-    api_key="...",          # API key (not needed for Ollama)
-    base_url=None,          # Custom base URL (optional)
-    max_tokens=2048,        # Max response tokens
-    temperature=0.7,        # Sampling temperature
-    timeout=60.0,           # Request timeout in seconds
+    provider="huggingface",   # Only "huggingface" is supported
+    model="llama3",           # Model name (HF model ID or local model name)
+    api_key="hf_...",         # HF_TOKEN for remote models (not needed for local)
+    base_url=None,            # Base URL for local inference servers
+    max_tokens=2048,          # Max response tokens
+    temperature=0.7,          # Sampling temperature
+    timeout=60.0,             # Request timeout in seconds
 )
 ```
+
+### Environment Variables
+
+Create a `.env` file in your project root:
+
+```bash
+HF_TOKEN=hf_your_token_here
+```
+
+The library automatically loads environment variables using `python-dotenv`.
 
 ## Supported Intents
 
@@ -165,12 +190,10 @@ The query classifier recognizes these intent types:
 - `UNCLEAR` - Ambiguous queries needing clarification
 
 ## Run all integration tests
+
 ```sh
 uv run pytest tests/it/ -v -m integration
 
-# Run specific classification test
-uv run pytest tests/it/test_agent_router_ollama.py::TestQueryClassifierOllama::test_classify_knowledge_search_query -v
-
-# Override the model
-OLLAMA_TEST_MODEL=qwen3-coder:30b uv run pytest tests/it/ -v -m integration
+# Run HuggingFace provider tests
+uv run pytest tests/it/test_huggingface_provider.py -v -m integration
 ```

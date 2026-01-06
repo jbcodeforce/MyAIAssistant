@@ -49,6 +49,16 @@
               <span class="meta-date">{{ formatDate(organization.created_at) }}</span>
             </div>
             <div class="organization-actions">
+              <router-link 
+                :to="`/organizations/${organization.id}`" 
+                class="btn-icon" 
+                title="View"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </router-link>
               <button class="btn-icon" @click="openEditModal(organization)" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>

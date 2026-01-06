@@ -12,9 +12,24 @@
           <h2 v-if="project">{{ project.name }}</h2>
           <h2 v-else-if="loading">Loading...</h2>
           <h2 v-else>Project Tasks</h2>
-          <p class="view-description">
-            Tasks linked to this project
-          </p>
+          <div class="header-meta">
+            <router-link 
+              v-if="organization"
+              :to="`/organizations/${organization.id}`"
+              class="organization-link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              {{ organization.name }}
+            </router-link>
+            <span class="view-description">
+              Tasks linked to this project
+            </span>
+          </div>
         </div>
       </div>
       <div class="header-actions">
@@ -125,7 +140,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { projectsApi, todosApi } from '@/services/api'
+import { projectsApi, todosApi, organizationsApi } from '@/services/api'
 import { useUiStore } from '@/stores/uiStore'
 import Modal from '@/components/common/Modal.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
@@ -135,6 +150,7 @@ const uiStore = useUiStore()
 const route = useRoute()
 
 const project = ref(null)
+const organization = ref(null)
 const todos = ref([])
 const totalCount = ref(0)
 const currentSkip = ref(0)
@@ -191,6 +207,19 @@ async function loadProjectTodos() {
     // Load project details
     const projectResponse = await projectsApi.get(projectId)
     project.value = projectResponse.data
+    
+    // Load organization if project has one
+    if (project.value.organization_id) {
+      try {
+        const orgResponse = await organizationsApi.get(project.value.organization_id)
+        organization.value = orgResponse.data
+      } catch (orgErr) {
+        console.error('Failed to load organization:', orgErr)
+        organization.value = null
+      }
+    } else {
+      organization.value = null
+    }
     
     // Load todos for the project
     const todosResponse = await projectsApi.getTodos(projectId, { skip: 0, limit })
@@ -328,6 +357,46 @@ async function handleCreate(todoData) {
 
 :global(.dark) .header-title h2 {
   color: #f1f5f9;
+}
+
+.header-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.organization-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.625rem;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.organization-link:hover {
+  background: #c7d2fe;
+  color: #312e81;
+}
+
+.organization-link svg {
+  flex-shrink: 0;
+}
+
+:global(.dark) .organization-link {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+}
+
+:global(.dark) .organization-link:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #c7d2fe;
 }
 
 .view-description {

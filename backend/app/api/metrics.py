@@ -2,17 +2,21 @@ from datetime import datetime, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
-from sqlalchemy import select, func, cast, Date
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db.models import Project, Todo
+from app.db.models import Project, Todo, Organization, MeetingRef
 from app.api.schemas.metrics import (
     StatusCount,
     ProjectMetrics,
     TaskMetrics,
     TaskCompletionDataPoint,
     TaskCompletionOverTime,
+    TimeSeriesDataPoint,
+    TimeSeriesMetrics,
+    StatusTimeSeriesDataPoint,
+    TaskStatusOverTime,
     DashboardMetrics
 )
 
@@ -58,12 +62,13 @@ async def get_tasks_completion_over_time(
     days: int = 30
 ) -> TaskCompletionOverTime:
     """Get task completion data over time."""
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days)
+    # Add 1 day buffer to end_date to handle UTC vs local timezone differences
+    end_date = datetime.now() + timedelta(days=1)
+    start_date = datetime.now() - timedelta(days=days)
     
     # Query completed tasks with completion date
     query = select(
-        cast(Todo.completed_at, Date).label("completion_date"),
+        func.date(Todo.completed_at).label("completion_date"),
         func.count(Todo.id).label("count")
     ).where(
         Todo.status == "Completed",
@@ -71,9 +76,9 @@ async def get_tasks_completion_over_time(
         Todo.completed_at >= start_date,
         Todo.completed_at <= end_date
     ).group_by(
-        cast(Todo.completed_at, Date)
+        func.date(Todo.completed_at)
     ).order_by(
-        cast(Todo.completed_at, Date)
+        func.date(Todo.completed_at)
     )
     
     result = await db.execute(query)
@@ -120,6 +125,253 @@ async def get_tasks_completion_over_time(
         end_date=end_date.strftime("%Y-%m-%d"),
         data_points=data_points,
         total_completed=total_completed
+    )
+
+
+async def get_organizations_over_time(
+    db: AsyncSession,
+    period: str = "daily",
+    days: int = 30
+) -> TimeSeriesMetrics:
+    """Get organizations created over time."""
+    # Add 1 day buffer to end_date to handle UTC vs local timezone differences
+    end_date = datetime.now() + timedelta(days=1)
+    start_date = datetime.now() - timedelta(days=days)
+    
+    query = select(
+        func.date(Organization.created_at).label("created_date"),
+        func.count(Organization.id).label("count")
+    ).where(
+        Organization.created_at >= start_date,
+        Organization.created_at <= end_date
+    ).group_by(
+        func.date(Organization.created_at)
+    ).order_by(
+        func.date(Organization.created_at)
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    data_points = []
+    total = 0
+    
+    for row in rows:
+        # Handle both date objects and strings (SQLite returns strings)
+        if row.created_date:
+            if hasattr(row.created_date, 'strftime'):
+                date_str = row.created_date.strftime("%Y-%m-%d")
+            else:
+                date_str = str(row.created_date)[:10]
+        else:
+            continue
+        data_points.append(TimeSeriesDataPoint(date=date_str, count=row.count))
+        total += row.count
+    
+    # Weekly aggregation
+    if period == "weekly":
+        weekly_data = {}
+        for dp in data_points:
+            date = datetime.strptime(dp.date, "%Y-%m-%d")
+            week_start = date - timedelta(days=date.weekday())
+            week_key = week_start.strftime("%Y-%m-%d")
+            weekly_data[week_key] = weekly_data.get(week_key, 0) + dp.count
+        
+        data_points = [
+            TimeSeriesDataPoint(date=k, count=v) 
+            for k, v in sorted(weekly_data.items())
+        ]
+    
+    # Monthly aggregation
+    elif period == "monthly":
+        monthly_data = {}
+        for dp in data_points:
+            month_key = dp.date[:7]  # YYYY-MM
+            monthly_data[month_key] = monthly_data.get(month_key, 0) + dp.count
+        
+        data_points = [
+            TimeSeriesDataPoint(date=f"{k}-01", count=v) 
+            for k, v in sorted(monthly_data.items())
+        ]
+    
+    return TimeSeriesMetrics(
+        period=period,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        data_points=data_points,
+        total=total
+    )
+
+
+async def get_meetings_over_time(
+    db: AsyncSession,
+    period: str = "daily",
+    days: int = 30
+) -> TimeSeriesMetrics:
+    """Get meetings created over time."""
+    # Add 1 day buffer to end_date to handle UTC vs local timezone differences
+    end_date = datetime.now() + timedelta(days=1)
+    start_date = datetime.now() - timedelta(days=days)
+    
+    query = select(
+        func.date(MeetingRef.created_at).label("created_date"),
+        func.count(MeetingRef.id).label("count")
+    ).where(
+        MeetingRef.created_at >= start_date,
+        MeetingRef.created_at <= end_date
+    ).group_by(
+        func.date(MeetingRef.created_at)
+    ).order_by(
+        func.date(MeetingRef.created_at)
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    data_points = []
+    total = 0
+    
+    for row in rows:
+        # Handle both date objects and strings (SQLite returns strings)
+        if row.created_date:
+            if hasattr(row.created_date, 'strftime'):
+                date_str = row.created_date.strftime("%Y-%m-%d")
+            else:
+                date_str = str(row.created_date)[:10]
+        else:
+            continue
+        data_points.append(TimeSeriesDataPoint(date=date_str, count=row.count))
+        total += row.count
+    
+    # Weekly aggregation
+    if period == "weekly":
+        weekly_data = {}
+        for dp in data_points:
+            date = datetime.strptime(dp.date, "%Y-%m-%d")
+            week_start = date - timedelta(days=date.weekday())
+            week_key = week_start.strftime("%Y-%m-%d")
+            weekly_data[week_key] = weekly_data.get(week_key, 0) + dp.count
+        
+        data_points = [
+            TimeSeriesDataPoint(date=k, count=v) 
+            for k, v in sorted(weekly_data.items())
+        ]
+    
+    # Monthly aggregation
+    elif period == "monthly":
+        monthly_data = {}
+        for dp in data_points:
+            month_key = dp.date[:7]  # YYYY-MM
+            monthly_data[month_key] = monthly_data.get(month_key, 0) + dp.count
+        
+        data_points = [
+            TimeSeriesDataPoint(date=f"{k}-01", count=v) 
+            for k, v in sorted(monthly_data.items())
+        ]
+    
+    return TimeSeriesMetrics(
+        period=period,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        data_points=data_points,
+        total=total
+    )
+
+
+async def get_task_status_over_time(
+    db: AsyncSession,
+    period: str = "daily",
+    days: int = 30
+) -> TaskStatusOverTime:
+    """Get task counts by status over time based on created_at date."""
+    # Add 1 day buffer to end_date to handle UTC vs local timezone differences
+    end_date = datetime.now() + timedelta(days=1)
+    start_date = datetime.now() - timedelta(days=days)
+    
+    # Query tasks grouped by date and status
+    query = select(
+        func.date(Todo.created_at).label("created_date"),
+        Todo.status,
+        func.count(Todo.id).label("count")
+    ).where(
+        Todo.created_at >= start_date,
+        Todo.created_at <= end_date
+    ).group_by(
+        func.date(Todo.created_at),
+        Todo.status
+    ).order_by(
+        func.date(Todo.created_at)
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    # Build a dict of date -> status -> count
+    date_status_counts: dict[str, dict[str, int]] = {}
+    totals = {"open": 0, "started": 0, "completed": 0, "cancelled": 0}
+    
+    for row in rows:
+        # Handle both date objects and strings (SQLite returns strings)
+        if row.created_date:
+            if hasattr(row.created_date, 'strftime'):
+                date_str = row.created_date.strftime("%Y-%m-%d")
+            else:
+                # SQLite returns date as string, extract YYYY-MM-DD
+                date_str = str(row.created_date)[:10]
+        else:
+            continue
+            
+        if date_str not in date_status_counts:
+            date_status_counts[date_str] = {"open": 0, "started": 0, "completed": 0, "cancelled": 0}
+        
+        # Map status to lowercase key
+        status_key = row.status.lower() if row.status else "open"
+        if status_key in date_status_counts[date_str]:
+            date_status_counts[date_str][status_key] = row.count
+            totals[status_key] = totals.get(status_key, 0) + row.count
+    
+    # Weekly aggregation
+    if period == "weekly":
+        weekly_data: dict[str, dict[str, int]] = {}
+        for date_str, counts in date_status_counts.items():
+            date = datetime.strptime(date_str, "%Y-%m-%d")
+            week_start = date - timedelta(days=date.weekday())
+            week_key = week_start.strftime("%Y-%m-%d")
+            if week_key not in weekly_data:
+                weekly_data[week_key] = {"open": 0, "started": 0, "completed": 0, "cancelled": 0}
+            for status, count in counts.items():
+                weekly_data[week_key][status] += count
+        date_status_counts = weekly_data
+    
+    # Monthly aggregation
+    elif period == "monthly":
+        monthly_data: dict[str, dict[str, int]] = {}
+        for date_str, counts in date_status_counts.items():
+            month_key = f"{date_str[:7]}-01"
+            if month_key not in monthly_data:
+                monthly_data[month_key] = {"open": 0, "started": 0, "completed": 0, "cancelled": 0}
+            for status, count in counts.items():
+                monthly_data[month_key][status] += count
+        date_status_counts = monthly_data
+    
+    # Convert to data points
+    data_points = [
+        StatusTimeSeriesDataPoint(
+            date=date_str,
+            open=counts.get("open", 0),
+            started=counts.get("started", 0),
+            completed=counts.get("completed", 0),
+            cancelled=counts.get("cancelled", 0)
+        )
+        for date_str, counts in sorted(date_status_counts.items())
+    ]
+    
+    return TaskStatusOverTime(
+        period=period,
+        start_date=start_date.strftime("%Y-%m-%d"),
+        end_date=end_date.strftime("%Y-%m-%d"),
+        data_points=data_points,
+        totals=totals
     )
 
 
@@ -171,6 +423,84 @@ async def get_task_completion_metrics(
     return await get_tasks_completion_over_time(db, period, days)
 
 
+@router.get("/organizations/created", response_model=TimeSeriesMetrics)
+async def get_organizations_created_metrics(
+    period: str = Query(
+        "daily", 
+        description="Time period aggregation: daily, weekly, or monthly"
+    ),
+    days: int = Query(
+        30, 
+        ge=1, 
+        le=365, 
+        description="Number of days to look back"
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get organization creation metrics over time.
+    
+    Returns the number of organizations created per day, week, or month
+    within the specified time range.
+    """
+    if period not in ["daily", "weekly", "monthly"]:
+        period = "daily"
+    
+    return await get_organizations_over_time(db, period, days)
+
+
+@router.get("/meetings/created", response_model=TimeSeriesMetrics)
+async def get_meetings_created_metrics(
+    period: str = Query(
+        "daily", 
+        description="Time period aggregation: daily, weekly, or monthly"
+    ),
+    days: int = Query(
+        30, 
+        ge=1, 
+        le=365, 
+        description="Number of days to look back"
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get meeting creation metrics over time.
+    
+    Returns the number of meetings created per day, week, or month
+    within the specified time range.
+    """
+    if period not in ["daily", "weekly", "monthly"]:
+        period = "daily"
+    
+    return await get_meetings_over_time(db, period, days)
+
+
+@router.get("/tasks/status-over-time", response_model=TaskStatusOverTime)
+async def get_task_status_over_time_metrics(
+    period: str = Query(
+        "daily", 
+        description="Time period aggregation: daily, weekly, or monthly"
+    ),
+    days: int = Query(
+        30, 
+        ge=1, 
+        le=365, 
+        description="Number of days to look back"
+    ),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get task status metrics over time.
+    
+    Returns the number of tasks created in each status (Open, Started, 
+    Completed, Cancelled) per day, week, or month.
+    """
+    if period not in ["daily", "weekly", "monthly"]:
+        period = "daily"
+    
+    return await get_task_status_over_time(db, period, days)
+
+
 @router.get("/dashboard", response_model=DashboardMetrics)
 async def get_dashboard_metrics(
     period: str = Query(
@@ -188,8 +518,8 @@ async def get_dashboard_metrics(
     """
     Get combined dashboard metrics.
     
-    Returns project metrics, task metrics, and task completion over time
-    in a single response for efficient dashboard rendering.
+    Returns project metrics, task metrics, task completion over time,
+    organizations created, and meetings created in a single response.
     """
     if period not in ["daily", "weekly", "monthly"]:
         period = "daily"
@@ -197,10 +527,16 @@ async def get_dashboard_metrics(
     projects = await get_project_metrics(db)
     tasks = await get_task_metrics(db)
     tasks_completion = await get_tasks_completion_over_time(db, period, days)
+    task_status_over_time = await get_task_status_over_time(db, period, days)
+    organizations_created = await get_organizations_over_time(db, period, days)
+    meetings_created = await get_meetings_over_time(db, period, days)
     
     return DashboardMetrics(
         projects=projects,
         tasks=tasks,
-        tasks_completion=tasks_completion
+        tasks_completion=tasks_completion,
+        task_status_over_time=task_status_over_time,
+        organizations_created=organizations_created,
+        meetings_created=meetings_created
     )
 

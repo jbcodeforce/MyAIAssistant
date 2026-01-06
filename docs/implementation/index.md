@@ -6,28 +6,27 @@ MyAIAssistant is built with a modular architecture separating concerns across di
 ## Architecture Overview
 
 ```
-┌────────────────────────────────────────────────────────────────────────────────┐
-│                              Vue.js Frontend                                   │
-│  ┌────────────┐ ┌─────────────┐ ┌──────────────┐ ┌──────────┐ ┌─────────────┐  │
-│  │  Dashboard │ │Organizations│ │   Projects   │ │Knowledge │ │ Unclassified│  │
-│  │  (Matrix)  │ │    View     │ │     View     │ │   View   │ │    View     │  │
-│  └────────────┘ └─────────────┘ └──────────────┘ └──────────┘ └─────────────┘  │
-└────────────────────────────────────────────────────────────────────────────────┘
-                                        │
-                                        ▼
-┌────────────────────────────────────────────────────────────────────────────────┐
-│                               FastAPI Backend                                  │
-│  ┌──────────┐ ┌─────────────────┐ ┌─────────────┐ ┌────────────┐ ┌───────────┐ │
-│  │ Todo API │ │ Organizations   │ │ Projects    │ │ Knowledge  │ │  RAG API  │ │
-│  │ /api/v1/ │ │      API        │ │    API      │ │    API     │ │           │ │
-│  └──────────┘ └─────────────────┘ └─────────────┘ └────────────┘ └───────────┘ │
-└────────────────────────────────────────────────────────────────────────────────┘
-                          │                              │
-                          ▼                              ▼
-               ┌──────────────────┐           ┌──────────────────────┐
-               │     Postgresql   │           │      ChromaDB        │
-               │  (Relational DB) │           │   (Vector Store)     │
-               └──────────────────┘           └──────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    Vue.js Frontend                                       │
+│  ┌──────────┐ ┌───────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌────────────┐  │
+│  │Dashboard │ │   Orgs    │ │Projects│ │Knowledge│ │Meetings│ │ Assets │ │Unclassified│  │
+│  │ (Matrix) │ │   View    │ │  View  │ │  View   │ │  View  │ │  View  │ │   View     │  │
+│  └──────────┘ └───────────┘ └────────┘ └─────────┘ └────────┘ └────────┘ └────────────┘  │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+                                              │
+                                              ▼
+┌──────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    FastAPI Backend                                       │
+│  ┌────────┐ ┌──────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌────────────────┐ │
+│  │Todo API│ │ Orgs API │ │Projects│ │Knowledge│ │Meetings│ │ Assets │ │    RAG API     │ │
+│  └────────┘ └──────────┘ └────────┘ └─────────┘ └────────┘ └────────┘ └────────────────┘ │
+└──────────────────────────────────────────────────────────────────────────────────────────┘
+                          │                                    │
+                          ▼                                    ▼
+               ┌──────────────────┐                 ┌──────────────────────┐
+               │    PostgreSQL    │                 │       ChromaDB       │
+               │  (Relational DB) │                 │    (Vector Store)    │
+               └──────────────────┘                 └──────────────────────┘
 ```
 
 
@@ -54,6 +53,28 @@ Centralized storage for document metadata with support for various document type
 - Status tracking (active, pending, error, archived)
 
 [Learn more about Knowledge Base](knowledge.md)
+
+### Meeting Notes
+
+Manage meeting notes with organization and project associations. Content is stored in markdown files with metadata tracked in the database.
+
+- Meeting ID-based identification
+- Links to organizations and projects
+- Markdown content with live preview
+- File-based storage with database references
+
+[Learn more about Meeting Notes](meetings.md)
+
+### Assets
+
+Reusable assets developed within projects or tasks. Assets reference code repositories, documents, or other resources.
+
+- Name and description metadata
+- Reference URL to external resources
+- Links to projects and tasks
+- Searchable asset library
+
+[Learn more about Assets](assets.md)
 
 ### RAG System
 
@@ -107,9 +128,14 @@ All backend APIs follow RESTful conventions with versioned endpoints:
 
 | Module | Base Path | Description |
 | ------ | --------- | ----------- |
-| Todos | `/api/v1/todos` | Task management operations |
-| Knowledge | `/api/v1/knowledge` | Knowledge item management |
-| RAG | `/api/v1/rag` | Indexing and semantic search |
+| Todos | `/api/todos` | Task management operations |
+| Organizations | `/api/organizations` | Organization management |
+| Projects | `/api/projects` | Project management |
+| Knowledge | `/api/knowledge` | Knowledge item management |
+| Meetings | `/api/meeting-refs` | Meeting notes management |
+| Assets | `/api/assets` | Reusable asset management |
+| RAG | `/api/rag` | Indexing and semantic search |
+| Metrics | `/api/metrics` | Dashboard metrics |
 | Health | `/health` | Application health check |
 
 ## Data Flow

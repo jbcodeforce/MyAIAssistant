@@ -1,6 +1,6 @@
 # RAG System
 
-The Retrieval-Augmented Generation (RAG) system enables semantic search across the knowledge base using vector embeddings.
+The Retrieval-Augmented Generation (RAG) system enables semantic search across the knowledge base using vector embeddings. The core implementation resides in the `agent_core` library, with the backend API providing HTTP endpoints.
 
 ## Architecture
 
@@ -8,41 +8,81 @@ Classical RAG architecture supported by the Code.
 
 ![](./images/docu_mgt.drawio.png)
 
+## Module Structure
+
+The RAG service is implemented in `agent_core/services/rag/`:
+
+```
+agent_core/
+└── services/
+    └── rag/
+        ├── __init__.py           # Public exports
+        ├── service.py            # RAGService, SearchResult, IndexingResult
+        ├── document_loader.py    # DocumentLoader, LoadedDocument
+        └── text_splitter.py      # RecursiveTextSplitter, TextChunk
+```
+
 ## Components
 
 ### Document Loader
 
-Loads document content from various sources (`app/rag/document_loader.py`):
+Loads document content from various sources (`agent_core/services/rag/document_loader.py`):
 
 ```python
-class DocumentLoader:
-    async def load(uri: str, document_type: str) -> LoadedDocument:
-        # Returns content and metadata including content_hash
+from agent_core.services.rag.document_loader import DocumentLoader, LoadedDocument
+
+loader = DocumentLoader(timeout=30.0)
+documents = await loader.load(uri, document_type)
 ```
 
 Supported sources:
 
 | Type | Description | Example URI |
 | ---- | ----------- | ----------- |
-| markdown | Local markdown files | `file:///path/to/doc.md` |
-| website | Web page content | `https://example.com/page` |
+| markdown | Local or remote markdown files | `file:///path/to/doc.md` or `https://...` |
+| website | Web page content (HTML parsed to markdown) | `https://example.com/page` |
+| folder | Directory of markdown files | `/path/to/docs/` |
 
-The loader returns a `LoadedDocument` containing:
+The loader returns a list of `LoadedDocument` objects containing:
 
-- `content`: The extracted text content
-- `content_hash`: MD5 hash for change detection
-- `metadata`: Source information
+```python
+class LoadedDocument(BaseModel):
+    content: str           # Extracted text content
+    document_id: str       # Unique document identifier
+    content_hash: str      # SHA256 hash for change detection
+    source_uri: str        # Original source URI
+    title: Optional[str]   # Extracted title
+```
+
+#### Frontmatter Support
+
+Markdown files can include YAML frontmatter for metadata:
+
+```markdown
+---
+title: Configuration Guide
+document_id: config-guide-v1
+source_url: https://docs.example.com/config
+---
+
+# Configuration Guide
+
+Content here...
+```
 
 ### Text Splitter
 
-Splits documents into chunks for embedding (`app/rag/text_splitter.py`):
+Splits documents into chunks for embedding (`agent_core/services/rag/text_splitter.py`):
 
 ```python
-class RecursiveTextSplitter:
-    def __init__(
-        chunk_size: int = 1000,      # Target chunk size in characters
-        chunk_overlap: int = 200      # Overlap between chunks
-    )
+from agent_core.services.rag.text_splitter import RecursiveTextSplitter, TextChunk
+
+splitter = RecursiveTextSplitter(
+    chunk_size=1000,       # Target chunk size in characters
+    chunk_overlap=200      # Overlap between chunks
+)
+
+chunks: list[TextChunk] = splitter.split_text(content, metadata)
 ```
 
 The recursive splitter attempts to split on natural boundaries:
@@ -51,11 +91,17 @@ The recursive splitter attempts to split on natural boundaries:
 2. Lines (`\n`)
 3. Sentences (`. `)
 4. Words (` `)
+5. Characters (fallback)
 
-Each chunk includes metadata:
+Each chunk is a `TextChunk` object:
 
-- `chunk_index`: Position in the document
-- `start_index`: Character offset in original content
+```python
+class TextChunk(BaseModel):
+    content: str        # Chunk text
+    start_index: int    # Character offset in original content
+    chunk_index: int    # Position in the document
+    metadata: dict      # Inherited metadata
+```
 
 ### Embedding Model
 
@@ -68,10 +114,37 @@ Uses sentence-transformers for local embedding generation:
 
 ### Vector Store
 
-ChromaDB provides persistent vector storage (`app/rag/service.py`):
+ChromaDB provides persistent vector storage.
+
+Configuration via environment variables:
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `CHROMA_PERSIST_DIRECTORY` | `./data/chroma` | ChromaDB storage path |
+| `CHROMA_COLLECTION_NAME` | `knowledge_base` | Vector collection name |
+| `CHUNK_SIZE` | `1000` | Text chunk size |
+| `OVERLAP` | `200` | Chunk overlap |
+| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence transformer model |
+
+Features:
+
+- Cosine similarity for search (configured via `hnsw:space`)
+- Metadata filtering by category, tags, knowledge_id
+- Persistent storage across restarts
+- Automatic collection management
+
+## Code Integration
+
+### Using RAGService Directly
 
 ```python
-RAGService(
+from agent_core.services.rag.service import RAGService, get_rag_service
+
+# Singleton access (recommended for applications)
+rag = get_rag_service()
+
+# Or manual initialization with custom settings
+rag = RAGService(
     persist_directory="./data/chroma",
     collection_name="knowledge_base",
     chunk_size=1000,
@@ -80,12 +153,165 @@ RAGService(
 )
 ```
 
-Features:
+### Indexing Documents
 
-- Cosine similarity for search (configured via `hnsw:space`)
-- Metadata filtering by category, tags, knowledge_id
-- Persistent storage across restarts
-- Automatic collection management
+```python
+from agent_core.services.rag.service import get_rag_service, IndexingResult
+
+rag = get_rag_service()
+
+# Index a single document
+result: IndexingResult = await rag.index_knowledge(
+    knowledge_id=123,
+    title="OAuth Guide",
+    uri="/path/to/document.md",
+    document_type="markdown",  # or "website" or "folder"
+    category="security",
+    tags="auth,oauth,security"
+)
+
+print(f"Success: {result.success}")
+print(f"Chunks indexed: {result.chunks_indexed}")
+print(f"Content hash: {result.content_hash}")
+if result.error:
+    print(f"Error: {result.error}")
+```
+
+#### IndexingResult Model
+
+```python
+class IndexingResult(BaseModel):
+    success: bool
+    chunks_indexed: int
+    content_hash: str
+    error: Optional[str] = None
+```
+
+### Searching
+
+```python
+from agent_core.services.rag.service import get_rag_service, SearchResult
+
+rag = get_rag_service()
+
+results: list[SearchResult] = await rag.search(
+    query="How to implement OAuth?",
+    n_results=5,
+    category="security",           # Optional filter
+    knowledge_ids=[1, 3, 7]        # Optional: search within specific documents
+)
+
+for result in results:
+    print(f"Score: {result.score:.2f}")
+    print(f"Title: {result.title}")
+    print(f"Content: {result.content[:200]}...")
+```
+
+#### SearchResult Model
+
+```python
+class SearchResult(BaseModel):
+    content: str
+    knowledge_id: int
+    title: str
+    uri: str
+    score: float
+    chunk_index: int
+```
+
+### Removing from Index
+
+```python
+rag = get_rag_service()
+
+success = await rag.remove_knowledge(knowledge_id=123)
+```
+
+### Getting Collection Statistics
+
+```python
+rag = get_rag_service()
+
+stats = rag.get_collection_stats()
+# Returns: {
+#   "total_chunks": 150,
+#   "unique_knowledge_items": 12,
+#   "collection_name": "knowledge_base",
+#   "embedding_model": "all-MiniLM-L6-v2"
+# }
+```
+
+## Using RAGAgent for AI Responses
+
+The `RAGAgent` combines RAG search with LLM generation:
+
+```python
+from agent_core.agents.rag_agent import RAGAgent
+from agent_core import LLMConfig
+
+# Configure LLM
+config = LLMConfig(
+    provider="openai",
+    model="gpt-4",
+    api_key="your-api-key"
+)
+
+# Create RAG agent
+agent = RAGAgent(
+    llm_config=config,
+    n_results=5  # Number of context chunks to retrieve
+)
+
+# Execute query with RAG
+response = await agent.execute(
+    query="How do I configure database connections?",
+    conversation_history=[
+        {"role": "user", "content": "previous message"},
+        {"role": "assistant", "content": "previous response"}
+    ],
+    context={"entities": {"topic": "database", "keywords": ["config", "connection"]}}
+)
+
+print(response.message)           # LLM-generated response
+print(response.context_used)      # Retrieved documents with scores
+print(response.agent_type)        # "rag"
+```
+
+### AgentResponse Structure
+
+```python
+@dataclass
+class AgentResponse:
+    message: str                      # LLM response text
+    context_used: list[dict] = []     # RAG context with title, uri, score, snippet
+    model: str = ""                   # Model used
+    provider: str = ""                # Provider used
+    agent_type: str = ""              # "rag"
+    metadata: dict = {}               # search_query, results_count
+```
+
+## FastAPI Integration
+
+The backend exposes RAG functionality via dependency injection:
+
+```python
+from fastapi import APIRouter, Depends
+from agent_core.services.rag.service import get_rag_service, RAGService
+
+router = APIRouter()
+
+def get_rag() -> RAGService:
+    """Dependency to get the RAG service."""
+    return get_rag_service()
+
+@router.post("/search")
+async def search(
+    query: str,
+    rag: RAGService = Depends(get_rag)
+):
+    results = await rag.search(query)
+    return {"results": results}
+```
 
 ## API Endpoints
 
@@ -219,12 +445,13 @@ Each stored chunk includes metadata:
 | knowledge_id | Source knowledge item ID |
 | title | Document title |
 | uri | Source URI |
-| document_type | markdown or website |
+| document_type | markdown, folder, or website |
 | category | Document category |
 | tags | Associated tags |
 | chunk_index | Position in document |
 | start_index | Character offset |
 | indexed_at | Indexing timestamp |
+| fetched_at | Content fetch timestamp |
 
 ## Scoring
 
@@ -257,9 +484,9 @@ Indexing automatically updates the knowledge item:
 
 | Action | Status Change | Fields Updated |
 | ------ | ------------- | -------------- |
-| Index success | `pending` → `active` | `content_hash`, `last_fetched_at` |
+| Index success | `pending` → `active` | `content_hash`, `last_fetched_at`, `indexed_at` |
 | Index failure | `pending` → `error` | `status` only |
-| Re-index | Unchanged | `content_hash`, `last_fetched_at` |
+| Re-index | Unchanged | `content_hash`, `last_fetched_at`, `indexed_at` |
 
 ## Testing
 
@@ -331,7 +558,7 @@ The RAG service handles errors gracefully:
   "success": false,
   "knowledge_id": 1,
   "chunks_indexed": 0,
-  "content_hash": null,
+  "content_hash": "",
   "error": "File not found: /nonexistent/path/file.md"
 }
 ```
@@ -343,4 +570,3 @@ Common errors:
 | File not found | Invalid file path in URI | Verify the `uri` field points to an existing file |
 | No content to index | Empty document | Add content to the document |
 | ChromaDB error | Storage issue | Check disk space and permissions |
-

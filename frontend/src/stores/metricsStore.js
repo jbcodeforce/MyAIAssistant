@@ -7,6 +7,9 @@ export const useMetricsStore = defineStore('metrics', () => {
   const projectMetrics = ref(null)
   const taskMetrics = ref(null)
   const taskCompletion = ref(null)
+  const taskStatusOverTime = ref(null)
+  const organizationsCreated = ref(null)
+  const meetingsCreated = ref(null)
   const loading = ref(false)
   const error = ref(null)
 
@@ -14,6 +17,8 @@ export const useMetricsStore = defineStore('metrics', () => {
   const totalProjects = computed(() => projectMetrics.value?.total || 0)
   const totalTasks = computed(() => taskMetrics.value?.total || 0)
   const totalCompleted = computed(() => taskCompletion.value?.total_completed || 0)
+  const totalOrganizationsCreated = computed(() => organizationsCreated.value?.total || 0)
+  const totalMeetingsCreated = computed(() => meetingsCreated.value?.total || 0)
 
   const projectsByStatus = computed(() => {
     if (!projectMetrics.value?.by_status) return []
@@ -30,6 +35,26 @@ export const useMetricsStore = defineStore('metrics', () => {
     return taskCompletion.value.data_points
   })
 
+  const organizationsDataPoints = computed(() => {
+    if (!organizationsCreated.value?.data_points) return []
+    return organizationsCreated.value.data_points
+  })
+
+  const meetingsDataPoints = computed(() => {
+    if (!meetingsCreated.value?.data_points) return []
+    return meetingsCreated.value.data_points
+  })
+
+  const taskStatusDataPoints = computed(() => {
+    if (!taskStatusOverTime.value?.data_points) return []
+    return taskStatusOverTime.value.data_points
+  })
+
+  const taskStatusTotals = computed(() => {
+    if (!taskStatusOverTime.value?.totals) return { open: 0, started: 0, completed: 0, cancelled: 0 }
+    return taskStatusOverTime.value.totals
+  })
+
   // Actions
   async function fetchDashboardMetrics(period = 'daily', days = 30) {
     loading.value = true
@@ -40,6 +65,9 @@ export const useMetricsStore = defineStore('metrics', () => {
       projectMetrics.value = data.projects
       taskMetrics.value = data.tasks
       taskCompletion.value = data.tasks_completion
+      taskStatusOverTime.value = data.task_status_over_time
+      organizationsCreated.value = data.organizations_created
+      meetingsCreated.value = data.meetings_created
       return data
     } catch (err) {
       error.value = err.response?.data?.detail || 'Failed to fetch metrics'
@@ -103,15 +131,24 @@ export const useMetricsStore = defineStore('metrics', () => {
     projectMetrics,
     taskMetrics,
     taskCompletion,
+    taskStatusOverTime,
+    organizationsCreated,
+    meetingsCreated,
     loading,
     error,
     // Getters
     totalProjects,
     totalTasks,
     totalCompleted,
+    totalOrganizationsCreated,
+    totalMeetingsCreated,
     projectsByStatus,
     tasksByStatus,
     completionDataPoints,
+    taskStatusDataPoints,
+    taskStatusTotals,
+    organizationsDataPoints,
+    meetingsDataPoints,
     // Actions
     fetchDashboardMetrics,
     fetchProjectMetrics,

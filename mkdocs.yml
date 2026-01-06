@@ -50,6 +50,8 @@ nav:
       - Overview: implementation/index.md
       - Todo Management: implementation/todo.md
       - Knowledge Base: implementation/knowledge.md
+      - Meeting Notes: implementation/meetings.md
+      - Assets: implementation/assets.md
       - RAG System: implementation/rag.md
       - Chat: implementation/chat.md
       - Frontend: implementation/frontend.md

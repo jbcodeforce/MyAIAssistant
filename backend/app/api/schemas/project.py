@@ -26,6 +26,10 @@ class ProjectEntity(BaseModel):
         None,
         description="Past steps taken to address the project's challenges"
     )
+    next_steps: Optional[str] = Field(
+        None,
+        description="Next steps planned to move the project forward"
+    )
 
     model_config = ConfigDict(
         json_schema_extra={
@@ -33,7 +37,8 @@ class ProjectEntity(BaseModel):
                 {
                     "status": "Active",
                     "tasks": "- Review requirements\n- Setup environment\n- Run migration",
-                    "past_steps": "- Review requirements\n- Setup environment\n- Run migration"
+                    "past_steps": "- Completed initial analysis\n- Met with stakeholders",
+                    "next_steps": "- Finalize design\n- Begin implementation"
                 }
             ]
         }
@@ -57,7 +62,8 @@ class ProjectCreate(ProjectEntity):
                     "organization_id": 1,
                     "status": "Active",
                     "tasks": "- Review requirements\n- Setup environment\n- Run migration",
-                    "past_steps": "- Review requirements\n- Setup environment\n- Run migration"             
+                    "past_steps": "- Completed initial analysis\n- Met with stakeholders",
+                    "next_steps": "- Finalize design\n- Begin implementation"
                 }
             ]
         }

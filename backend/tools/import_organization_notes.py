@@ -51,6 +51,22 @@ class ExtractedOrganizationData(BaseModel):
         None,
         description="Products or technologies being used or discussed (e.g., 'CC Flink', 'Kafka', etc.)"
     )
+    use_case_information: Optional[str] = Field(
+        None,
+        description="Use case information"
+    )
+    context_information: Optional[str] = Field(
+        None,
+        description="Context information"
+    )
+    architecture_information: Optional[str] = Field(
+        None,
+        description="Architecture information"
+    )
+    sources_of_information: Optional[str] = Field(
+        None,
+        description="Sources of information"
+    )
 
 
 class ExtractedProjectData(BaseModel):
@@ -74,6 +90,10 @@ class ExtractedProjectData(BaseModel):
     past_steps: Optional[str] = Field(
         None,
         description="Past steps taken to address the project's challenges"
+    )
+    next_steps: Optional[str] = Field(
+        None,
+        description="Next steps planned to move the project forward"
     )
 
 
@@ -103,7 +123,10 @@ class OrganizationNotesImporter:
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.get(f"{self.backend_base_url}/")
-                return response.status_code == 200
+                if response.status_code == 200:
+                    print(f"  [OK] Backend API connected at {self.backend_base_url}")
+                    return True
+                return False
         except Exception as e:
             logger.error(f"Backend health check failed: {e}")
             return False
@@ -224,8 +247,33 @@ Extract the following information:
    - name: Derive a project name from the main use case or initiative
    - description: Project goals and scope
    - status: Infer status from context (Active if ongoing work, Completed if finished, etc.)
-   - tasks: Extract "Next Steps" or action items as a bullet list
-   - past_steps: Extract "Past Steps" or steps taken to address the project's challenges
+   - tasks: Extract action items or current tasks as a bullet list
+   - past_steps: Extract "Past Steps" or steps already taken to address the project's challenges
+   - next_steps: Extract "Next Steps" or planned actions to move the project forward
+
+3. **Use case information**
+   - why it is important?
+   - business unit?
+   - what prior discussions regarding this use-case have happened in the account in the past?
+
+4. **Context information**
+   - what is the context of the use case?
+   - what is the business context of the use case?
+   - what is the technical context of the use case?
+
+5. **Architecture information**
+
+   - what is the architecture of the use case?
+   - what are the upstream sources and the downstream destinations?
+   - who is consuming the data and how (application, dashboards, etc.)?
+   - do they need exactly-once semantics or is at-least once semantics acceptable?
+   - what is the expected throughput (messages/sec and bytes/sec)?
+   - average message size?
+   - how many Flink statement forcasted?
+   - what are their expectations around processing lag during deployments and failure recovery?
+
+6. **Sources of information**
+   - what are the sources of information?
 
 Be concise. If information is not found, return null for that field.
 Return valid JSON matching the schema."""
@@ -283,6 +331,7 @@ Return a JSON object with "organization" and "project" fields."""
         index_file = folder_path / "index.md"
 
         if not index_file.exists():
+            print(f"  [SKIP] No index.md file found")
             return {
                 "organization": organization_name,
                 "status": "skipped",
@@ -291,8 +340,10 @@ Return a JSON object with "organization" and "project" fields."""
             }
 
         try:
+            print(f"  [PARSE] Reading {index_file.name}...")
             content = index_file.read_text(encoding="utf-8")
             if not content.strip():
+                print(f"  [SKIP] Empty file")
                 return {
                     "organization": organization_name,
                     "status": "skipped",
@@ -300,17 +351,39 @@ Return a JSON object with "organization" and "project" fields."""
                     "action": "none"
                 }
 
+            print(f"  [LLM] Extracting structured data using {self.model}...")
             logger.info(f"Extracting data for organization: {organization_name}")
             extracted = await self.extract_data_from_markdown(content, organization_name)
+            print(f"  [LLM] Extraction complete")
+
+            def truncate(text: Optional[str], max_len: int = 100) -> Optional[str]:
+                """Truncate text to max_len characters with ellipsis."""
+                if text and len(text) > max_len:
+                    return text[:max_len] + "..."
+                return text
+
+            # Count how many sections were extracted
+            sections_count = sum(1 for x in [
+                extracted.organization.description,
+                extracted.organization.use_case_information,
+                extracted.organization.context_information,
+                extracted.organization.architecture_information,
+                extracted.organization.sources_of_information,
+            ] if x)
 
             result = {
                 "organization": organization_name,
                 "status": "success",
                 "extracted": {
-                    "stakeholders": extracted.organization.stakeholders[:100] + "..." if extracted.organization.stakeholders and len(extracted.organization.stakeholders) > 100 else extracted.organization.stakeholders,
-                    "team": extracted.organization.team[:100] + "..." if extracted.organization.team and len(extracted.organization.team) > 100 else extracted.organization.team,
-                    "description": extracted.organization.description[:200] + "..." if extracted.organization.description and len(extracted.organization.description) > 200 else extracted.organization.description,
-                    "products": extracted.organization.related_products[:100] + "..." if extracted.organization.related_products and len(extracted.organization.related_products) > 100 else extracted.organization.related_products,
+                    "stakeholders": truncate(extracted.organization.stakeholders),
+                    "team": truncate(extracted.organization.team),
+                    "products": truncate(extracted.organization.related_products),
+                    "sections_extracted": sections_count,
+                    "has_description": bool(extracted.organization.description),
+                    "has_use_case": bool(extracted.organization.use_case_information),
+                    "has_context": bool(extracted.organization.context_information),
+                    "has_architecture": bool(extracted.organization.architecture_information),
+                    "has_sources": bool(extracted.organization.sources_of_information),
                     "project_name": extracted.project.name if extracted.project else None,
                 },
                 "organization_action": "none",
@@ -322,15 +395,41 @@ Return a JSON object with "organization" and "project" fields."""
                 return result
 
             # Check if organization exists via API
+            print(f"  [DB] Checking if organization '{organization_name}' exists...")
             existing_organization = await self._get_organization_by_name(client, organization_name)
+
+            # Build combined description from all extracted sections
+            def build_combined_description(org_data: ExtractedOrganizationData) -> str:
+                """Combine all extracted sections into a single markdown description."""
+                sections = []
+                
+                if org_data.description:
+                    sections.append(f"## Description\n\n{org_data.description}")
+                
+                if org_data.use_case_information:
+                    sections.append(f"## Use Cases\n\n{org_data.use_case_information}")
+                
+                if org_data.context_information:
+                    sections.append(f"## Context\n\n{org_data.context_information}")
+                
+                if org_data.architecture_information:
+                    sections.append(f"## Architecture\n\n{org_data.architecture_information}")
+                
+                if org_data.sources_of_information:
+                    sections.append(f"## Sources of Information\n\n{org_data.sources_of_information}")
+                
+                return "\n\n".join(sections) if sections else None
+
+            combined_description = build_combined_description(extracted.organization)
 
             if existing_organization:
                 # Update existing organization
+                print(f"  [DB] Updating organization (id={existing_organization['id']})...")
                 organization_update = {
                     "stakeholders": extracted.organization.stakeholders,
                     "team": extracted.organization.team,
-                    "description": extracted.organization.description,
-                    "related_products": extracted.organization.related_products
+                    "description": combined_description,
+                    "related_products": extracted.organization.related_products,
                 }
                 # Remove None values
                 organization_update = {k: v for k, v in organization_update.items() if v is not None}
@@ -338,14 +437,16 @@ Return a JSON object with "organization" and "project" fields."""
                 await self._update_organization(client, existing_organization["id"], organization_update)
                 result["organization_action"] = "updated"
                 result["organization_id"] = existing_organization["id"]
+                print(f"  [DB] Organization updated successfully")
             else:
                 # Create new organization
+                print(f"  [DB] Creating new organization '{organization_name}'...")
                 organization_create = {
                     "name": organization_name,
                     "stakeholders": extracted.organization.stakeholders,
                     "team": extracted.organization.team,
-                    "description": extracted.organization.description,
-                    "related_products": extracted.organization.related_products
+                    "description": combined_description,
+                    "related_products": extracted.organization.related_products,
                 }
                 # Remove None values
                 organization_create = {k: v for k, v in organization_create.items() if v is not None}
@@ -353,20 +454,24 @@ Return a JSON object with "organization" and "project" fields."""
                 new_organization = await self._create_organization(client, organization_create)
                 result["organization_action"] = "created"
                 result["organization_id"] = new_organization["id"]
+                print(f"  [DB] Organization created (id={new_organization['id']})")
 
             # Handle project if extracted
             if extracted.project and extracted.project.name:
                 organization_id = result["organization_id"]
+                print(f"  [DB] Checking if project '{extracted.project.name}' exists...")
                 existing_project = await self._get_project_by_name(
                     client, extracted.project.name, organization_id
                 )
 
                 if existing_project:
+                    print(f"  [DB] Updating project (id={existing_project['id']})...")
                     project_update = {
                         "description": extracted.project.description,
                         "status": extracted.project.status,
                         "tasks": extracted.project.tasks,
-                        "past_steps": extracted.project.past_steps
+                        "past_steps": extracted.project.past_steps,
+                        "next_steps": extracted.project.next_steps
                     }
                     # Remove None values
                     project_update = {k: v for k, v in project_update.items() if v is not None}
@@ -375,14 +480,17 @@ Return a JSON object with "organization" and "project" fields."""
                     result["project_action"] = "updated"
                     result["project_id"] = existing_project["id"]
                     result["project_name"] = extracted.project.name
+                    print(f"  [DB] Project updated successfully")
                 else:
+                    print(f"  [DB] Creating new project '{extracted.project.name}'...")
                     project_create = {
                         "name": extracted.project.name,
                         "description": extracted.project.description,
                         "organization_id": organization_id,
                         "status": extracted.project.status or "Active",
                         "tasks": extracted.project.tasks,
-                        "past_steps": extracted.project.past_steps
+                        "past_steps": extracted.project.past_steps,
+                        "next_steps": extracted.project.next_steps
                     }
                     # Remove None values (except organization_id and status which are required)
                     project_create = {
@@ -394,10 +502,13 @@ Return a JSON object with "organization" and "project" fields."""
                     result["project_action"] = "created"
                     result["project_id"] = new_project["id"]
                     result["project_name"] = extracted.project.name
+                    print(f"  [DB] Project created (id={new_project['id']})")
 
+            print(f"  [DONE] Successfully processed {organization_name}")
             return result
 
         except Exception as e:
+            print(f"  [ERROR] {e}")
             logger.error(f"Error processing {organization_name}: {e}")
             return {
                 "organization": organization_name,
@@ -433,6 +544,7 @@ Return a JSON object with "organization" and "project" fields."""
 
         # Check backend health first (skip in dry-run mode)
         if not dry_run:
+            print("Checking backend API connectivity...")
             logger.info("Checking backend API connectivity...")
             if not await self._check_backend_health():
                 raise ConnectionError(
@@ -440,6 +552,8 @@ Return a JSON object with "organization" and "project" fields."""
                     "Make sure the backend server is running."
                 )
             logger.info("Backend API is reachable")
+        else:
+            print("Dry run mode - skipping backend connectivity check")
 
         # Find all organization folders (directories with index.md)
         organization_folders = [
@@ -469,8 +583,10 @@ Return a JSON object with "organization" and "project" fields."""
             "details": []
         }
 
+        print(f"\nProcessing {len(organization_folders)} organization(s)...\n")
         async with httpx.AsyncClient(timeout=60.0) as client:
             for i, folder in enumerate(organization_folders, 1):
+                print(f"\n[{i}/{len(organization_folders)}] === {folder.name} ===")
                 logger.info(f"[{i}/{len(organization_folders)}] Processing: {folder.name}")
 
                 result = await self.import_organization_folder(folder, client, dry_run=dry_run)
@@ -526,8 +642,8 @@ Examples:
     parser.add_argument(
         "--model", "-m",
         type=str,
-        default="gpt-oss:20b",
-        help="Ollama model to use (default: gpt-oss:20b)"
+        default="mistral:7b-instruct",
+        help="Ollama model to use (default: mistral:7b-instruct)"
     )
 
     parser.add_argument(
@@ -574,8 +690,20 @@ Examples:
         model=args.model
     )
 
+    # Print configuration summary
+    print("\n" + "=" * 60)
+    print("CONFIGURATION")
+    print("=" * 60)
+    print(f"Source folder:  {args.folder}")
+    print(f"LLM model:      {importer.model}")
+    print(f"Ollama URL:     {importer.ollama_base_url}")
+    print(f"Backend API:    {importer.backend_base_url}")
     if args.dry_run:
+        print("Mode:           DRY RUN (no database changes)")
         logger.info("DRY RUN MODE - no changes will be made to the database")
+    else:
+        print("Mode:           LIVE (changes will be persisted)")
+    print("=" * 60 + "\n")
 
     logger.info(f"Processing folder: {args.folder}")
     logger.info(f"Using model: {importer.model}")
@@ -628,14 +756,25 @@ Examples:
             if detail.get("extracted"):
                 ext = detail["extracted"]
                 if ext.get("stakeholders"):
-                    stakeholders_preview = ext['stakeholders'][:100] + "..." if len(ext['stakeholders']) > 100 else ext['stakeholders']
-                    print(f"      Stakeholders: {stakeholders_preview}")
+                    print(f"      Stakeholders: {ext['stakeholders']}")
                 if ext.get("team"):
-                    team_preview = ext['team'][:100] + "..." if len(ext['team']) > 100 else ext['team']
-                    print(f"      Team: {team_preview}")
+                    print(f"      Team: {ext['team']}")
                 if ext.get("products"):
-                    products_preview = ext['products'][:100] + "..." if len(ext['products']) > 100 else ext['products']
-                    print(f"      Products: {products_preview}")
+                    print(f"      Products: {ext['products']}")
+                # Show description sections summary
+                sections = []
+                if ext.get("has_description"):
+                    sections.append("Description")
+                if ext.get("has_use_case"):
+                    sections.append("Use Cases")
+                if ext.get("has_context"):
+                    sections.append("Context")
+                if ext.get("has_architecture"):
+                    sections.append("Architecture")
+                if ext.get("has_sources"):
+                    sections.append("Sources")
+                if sections:
+                    print(f"      Description sections: {', '.join(sections)} ({ext.get('sections_extracted', 0)} total)")
                 if ext.get("project_name"):
                     print(f"      Project: {ext['project_name']}")
 

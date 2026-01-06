@@ -1,36 +1,43 @@
-"""LLM Client - unified interface for multiple LLM providers."""
+"""LLM Client - unified interface using HuggingFace InferenceClient."""
 
 from typing import Optional
 
 from agent_core.config import LLMConfig
 from agent_core.types import Message, LLMResponse, LLMError
 from agent_core.providers.base import LLMProvider
-from agent_core.providers.openai import OpenAIProvider
-from agent_core.providers.anthropic import AnthropicProvider
-from agent_core.providers.ollama import OllamaProvider
+from agent_core.providers.huggingface import HuggingFaceProvider
 
 
 class LLMClient:
     """
-    Unified LLM client with support for multiple providers.
+    Unified LLM client using HuggingFace InferenceClient.
+    
+    Supports both local inference servers (TGI, vLLM, Ollama) and remote
+    HuggingFace Hub models through a single provider interface.
     
     Provides both synchronous and asynchronous APIs for chat completions.
     
-    Example:
-        config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
+    Example (local server):
+        config = LLMConfig(
+            provider="huggingface",
+            model="llama3",
+            base_url="http://localhost:8080"
+        )
         client = LLMClient(config)
-        
-        # Async usage
         response = await client.chat_async([Message(role="user", content="Hello")])
-        
-        # Sync usage
+    
+    Example (HF Hub):
+        config = LLMConfig(
+            provider="huggingface",
+            model="meta-llama/Meta-Llama-3-8B-Instruct",
+            api_key=os.getenv("HF_TOKEN")
+        )
+        client = LLMClient(config)
         response = client.chat([Message(role="user", content="Hello")])
     """
     
     PROVIDERS: dict[str, type[LLMProvider]] = {
-        "openai": OpenAIProvider,
-        "anthropic": AnthropicProvider,
-        "ollama": OllamaProvider,
+        "huggingface": HuggingFaceProvider,
     }
     
     def __init__(self, config: LLMConfig):
@@ -50,7 +57,7 @@ class LLMClient:
             provider_class = self.PROVIDERS.get(self.config.provider)
             if provider_class is None:
                 raise LLMError(
-                    message=f"Unsupported provider: {self.config.provider}",
+                    message=f"Unsupported provider: {self.config.provider}. Use 'huggingface' provider.",
                     provider=self.config.provider,
                 )
             self._provider = provider_class()
@@ -167,4 +174,3 @@ class LLMClient:
             provider_class: Provider class implementing LLMProvider
         """
         cls.PROVIDERS[name] = provider_class
-

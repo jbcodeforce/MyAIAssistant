@@ -60,6 +60,8 @@ class Project(Base):
     tasks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     # Past steps taken to address the project's challenges
     past_steps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Next steps planned to move the project forward
+    next_steps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -253,6 +255,48 @@ class MeetingRef(Base):
 
     def __repr__(self) -> str:
         return f"MeetingRef(id={self.id!r}, meeting_id={self.meeting_id!r}, file_ref={self.file_ref!r})"
+
+
+class Asset(Base):
+    """Reusable asset entity.
+    
+    Assets are code, documents, or other resources that can be developed
+    within a project or task and reused across the workspace.
+    """
+    __tablename__ = "assets"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    reference_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    
+    # Optional links to project or todo
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True
+    )
+    todo_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("todos.id"), nullable=True
+    )
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project", backref="assets")
+    todo: Mapped[Optional["Todo"]] = relationship("Todo", backref="assets")
+
+    def __repr__(self) -> str:
+        return f"Asset(id={self.id!r}, name={self.name!r}, reference_url={self.reference_url!r})"
 
 
 class SLPassessment(Base):

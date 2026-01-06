@@ -1,0 +1,67 @@
+---
+alwaysApply: true
+description: Build and version control guidelines for safe code modifications
+globs:
+  - "**/*"
+---
+
+# Build Guidelines
+
+Standard practices for building, testing, and version control across the MyAIAssistant project.
+
+## Git Commit Before Code Changes
+
+Before making significant code modifications, create a commit checkpoint to enable rollback:
+
+```bash
+# Stage current changes and commit before starting new work
+git add -A
+git commit -m "checkpoint: before <description of upcoming changes>"
+```
+
+### When to Commit
+
+1. **Before refactoring** - Commit working code before restructuring
+2. **Before adding new features** - Checkpoint stable state
+3. **Before modifying database models** - Preserve migration-safe state
+4. **Before updating dependencies** - Lock known-working state
+
+### Rollback Commands
+
+If changes need to be reverted:
+
+```bash
+# Discard uncommitted changes
+git checkout -- .
+
+# Revert to last commit
+git reset --hard HEAD
+
+# Revert to specific commit
+git reset --hard <commit-hash>
+
+# View recent commits to find rollback point
+git log --oneline -10
+```
+
+## Build Verification
+
+After code changes, verify the build:
+
+```bash
+# Backend
+cd backend && uv sync && uv run pytest
+
+# Frontend
+cd frontend && npm install && npm run build
+
+# Agent Core
+cd agent_core && uv sync && uv run pytest
+```
+
+## Pre-Commit Checklist
+
+- [ ] All tests pass
+- [ ] Linting passes
+- [ ] Build completes without errors
+- [ ] Changes are committed with descriptive message

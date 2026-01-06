@@ -68,6 +68,12 @@
               {{ project.status }}
             </span>
             <div class="project-actions">
+              <router-link :to="`/projects/${project.id}`" class="btn-icon" title="View Details">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                  <circle cx="12" cy="12" r="3"/>
+                </svg>
+              </router-link>
               <button class="btn-icon" @click="openEditModal(project)" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -86,7 +92,11 @@
 
           <h3 class="project-name">{{ project.name }}</h3>
           
-          <p class="project-organization" v-if="getOrganizationName(project.organization_id)">
+          <router-link 
+            v-if="getOrganizationName(project.organization_id)"
+            :to="`/organizations/${project.organization_id}`"
+            class="project-organization"
+          >
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
@@ -94,7 +104,7 @@
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
             {{ getOrganizationName(project.organization_id) }}
-          </p>
+          </router-link>
 
           <div class="project-sections">
             <div 
@@ -119,6 +129,30 @@
                 <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
               </svg>
               Tasks
+            </div>
+
+            <div 
+              v-if="project.past_steps" 
+              class="section-chip"
+              @click="openSectionViewer(project, 'past_steps')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              Past Steps
+            </div>
+
+            <div 
+              v-if="project.next_steps" 
+              class="section-chip"
+              @click="openSectionViewer(project, 'next_steps')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
+              Next Steps
             </div>
           </div>
 
@@ -280,6 +314,74 @@ Describe the project goals, scope, and key deliverables.
           </div>
           <span class="form-hint">Project tasks and action items (supports Markdown)</span>
         </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Past Steps</label>
+            <div class="markdown-editor-container">
+              <div class="editor-tabs">
+                <button 
+                  type="button" 
+                  :class="['tab-btn', { active: pastStepsTab === 'write' }]"
+                  @click="pastStepsTab = 'write'"
+                >
+                  Write
+                </button>
+                <button 
+                  type="button" 
+                  :class="['tab-btn', { active: pastStepsTab === 'preview' }]"
+                  @click="pastStepsTab = 'preview'"
+                >
+                  Preview
+                </button>
+              </div>
+              <textarea 
+                v-if="pastStepsTab === 'write'"
+                v-model="formData.past_steps" 
+                class="markdown-textarea"
+                rows="6"
+                placeholder="- Completed initial analysis
+- Met with stakeholders
+- Reviewed requirements"
+              ></textarea>
+              <div v-else class="markdown-preview" v-html="renderedPastSteps"></div>
+            </div>
+            <span class="form-hint">Steps already taken (supports Markdown)</span>
+          </div>
+
+          <div class="form-group">
+            <label>Next Steps</label>
+            <div class="markdown-editor-container">
+              <div class="editor-tabs">
+                <button 
+                  type="button" 
+                  :class="['tab-btn', { active: nextStepsTab === 'write' }]"
+                  @click="nextStepsTab = 'write'"
+                >
+                  Write
+                </button>
+                <button 
+                  type="button" 
+                  :class="['tab-btn', { active: nextStepsTab === 'preview' }]"
+                  @click="nextStepsTab = 'preview'"
+                >
+                  Preview
+                </button>
+              </div>
+              <textarea 
+                v-if="nextStepsTab === 'write'"
+                v-model="formData.next_steps" 
+                class="markdown-textarea"
+                rows="6"
+                placeholder="- Finalize design
+- Begin implementation
+- Schedule review meeting"
+              ></textarea>
+              <div v-else class="markdown-preview" v-html="renderedNextSteps"></div>
+            </div>
+            <span class="form-hint">Planned next actions (supports Markdown)</span>
+          </div>
+        </div>
       </form>
 
       <template #footer>
@@ -322,12 +424,16 @@ const formData = ref({
   description: '',
   organization_id: null,
   status: 'Draft',
-  tasks: ''
+  tasks: '',
+  past_steps: '',
+  next_steps: ''
 })
 
 // Editor tabs
 const descriptionTab = ref('write')
 const tasksTab = ref('write')
+const pastStepsTab = ref('write')
+const nextStepsTab = ref('write')
 
 // Section viewer modal state
 const showSectionViewer = ref(false)
@@ -353,11 +459,15 @@ const isFormValid = computed(() => {
 // Rendered markdown for form fields
 const renderedDescription = computed(() => marked(formData.value.description || ''))
 const renderedTasks = computed(() => marked(formData.value.tasks || ''))
+const renderedPastSteps = computed(() => marked(formData.value.past_steps || ''))
+const renderedNextSteps = computed(() => marked(formData.value.next_steps || ''))
 
 // Section viewer computeds
 const sectionLabels = {
   description: 'Description',
-  tasks: 'Tasks'
+  tasks: 'Tasks',
+  past_steps: 'Past Steps',
+  next_steps: 'Next Steps'
 }
 
 const sectionViewerTitle = computed(() => {
@@ -450,7 +560,9 @@ function openCreateModal() {
     description: '',
     organization_id: null,
     status: 'Draft',
-    tasks: ''
+    tasks: '',
+    past_steps: '',
+    next_steps: ''
   }
   resetTabs()
   showModal.value = true
@@ -464,7 +576,9 @@ function openEditModal(project) {
     description: project.description || '',
     organization_id: project.organization_id || null,
     status: project.status,
-    tasks: project.tasks || ''
+    tasks: project.tasks || '',
+    past_steps: project.past_steps || '',
+    next_steps: project.next_steps || ''
   }
   resetTabs()
   showModal.value = true
@@ -473,6 +587,8 @@ function openEditModal(project) {
 function resetTabs() {
   descriptionTab.value = 'write'
   tasksTab.value = 'write'
+  pastStepsTab.value = 'write'
+  nextStepsTab.value = 'write'
 }
 
 function closeModal() {
@@ -836,18 +952,41 @@ function formatDate(dateString) {
 }
 
 .project-organization {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 0.25rem;
   margin: 0 0 0.625rem 0;
   font-size: 0.75rem;
   color: #6b7280;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.project-organization:hover {
+  color: #2563eb;
+}
+
+:global(.dark) .project-organization {
+  color: #94a3b8;
+}
+
+:global(.dark) .project-organization:hover {
+  color: #60a5fa;
 }
 
 .project-organization svg {
   color: #9ca3af;
   width: 12px;
   height: 12px;
+  transition: color 0.15s;
+}
+
+.project-organization:hover svg {
+  color: #2563eb;
+}
+
+:global(.dark) .project-organization:hover svg {
+  color: #60a5fa;
 }
 
 .project-sections {
