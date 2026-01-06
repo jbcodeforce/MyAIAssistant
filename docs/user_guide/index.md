@@ -322,27 +322,65 @@ The metrics view presents a set of task and project metrics.
 
 --- 
 
-## Vectorize a folder
+## ai_assist CLI
 
+The `ai_assist` CLI manages workspaces and knowledge resources from the command line. It provides an alternative to the web UI for automation, scripting, and batch operations and aim to prepare using the backend and frontend in an isolated workspace.
 
-* In backend folder
+### Installation
 
-```sh
-# First run - creates all documents
-uv run python -m tools.vectorize_folder /path/to/docs --extensions .md .txt .html --chunk-size 500 --category "Docs" --tags "api,reference"
-
-# Re-run - skips unchanged files
-uv run python -m tools.vectorize_folder /path/to/docs --category "Docs" --tags "api,reference"
-
-# Force re-index everything
-uv run python -m tools.vectorize_folder /path/to/docs --force
-
-# View current collection stats
-python -m tools.vectorize_folder --stats-only .
+```bash
+cd ai_assist_cli
+uv pip install -e .
 ```
 
-* Tools:
-    ```sh
-    cd backend
-    uv run tools/vectorize_folder.py
-    ```
+### Features
+
+| Command Group | Commands | Description |
+|--------------|----------|-------------|
+| `init` | - | Initialize a new workspace with local and global directories |
+| `workspace` | `status`, `list`, `clean` | View workspace configuration, list registered workspaces, clean cache/history |
+| `config` | `show`, `get`, `set`, `edit` | View and modify workspace configuration |
+| `global` | `status`, `config`, `prompts`, `agents`, `tools`, `tree` | Manage shared resources in `~/.ai_assist` |
+| `knowledge` | `process` | Batch process documents from JSON specification files |
+
+### Quick Start
+
+```bash
+# Initialize workspace in current directory
+ai_assist init
+
+# Check workspace status
+ai_assist workspace status
+
+# Process knowledge documents from JSON file
+ai_assist knowledge process documents.json
+
+# View global resources
+ai_assist global tree
+```
+
+### Directory Structure
+
+The CLI creates two directory structures:
+
+- **Global home** (`~/.ai_assist/`): Shared prompts, agents, tools, models, and cache
+- **Workspace** (local): Configuration, vector database, history, summaries, and notes
+
+### Knowledge Processing
+
+Batch index documents using a JSON specification file:
+
+```json
+[
+  {"document_type": "website", "uri": "https://example.com/docs", "collection": "docs"},
+  {"document_type": "folder", "uri": "$HOME/notes", "collection": "notes"}
+]
+```
+
+```bash
+# Dry run to validate
+ai_assist knowledge process docs.json --dry-run
+
+# Process with verbose output
+ai_assist knowledge process docs.json --verbose
+```

@@ -556,13 +556,20 @@ async function loadTaskPlan() {
   margin-top: 0;
 }
 
-.plan-content :deep(ul),
+.plan-content :deep(ul) {
+  list-style-type: disc;
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
 .plan-content :deep(ol) {
+  list-style-type: decimal;
   margin: 0.5rem 0;
   padding-left: 1.5rem;
 }
 
 .plan-content :deep(li) {
+  display: list-item;
   margin: 0.25rem 0;
 }
 

@@ -296,13 +296,20 @@ function onDragEnd() {
   text-decoration: underline;
 }
 
-.todo-description :deep(ul),
+.todo-description :deep(ul) {
+  list-style-type: disc;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
 .todo-description :deep(ol) {
+  list-style-type: decimal;
   margin: 0;
   padding-left: 1.25rem;
 }
 
 .todo-description :deep(li) {
+  display: list-item;
   margin: 0.125rem 0;
 }
 

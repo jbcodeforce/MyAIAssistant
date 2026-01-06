@@ -724,3 +724,215 @@ async def test_filter_by_tag_at_end(client: AsyncClient):
     data = response.json()
     assert data["total"] == 1
 
+
+# ============================================================================
+# Tests for GET /api/knowledge/by-uri/ endpoint
+# ============================================================================
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_found(client: AsyncClient):
+    """Test retrieving a knowledge item by its URI when it exists."""
+    test_uri = "file:///unique/path/document.md"
+    
+    # Create a knowledge item
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "URI Test Document",
+            "description": "Document for URI lookup test",
+            "document_type": "markdown",
+            "uri": test_uri,
+            "category": "Testing",
+            "tags": "test,uri"
+        }
+    )
+    
+    # Look up by URI
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is not None
+    assert data["title"] == "URI Test Document"
+    assert data["uri"] == test_uri
+    assert data["category"] == "Testing"
+    assert "id" in data
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_not_found(client: AsyncClient):
+    """Test retrieving a knowledge item by URI when it doesn't exist."""
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": "file:///nonexistent/document.md"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is None
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_website(client: AsyncClient):
+    """Test retrieving a website knowledge item by URI."""
+    test_uri = "https://example.com/docs/getting-started"
+    
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Website Doc",
+            "document_type": "website",
+            "uri": test_uri
+        }
+    )
+    
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is not None
+    assert data["document_type"] == "website"
+    assert data["uri"] == test_uri
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_duplicate_check(client: AsyncClient):
+    """Test that URI lookup can be used to check for duplicates before creation."""
+    test_uri = "file:///shared/resource.md"
+    
+    # First lookup should return None (doesn't exist)
+    response1 = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response1.status_code == 200
+    assert response1.json() is None
+    
+    # Create the document
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Shared Resource",
+            "document_type": "markdown",
+            "uri": test_uri
+        }
+    )
+    
+    # Second lookup should find it
+    response2 = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response2.status_code == 200
+    data = response2.json()
+    assert data is not None
+    assert data["title"] == "Shared Resource"
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_returns_content_hash(client: AsyncClient):
+    """Test that URI lookup returns content_hash when set."""
+    test_uri = "file:///hashed/document.md"
+    test_hash = "abc123def456789" * 4
+    
+    # Create and then update with content hash
+    create_response = await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Hashed Document",
+            "document_type": "markdown",
+            "uri": test_uri
+        }
+    )
+    knowledge_id = create_response.json()["id"]
+    
+    # Update with content hash
+    await client.put(
+        f"/api/knowledge/{knowledge_id}",
+        json={"content_hash": test_hash}
+    )
+    
+    # Lookup by URI should include content_hash
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is not None
+    assert data["content_hash"] == test_hash
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_exact_match(client: AsyncClient):
+    """Test that URI lookup requires exact match."""
+    # Create two similar URIs
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Document 1",
+            "document_type": "markdown",
+            "uri": "file:///docs/test.md"
+        }
+    )
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Document 2",
+            "document_type": "markdown",
+            "uri": "file:///docs/test-extra.md"
+        }
+    )
+    
+    # Lookup exact URI
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": "file:///docs/test.md"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is not None
+    assert data["title"] == "Document 1"
+    
+    # Partial match should not work
+    response_partial = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": "file:///docs/test"}  # Missing .md
+    )
+    assert response_partial.status_code == 200
+    assert response_partial.json() is None
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_missing_param(client: AsyncClient):
+    """Test that URI parameter is required."""
+    response = await client.get("/api/knowledge/by-uri/")
+    assert response.status_code == 422  # Validation error - missing required parameter
+
+
+@pytest.mark.asyncio
+async def test_get_knowledge_by_uri_special_characters(client: AsyncClient):
+    """Test URI lookup with special characters in the URI."""
+    test_uri = "file:///path/with spaces/and%20encoding/doc.md"
+    
+    await client.post(
+        "/api/knowledge/",
+        json={
+            "title": "Special Chars Doc",
+            "document_type": "markdown",
+            "uri": test_uri
+        }
+    )
+    
+    response = await client.get(
+        "/api/knowledge/by-uri/",
+        params={"uri": test_uri}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data is not None
+    assert data["uri"] == test_uri
+

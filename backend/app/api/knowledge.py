@@ -52,6 +52,19 @@ async def list_knowledge(
     return KnowledgeListResponse(items=items, total=total, skip=skip, limit=limit)
 
 
+@router.get("/by-uri/", response_model=Optional[KnowledgeResponse])
+async def get_knowledge_by_uri(
+    uri: str = Query(..., description="Document URI to lookup"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get knowledge item by URI. Returns null if not found.
+    
+    Useful for checking if a document already exists before creating.
+    """
+    return await crud.get_knowledge_by_uri(db=db, uri=uri)
+
+
 @router.get("/{knowledge_id}", response_model=KnowledgeResponse)
 async def get_knowledge(
     knowledge_id: int,

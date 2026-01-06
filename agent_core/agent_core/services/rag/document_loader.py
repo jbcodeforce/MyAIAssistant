@@ -150,19 +150,40 @@ def filter_short_lines(content: str, min_length: int = 3) -> str:
     return '\n'.join(filtered_lines)
 
 
+# Default supported file extensions for folder loading
+DEFAULT_EXTENSIONS = {".md", ".markdown", ".txt"}
+
+# Extension to document type mapping
+EXTENSION_TYPE_MAP = {
+    ".md": "markdown",
+    ".markdown": "markdown",
+    ".txt": "text",
+    ".html": "html",
+    ".htm": "html",
+}
+
+
 class DocumentLoader:
     """Loads documents from various sources (markdown files, folder, websites)."""
 
     def __init__(self, timeout: float = 30.0):
         self.timeout = timeout
 
-    async def load(self, uri: str, document_type: str) -> List[LoadedDocument]:
+    async def load(
+        self,
+        uri: str,
+        document_type: str,
+        extensions: Optional[set[str]] = None,
+        recursive: bool = False
+    ) -> List[LoadedDocument]:
         """
         Load a document from the given URI based on its type.
         
         Args:
             uri: The URI of the document (folder or unique file path or URL)
             document_type: Type of document ('markdown', 'folder' or 'website')
+            extensions: For 'folder' type, set of file extensions to include (default: {".md", ".markdown", ".txt"})
+            recursive: For 'folder' type, whether to scan subdirectories (default: False)
             
         Returns:
             LoadedDocument with content and metadata
@@ -172,7 +193,7 @@ class DocumentLoader:
         elif document_type == "website":
             return await self._load_website(uri)
         elif document_type == "folder":
-            return self._load_directory(uri)
+            return self._load_directory(uri, extensions=extensions, recursive=recursive)
         else:
             raise ValueError(f"Unsupported document type: {document_type}")
 
@@ -292,32 +313,89 @@ class DocumentLoader:
             title=title
         )]
 
-    def _load_directory(self, uri: str) -> list[LoadedDocument]:
-        """Load a directory and process all markdown files within it."""
+    def _load_directory(
+        self,
+        uri: str,
+        extensions: Optional[set[str]] = None,
+        recursive: bool = False
+    ) -> list[LoadedDocument]:
+        """Load a directory and process files matching the specified extensions.
+        
+        Args:
+            uri: Path to the directory (with or without file:// prefix)
+            extensions: Set of file extensions to include (default: {".md", ".markdown", ".txt"})
+            recursive: Whether to scan subdirectories (default: False)
+            
+        Returns:
+            List of LoadedDocument objects for each processed file
+        """
         if uri.startswith("file://"):
-            # Local file
             file_path = uri.replace("file://", "")
             path = Path(file_path)
         else:
             path = Path(uri)
+        
         if not path.exists():
             raise FileNotFoundError(f"Directory not found: {uri}")
+        
+        # Use default extensions if not specified
+        if extensions is None:
+            extensions = DEFAULT_EXTENSIONS
+        
+        # Find matching files
         all_documents = []
-        for file in path.glob("*.md"):
+        if recursive:
+            files = [f for f in path.rglob("*") if f.is_file() and f.suffix.lower() in extensions]
+        else:
+            files = [f for f in path.iterdir() if f.is_file() and f.suffix.lower() in extensions]
+        
+        # Sort for consistent ordering
+        files.sort()
+        
+        for file in files:
+            # Skip README.md files
             if file.name == "README.md":
                 continue
-            content = file.read_text(encoding="utf-8")
-            frontmatter, content = self._parse_frontmatter(content)
-            if frontmatter:
-                title = frontmatter.get("title", "")
-                source_uri = frontmatter.get("source_url", str(file))
-                document_id = frontmatter.get("document_id", file.name)
-                if not title:
+            
+            # Determine file type based on extension
+            file_ext = file.suffix.lower()
+            file_type = EXTENSION_TYPE_MAP.get(file_ext, "text")
+            
+            try:
+                content = file.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                # Skip binary files
+                continue
+            
+            if file_type in ("markdown", "text"):
+                # Parse frontmatter for markdown/text files
+                frontmatter, content = self._parse_frontmatter(content)
+                if frontmatter:
+                    title = frontmatter.get("title", "")
+                    source_uri = frontmatter.get("source_url", str(file))
+                    document_id = frontmatter.get("document_id", file.name)
+                    if not title:
+                        title = self._extract_markdown_title(content)
+                else:
                     title = self._extract_markdown_title(content)
-            else:
-                title = self._extract_markdown_title(content)
+                    document_id = file.name
+                    source_uri = str(file)
+                
+                if not title:
+                    title = file.stem
+            elif file_type == "html":
+                # Process HTML files
+                content, title = self._extract_html_content(content)
                 document_id = file.name
                 source_uri = str(file)
+                if not title:
+                    title = file.stem
+            else:
+                # Plain text - use filename as title
+                title = file.stem
+                document_id = file.name
+                source_uri = str(file)
+            
             all_documents.append(LoadedDocument(
                 document_id=document_id,
                 content=content,
@@ -325,7 +403,49 @@ class DocumentLoader:
                 source_uri=source_uri,
                 title=title
             ))
+        
         return all_documents
+    
+    def _extract_html_content(self, html_content: str) -> tuple[str, Optional[str]]:
+        """Extract text content and title from HTML.
+        
+        Args:
+            html_content: Raw HTML string
+            
+        Returns:
+            Tuple of (extracted content as markdown, title or None)
+        """
+        soup = BeautifulSoup(html_content, "html.parser")
+        
+        # Remove script and style elements
+        for element in soup(["script", "style", "nav", "footer", "header", "aside", "noscript"]):
+            element.decompose()
+        
+        # Find main content
+        main_content = (
+            soup.find("main") or
+            soup.find("article") or
+            soup.find("div", class_=re.compile(r"content|main|article", re.I)) or
+            soup.find("body")
+        )
+        
+        if main_content:
+            content = markdownify(str(main_content), heading_style="ATX", strip=["a"])
+        else:
+            content = soup.get_text(separator="\n", strip=True)
+        
+        # Clean up whitespace
+        content = re.sub(r"\n{3,}", "\n\n", content).strip()
+        
+        # Extract title
+        title = None
+        title_tag = soup.find("title")
+        if title_tag:
+            title = title_tag.get_text(strip=True)
+        elif soup.find("h1"):
+            title = soup.find("h1").get_text(strip=True)
+        
+        return content, title
 
 
     def _extract_markdown_title(self, content: str) -> Optional[str]:

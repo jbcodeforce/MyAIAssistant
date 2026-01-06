@@ -3,7 +3,7 @@ name = "ai-assist-cli"
 version = "0.1.0"
 description = "CLI tool to manage AI Assistant workspaces"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 dependencies = [
     "typer>=0.15.0",
     "rich>=13.0.0",

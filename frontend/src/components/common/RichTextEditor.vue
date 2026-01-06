@@ -266,14 +266,21 @@ onBeforeUnmount(() => {
   margin: 0 0 0.5em 0;
 }
 
-.editor-content :deep(.tiptap ul),
+.editor-content :deep(.tiptap ul) {
+  list-style-type: disc;
+  padding-left: 1.5em;
+  margin: 0 0 0.5em 0;
+}
+
 .editor-content :deep(.tiptap ol) {
+  list-style-type: decimal;
   padding-left: 1.5em;
   margin: 0 0 0.5em 0;
 }
 
 .editor-content :deep(.tiptap li) {
   margin: 0.25em 0;
+  display: list-item;
 }
 
 .editor-content :deep(.tiptap blockquote) {
