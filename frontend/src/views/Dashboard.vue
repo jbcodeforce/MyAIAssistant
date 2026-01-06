@@ -31,6 +31,7 @@
         :not-urgent-not-important-todos="todoStore.notUrgentNotImportant"
         :projects="projects"
         @update="handleUpdatePriority"
+        @view="handleView"
         @edit="handleEdit"
         @delete="handleDelete"
         @chat="handleChat"
@@ -49,6 +50,7 @@
             :key="todo.id"
             :todo="todo"
             :projects="projects"
+            @view="handleView"
             @edit="handleEdit"
             @delete="handleDelete"
             @chat="handleChat"
@@ -96,6 +98,16 @@
       :todo="planningTodo || {}"
       @close="closePlanModal"
     />
+
+    <TaskDetailModal
+      :show="showDetailModal"
+      :todo="viewingTodo || {}"
+      :projects="projects"
+      @close="closeDetailModal"
+      @edit="handleDetailEdit"
+      @chat="handleDetailChat"
+      @plan="handleDetailPlan"
+    />
   </div>
 </template>
 
@@ -110,6 +122,7 @@ import TodoForm from '@/components/todo/TodoForm.vue'
 import Modal from '@/components/common/Modal.vue'
 import ChatModal from '@/components/chat/ChatModal.vue'
 import TaskPlanModal from '@/components/todo/TaskPlanModal.vue'
+import TaskDetailModal from '@/components/todo/TaskDetailModal.vue'
 
 const todoStore = useTodoStore()
 const uiStore = useUiStore()
@@ -122,10 +135,12 @@ const showCreateModal = computed(() => uiStore.showCreateModal)
 const showEditModal = computed(() => uiStore.showEditModal)
 const showChatModal = ref(false)
 const showPlanModal = ref(false)
+const showDetailModal = ref(false)
 
 const editingTodo = ref(null)
 const chattingTodo = ref(null)
 const planningTodo = ref(null)
+const viewingTodo = ref(null)
 
 const unclassifiedOpenTodos = computed(() => {
   return todoStore.todos.filter(todo => 
@@ -228,6 +243,31 @@ function handlePlan(todo) {
 function closePlanModal() {
   showPlanModal.value = false
   planningTodo.value = null
+}
+
+function handleView(todo) {
+  viewingTodo.value = todo
+  showDetailModal.value = true
+}
+
+function closeDetailModal() {
+  showDetailModal.value = false
+  viewingTodo.value = null
+}
+
+function handleDetailEdit(todo) {
+  closeDetailModal()
+  handleEdit(todo)
+}
+
+function handleDetailChat(todo) {
+  closeDetailModal()
+  handleChat(todo)
+}
+
+function handleDetailPlan(todo) {
+  closeDetailModal()
+  handlePlan(todo)
 }
 
 defineExpose({
