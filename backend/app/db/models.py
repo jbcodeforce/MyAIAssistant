@@ -270,6 +270,12 @@ class Asset(Base):
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     reference_url: Mapped[str] = mapped_column(String(2048), nullable=False)
     
+    # Status: Started, Active, Completed
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="Started")
+    
+    # Number of projects where this asset has been used
+    project_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    
     # Optional links to project or todo
     project_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("projects.id"), nullable=True

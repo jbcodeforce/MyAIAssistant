@@ -112,6 +112,20 @@
             <span class="card-label">Meetings ({{ selectedDays }}d)</span>
           </div>
         </div>
+
+        <div class="summary-card assets-card">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+              <path d="m3.3 7 8.7 5 8.7-5"/>
+              <path d="M12 22V12"/>
+            </svg>
+          </div>
+          <div class="card-content">
+            <span class="card-value">{{ metricsStore.totalAssets }}</span>
+            <span class="card-label">Total Assets</span>
+          </div>
+        </div>
       </div>
 
       <!-- Charts Grid -->
@@ -157,6 +171,28 @@
           </div>
           <div v-else class="empty-chart">
             <p>No tasks yet</p>
+          </div>
+        </div>
+
+        <!-- Asset Status Distribution -->
+        <div class="chart-card">
+          <h3 class="chart-title">Assets by Status</h3>
+          <div class="donut-chart-container" v-if="metricsStore.assetsByStatus.length > 0">
+            <DonutChart :data="assetChartData" :colors="assetColors" />
+            <div class="chart-legend">
+              <div 
+                v-for="(item, index) in metricsStore.assetsByStatus" 
+                :key="item.status"
+                class="legend-item"
+              >
+                <span class="legend-dot" :style="{ background: assetColors[index % assetColors.length] }"></span>
+                <span class="legend-label">{{ item.status }}</span>
+                <span class="legend-value">{{ item.count }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="empty-chart">
+            <p>No assets yet</p>
           </div>
         </div>
 
@@ -218,6 +254,7 @@ const error = computed(() => metricsStore.error)
 
 const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
 const taskColors = ['#6366f1', '#22c55e', '#eab308', '#ef4444']
+const assetColors = ['#f97316', '#3b82f6', '#10b981']
 
 const taskStatusSeries = [
   { key: 'open', label: 'Open', color: '#6366f1' },
@@ -235,6 +272,13 @@ const projectChartData = computed(() => {
 
 const taskChartData = computed(() => {
   return metricsStore.tasksByStatus.map(item => ({
+    label: item.status,
+    value: item.count
+  }))
+})
+
+const assetChartData = computed(() => {
+  return metricsStore.assetsByStatus.map(item => ({
     label: item.status,
     value: item.count
   }))
@@ -512,6 +556,16 @@ onMounted(() => {
 :global(.dark) .meetings-card .card-icon {
   background: linear-gradient(135deg, #164e63 0%, #155e75 100%);
   color: #22d3ee;
+}
+
+.assets-card .card-icon {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  color: #d97706;
+}
+
+:global(.dark) .assets-card .card-icon {
+  background: linear-gradient(135deg, #78350f 0%, #92400e 100%);
+  color: #fbbf24;
 }
 
 .card-content {

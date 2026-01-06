@@ -10,6 +10,7 @@ from app.api.schemas.asset import (
     AssetEntity,
     AssetResponse,
     AssetListResponse,
+    AssetStatus,
 )
 
 
@@ -45,6 +46,7 @@ async def list_assets(
     limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
     project_id: Optional[int] = Query(None, description="Filter by project ID"),
     todo_id: Optional[int] = Query(None, description="Filter by todo ID"),
+    status: Optional[AssetStatus] = Query(None, description="Filter by status: Started, Active, Completed"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -55,7 +57,8 @@ async def list_assets(
         skip=skip,
         limit=limit,
         project_id=project_id,
-        todo_id=todo_id
+        todo_id=todo_id,
+        status=status.value if status else None
     )
     return AssetListResponse(assets=assets, total=total, skip=skip, limit=limit)
 

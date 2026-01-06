@@ -6,11 +6,12 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db.models import Project, Todo, Organization, MeetingRef
+from app.db.models import Project, Todo, Organization, MeetingRef, Asset
 from app.api.schemas.metrics import (
     StatusCount,
     ProjectMetrics,
     TaskMetrics,
+    AssetMetrics,
     TaskCompletionDataPoint,
     TaskCompletionOverTime,
     TimeSeriesDataPoint,
@@ -54,6 +55,22 @@ async def get_task_metrics(db: AsyncSession) -> TaskMetrics:
     total = sum(s.count for s in by_status)
     
     return TaskMetrics(total=total, by_status=by_status)
+
+
+async def get_asset_metrics(db: AsyncSession) -> AssetMetrics:
+    """Get asset counts grouped by status."""
+    query = select(
+        Asset.status,
+        func.count(Asset.id).label("count")
+    ).group_by(Asset.status)
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    by_status = [StatusCount(status=row.status, count=row.count) for row in rows]
+    total = sum(s.count for s in by_status)
+    
+    return AssetMetrics(total=total, by_status=by_status)
 
 
 async def get_tasks_completion_over_time(
@@ -526,6 +543,7 @@ async def get_dashboard_metrics(
     
     projects = await get_project_metrics(db)
     tasks = await get_task_metrics(db)
+    assets = await get_asset_metrics(db)
     tasks_completion = await get_tasks_completion_over_time(db, period, days)
     task_status_over_time = await get_task_status_over_time(db, period, days)
     organizations_created = await get_organizations_over_time(db, period, days)
@@ -534,6 +552,7 @@ async def get_dashboard_metrics(
     return DashboardMetrics(
         projects=projects,
         tasks=tasks,
+        assets=assets,
         tasks_completion=tasks_completion,
         task_status_over_time=task_status_over_time,
         organizations_created=organizations_created,

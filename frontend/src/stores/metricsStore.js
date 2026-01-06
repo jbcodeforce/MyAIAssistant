@@ -6,6 +6,7 @@ export const useMetricsStore = defineStore('metrics', () => {
   // State
   const projectMetrics = ref(null)
   const taskMetrics = ref(null)
+  const assetMetrics = ref(null)
   const taskCompletion = ref(null)
   const taskStatusOverTime = ref(null)
   const organizationsCreated = ref(null)
@@ -16,6 +17,7 @@ export const useMetricsStore = defineStore('metrics', () => {
   // Getters
   const totalProjects = computed(() => projectMetrics.value?.total || 0)
   const totalTasks = computed(() => taskMetrics.value?.total || 0)
+  const totalAssets = computed(() => assetMetrics.value?.total || 0)
   const totalCompleted = computed(() => taskCompletion.value?.total_completed || 0)
   const totalOrganizationsCreated = computed(() => organizationsCreated.value?.total || 0)
   const totalMeetingsCreated = computed(() => meetingsCreated.value?.total || 0)
@@ -28,6 +30,11 @@ export const useMetricsStore = defineStore('metrics', () => {
   const tasksByStatus = computed(() => {
     if (!taskMetrics.value?.by_status) return []
     return taskMetrics.value.by_status
+  })
+
+  const assetsByStatus = computed(() => {
+    if (!assetMetrics.value?.by_status) return []
+    return assetMetrics.value.by_status
   })
 
   const completionDataPoints = computed(() => {
@@ -64,6 +71,7 @@ export const useMetricsStore = defineStore('metrics', () => {
       const data = response.data
       projectMetrics.value = data.projects
       taskMetrics.value = data.tasks
+      assetMetrics.value = data.assets
       taskCompletion.value = data.tasks_completion
       taskStatusOverTime.value = data.task_status_over_time
       organizationsCreated.value = data.organizations_created
@@ -130,6 +138,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     // State
     projectMetrics,
     taskMetrics,
+    assetMetrics,
     taskCompletion,
     taskStatusOverTime,
     organizationsCreated,
@@ -139,11 +148,13 @@ export const useMetricsStore = defineStore('metrics', () => {
     // Getters
     totalProjects,
     totalTasks,
+    totalAssets,
     totalCompleted,
     totalOrganizationsCreated,
     totalMeetingsCreated,
     projectsByStatus,
     tasksByStatus,
+    assetsByStatus,
     completionDataPoints,
     taskStatusDataPoints,
     taskStatusTotals,

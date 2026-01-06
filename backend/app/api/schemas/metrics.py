@@ -167,10 +167,32 @@ class TaskStatusOverTime(BaseModel):
     )
 
 
+class AssetMetrics(BaseModel):
+    """Metrics for assets grouped by status."""
+    total: int = Field(..., description="Total number of assets")
+    by_status: list[StatusCount] = Field(default_factory=list, description="Assets count per status")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "total": 12,
+                    "by_status": [
+                        {"status": "Started", "count": 4},
+                        {"status": "Active", "count": 5},
+                        {"status": "Completed", "count": 3}
+                    ]
+                }
+            ]
+        }
+    )
+
+
 class DashboardMetrics(BaseModel):
     """Combined dashboard metrics response."""
     projects: ProjectMetrics = Field(..., description="Project metrics")
     tasks: TaskMetrics = Field(..., description="Task metrics")
+    assets: AssetMetrics = Field(..., description="Asset metrics")
     tasks_completion: TaskCompletionOverTime = Field(..., description="Task completion over time")
     task_status_over_time: TaskStatusOverTime = Field(..., description="Task status changes over time")
     organizations_created: TimeSeriesMetrics = Field(..., description="Organizations created over time")

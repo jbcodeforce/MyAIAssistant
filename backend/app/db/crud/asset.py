@@ -28,6 +28,7 @@ async def get_assets(
     limit: int = 100,
     project_id: Optional[int] = None,
     todo_id: Optional[int] = None,
+    status: Optional[str] = None,
 ) -> tuple[list[Asset], int]:
     """Get all assets with pagination and optional filtering."""
     query = select(Asset)
@@ -36,6 +37,8 @@ async def get_assets(
         query = query.where(Asset.project_id == project_id)
     if todo_id is not None:
         query = query.where(Asset.todo_id == todo_id)
+    if status is not None:
+        query = query.where(Asset.status == status)
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
