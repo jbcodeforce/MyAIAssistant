@@ -170,6 +170,7 @@ class TaskStatusOverTime(BaseModel):
 class AssetMetrics(BaseModel):
     """Metrics for assets grouped by status."""
     total: int = Field(..., description="Total number of assets")
+    total_usage: int = Field(0, description="Total usage count across all assets (sum of project_count)")
     by_status: list[StatusCount] = Field(default_factory=list, description="Assets count per status")
     
     model_config = ConfigDict(
@@ -177,6 +178,7 @@ class AssetMetrics(BaseModel):
             "examples": [
                 {
                     "total": 12,
+                    "total_usage": 45,
                     "by_status": [
                         {"status": "Started", "count": 4},
                         {"status": "Active", "count": 5},

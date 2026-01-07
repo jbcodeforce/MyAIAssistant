@@ -58,19 +58,25 @@ async def get_task_metrics(db: AsyncSession) -> TaskMetrics:
 
 
 async def get_asset_metrics(db: AsyncSession) -> AssetMetrics:
-    """Get asset counts grouped by status."""
-    query = select(
+    """Get asset counts grouped by status and total usage."""
+    # Query assets grouped by status
+    status_query = select(
         Asset.status,
         func.count(Asset.id).label("count")
     ).group_by(Asset.status)
     
-    result = await db.execute(query)
+    result = await db.execute(status_query)
     rows = result.all()
     
     by_status = [StatusCount(status=row.status, count=row.count) for row in rows]
     total = sum(s.count for s in by_status)
     
-    return AssetMetrics(total=total, by_status=by_status)
+    # Query total usage (sum of all project_count values)
+    usage_query = select(func.coalesce(func.sum(Asset.project_count), 0))
+    usage_result = await db.execute(usage_query)
+    total_usage = usage_result.scalar() or 0
+    
+    return AssetMetrics(total=total, total_usage=total_usage, by_status=by_status)
 
 
 async def get_tasks_completion_over_time(

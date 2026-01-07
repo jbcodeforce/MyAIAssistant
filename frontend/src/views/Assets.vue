@@ -64,6 +64,7 @@
               <th class="col-project">Project</th>
               <th class="col-todo">Task</th>
               <th class="col-url">Reference URL</th>
+              <th class="col-reuse">Reuse Count</th>
               <th class="col-date">Created</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -104,6 +105,11 @@
                     <line x1="10" x2="21" y1="14" y2="3"/>
                   </svg>
                 </a>
+              </td>
+              <td class="col-reuse">
+                <span class="reuse-badge" :class="{ 'has-reuse': item.project_count > 0 }">
+                  {{ item.project_count || 0 }}
+                </span>
               </td>
               <td class="col-date">
                 {{ formatDate(item.created_at) }}
@@ -192,6 +198,18 @@
             </select>
           </div>
         </div>
+
+        <div class="form-group">
+          <label for="project_count">Reuse Count</label>
+          <input 
+            id="project_count" 
+            v-model.number="formData.project_count" 
+            type="number" 
+            min="0"
+            placeholder="0"
+          />
+          <span class="form-hint">Number of projects where this asset has been used</span>
+        </div>
       </form>
 
       <template #footer>
@@ -231,7 +249,8 @@ const formData = ref({
   description: '',
   reference_url: '',
   project_id: null,
-  todo_id: null
+  todo_id: null,
+  project_count: 0
 })
 
 // Computed
@@ -314,7 +333,8 @@ function openCreateModal() {
     description: '',
     reference_url: '',
     project_id: null,
-    todo_id: null
+    todo_id: null,
+    project_count: 0
   }
   showModal.value = true
 }
@@ -327,7 +347,8 @@ function openEditModal(item) {
     description: item.description || '',
     reference_url: item.reference_url,
     project_id: item.project_id,
-    todo_id: item.todo_id
+    todo_id: item.todo_id,
+    project_count: item.project_count || 0
   }
   showModal.value = true
 }
@@ -596,6 +617,11 @@ function truncate(text, maxLength) {
   min-width: 200px;
 }
 
+.col-reuse {
+  width: 90px;
+  text-align: center;
+}
+
 .col-date {
   width: 100px;
   white-space: nowrap;
@@ -658,6 +684,34 @@ function truncate(text, maxLength) {
 .url-link svg {
   flex-shrink: 0;
   opacity: 0.6;
+}
+
+.reuse-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2rem;
+  padding: 0.25rem 0.5rem;
+  background: #f3f4f6;
+  color: #6b7280;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+
+.reuse-badge.has-reuse {
+  background: #fef3c7;
+  color: #b45309;
+}
+
+:global(.dark) .reuse-badge {
+  background: #374151;
+  color: #9ca3af;
+}
+
+:global(.dark) .reuse-badge.has-reuse {
+  background: #78350f;
+  color: #fcd34d;
 }
 
 .no-value {
@@ -783,7 +837,7 @@ function truncate(text, maxLength) {
   }
   
   .assets-table {
-    min-width: 900px;
+    min-width: 1000px;
   }
 }
 

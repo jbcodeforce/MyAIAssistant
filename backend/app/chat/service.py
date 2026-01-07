@@ -232,7 +232,7 @@ class ChatService:
                 })
         
         # Route through agent workflow
-        routed_response: RoutedResponse = get_agent_router().route(
+        routed_response: RoutedResponse = await get_agent_router().route(
             query=user_message,
             conversation_history=history_dicts,
             context=context or {},

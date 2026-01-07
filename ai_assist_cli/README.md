@@ -7,18 +7,21 @@ Command-line tool for managing AI Assistant's workspaces and global cross worksp
 ### Using uv (recommended)
 
 ```bash
-cd ai_assist_cli
-uv pip install -e .
-```
+cd ../agent_core
+uv build
 
-### Using pip
-
-```bash
 cd ai_assist_cli
-pip install -e .
+uv build
+uv tool install /Users/jerome/Documents/Code/MyAIAssistant/ai_assist_cli/dist/ai_assist_cli-0.1.0-py3-none-any.whl \
+  --with /Users/jerome/Documents/Code/MyAIAssistant/agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
+  --force
 ```
 
 ## Usage
+
+```sh
+ai_assist --help
+```
 
 ### Initialize a new workspace
 

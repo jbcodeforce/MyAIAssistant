@@ -18,6 +18,7 @@ export const useMetricsStore = defineStore('metrics', () => {
   const totalProjects = computed(() => projectMetrics.value?.total || 0)
   const totalTasks = computed(() => taskMetrics.value?.total || 0)
   const totalAssets = computed(() => assetMetrics.value?.total || 0)
+  const totalAssetUsage = computed(() => assetMetrics.value?.total_usage || 0)
   const totalCompleted = computed(() => taskCompletion.value?.total_completed || 0)
   const totalOrganizationsCreated = computed(() => organizationsCreated.value?.total || 0)
   const totalMeetingsCreated = computed(() => meetingsCreated.value?.total || 0)
@@ -149,6 +150,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     totalProjects,
     totalTasks,
     totalAssets,
+    totalAssetUsage,
     totalCompleted,
     totalOrganizationsCreated,
     totalMeetingsCreated,
