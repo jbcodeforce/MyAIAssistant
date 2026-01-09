@@ -10,19 +10,17 @@ database_url: "sqlite+aiosqlite:///./data/app.db"
 # PostgreSQL (for docker-compose.postgres.yml or production):
 # database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
 
-# Knowledge base / Vector store settings
-chroma_persist_directory: "/app/data/chroma"
-chroma_collection_name: "km-db"
-
 # CORS settings (list of allowed origins)
 cors_origins:
   - "http://localhost:5173"
   - "http://localhost:3000"
 
 # LLM settings
-llm_provider: "ollama"
+# Provider must be "huggingface" - the InferenceClient connects to Ollama via base_url
+# Ollama's OpenAI-compatible endpoint is at /v1
+llm_provider: "huggingface"
 llm_model: "gpt-oss:20b"
 llm_api_key: null
-llm_base_url: "http://localhost:11434"
+llm_base_url: "http://localhost:11434/v1"
 llm_max_tokens: 2048
 llm_temperature: 0.1

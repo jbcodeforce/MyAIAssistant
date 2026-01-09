@@ -38,6 +38,7 @@ class LLMClient:
     
     PROVIDERS: dict[str, type[LLMProvider]] = {
         "huggingface": HuggingFaceProvider,
+        "ollama": HuggingFaceProvider,
     }
     
     def __init__(self, config: LLMConfig):

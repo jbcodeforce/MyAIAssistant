@@ -111,7 +111,14 @@ async def get_tasks_completion_over_time(
     total_completed = 0
     
     for row in rows:
-        date_str = row.completion_date.strftime("%Y-%m-%d") if row.completion_date else ""
+        # Handle both date objects and strings (SQLite returns strings)
+        if row.completion_date:
+            if hasattr(row.completion_date, 'strftime'):
+                date_str = row.completion_date.strftime("%Y-%m-%d")
+            else:
+                date_str = str(row.completion_date)[:10]
+        else:
+            continue
         if date_str:
             data_points.append(TaskCompletionDataPoint(date=date_str, count=row.count))
             total_completed += row.count

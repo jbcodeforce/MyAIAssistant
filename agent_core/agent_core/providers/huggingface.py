@@ -24,11 +24,11 @@ class HuggingFaceProvider(LLMProvider):
             api_key=os.getenv("HF_TOKEN")
         )
     
-    Example (local):
+    Example (local with Ollama):
         config = LLMConfig(
             provider="huggingface",
             model="llama3",
-            base_url="http://localhost:8080"
+            base_url="http://localhost:11434/v1"
         )
     """
     
@@ -38,15 +38,9 @@ class HuggingFaceProvider(LLMProvider):
         """Get HuggingFace token from config or environment."""
         return config.api_key or get_hf_token()
     
-    def _get_model_or_base_url(self, config: LLMConfig) -> str:
-        """Get the model identifier or base URL for the client.
-        
-        For local servers, returns the base_url.
-        For HF Hub, returns the model name.
-        """
-        if config.base_url:
-            return config.base_url
-        return config.model
+    def _is_local_server(self, config: LLMConfig) -> bool:
+        """Check if using a local inference server."""
+        return config.base_url is not None
     
     def _parse_response(
         self,
@@ -97,21 +91,36 @@ class HuggingFaceProvider(LLMProvider):
     ) -> LLMResponse:
         """Send async chat completion request using HuggingFace AsyncInferenceClient."""
         token = self._get_token(config)
-        model_or_url = self._get_model_or_base_url(config)
+        is_local = self._is_local_server(config)
         
         try:
-            client = AsyncInferenceClient(
-                model=model_or_url,
-                token=token,
-                timeout=config.timeout,
-            )
+            # For local servers, use base_url parameter; for remote, use model
+            if is_local:
+                client = AsyncInferenceClient(
+                    base_url=config.base_url,
+                    token=token,
+                    timeout=config.timeout,
+                )
+            else:
+                client = AsyncInferenceClient(
+                    model=config.model,
+                    token=token,
+                    timeout=config.timeout,
+                )
             
-            response = await client.chat_completion(
-                messages=[msg.to_dict() for msg in messages],
-                max_tokens=config.max_tokens,
-                temperature=config.temperature,
-                stream=False,
-            )
+            # Build chat completion kwargs
+            chat_kwargs = {
+                "messages": [msg.to_dict() for msg in messages],
+                "max_tokens": config.max_tokens,
+                "temperature": config.temperature,
+                "stream": False,
+            }
+            
+            # For local servers, pass model name in the request
+            if is_local:
+                chat_kwargs["model"] = config.model
+            
+            response = await client.chat_completion(**chat_kwargs)
             
             return self._parse_response(response, config)
             
@@ -119,7 +128,7 @@ class HuggingFaceProvider(LLMProvider):
             # Check for connection errors
             if "connect" in str(e).lower() or "connection" in str(e).lower():
                 raise LLMError(
-                    message=f"Could not connect to HuggingFace endpoint. Error: {e}",
+                    message=f"Could not connect to inference endpoint. Error: {e}",
                     provider=self.provider_name,
                 )
             self._handle_error(e)
@@ -131,21 +140,36 @@ class HuggingFaceProvider(LLMProvider):
     ) -> LLMResponse:
         """Send sync chat completion request using HuggingFace InferenceClient."""
         token = self._get_token(config)
-        model_or_url = self._get_model_or_base_url(config)
+        is_local = self._is_local_server(config)
         
         try:
-            client = InferenceClient(
-                model=model_or_url,
-                token=token,
-                timeout=config.timeout,
-            )
+            # For local servers, use base_url parameter; for remote, use model
+            if is_local:
+                client = InferenceClient(
+                    base_url=config.base_url,
+                    token=token,
+                    timeout=config.timeout,
+                )
+            else:
+                client = InferenceClient(
+                    model=config.model,
+                    token=token,
+                    timeout=config.timeout,
+                )
             
-            response = client.chat_completion(
-                messages=[msg.to_dict() for msg in messages],
-                max_tokens=config.max_tokens,
-                temperature=config.temperature,
-                stream=False,
-            )
+            # Build chat completion kwargs
+            chat_kwargs = {
+                "messages": [msg.to_dict() for msg in messages],
+                "max_tokens": config.max_tokens,
+                "temperature": config.temperature,
+                "stream": False,
+            }
+            
+            # For local servers, pass model name in the request
+            if is_local:
+                chat_kwargs["model"] = config.model
+            
+            response = client.chat_completion(**chat_kwargs)
             
             return self._parse_response(response, config)
             
@@ -153,7 +177,7 @@ class HuggingFaceProvider(LLMProvider):
             # Check for connection errors
             if "connect" in str(e).lower() or "connection" in str(e).lower():
                 raise LLMError(
-                    message=f"Could not connect to HuggingFace endpoint. Error: {e}",
+                    message=f"Could not connect to inference endpoint. Error: {e}",
                     provider=self.provider_name,
                 )
             self._handle_error(e)

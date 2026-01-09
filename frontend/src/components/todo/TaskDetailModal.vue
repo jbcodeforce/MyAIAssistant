@@ -507,6 +507,57 @@ async function loadTaskPlan() {
   font-style: italic;
 }
 
+/* Task List (Checkbox) Styles */
+.description-content :deep(ul[data-type="taskList"]) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+}
+
+.description-content :deep(ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.375rem 0;
+}
+
+.description-content :deep(ul[data-type="taskList"] li > label) {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  margin-top: 0.2em;
+}
+
+.description-content :deep(ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+  border-radius: 4px;
+}
+
+.description-content :deep(ul[data-type="taskList"] li > div) {
+  flex: 1;
+  min-width: 0;
+}
+
+.description-content :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+:global(.dark) .description-content :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  color: #64748b;
+}
+
+/* Nested task lists */
+.description-content :deep(ul[data-type="taskList"] ul[data-type="taskList"]) {
+  margin-left: 1.5rem;
+  margin-top: 0.25rem;
+  margin-bottom: 0;
+}
+
 .no-description {
   color: #9ca3af;
   font-style: italic;
@@ -571,6 +622,46 @@ async function loadTaskPlan() {
 .plan-content :deep(li) {
   display: list-item;
   margin: 0.25rem 0;
+}
+
+/* Task List (Checkbox) Styles in Plan Content */
+.plan-content :deep(ul[data-type="taskList"]) {
+  list-style: none;
+  padding-left: 0;
+}
+
+.plan-content :deep(ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.plan-content :deep(ul[data-type="taskList"] li > label) {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 0.2em;
+}
+
+.plan-content :deep(ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.plan-content :deep(ul[data-type="taskList"] li > div) {
+  flex: 1;
+  min-width: 0;
+}
+
+.plan-content :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+:global(.dark) .plan-content :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  color: #64748b;
 }
 
 .detail-footer {

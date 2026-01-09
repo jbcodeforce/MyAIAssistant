@@ -351,9 +351,66 @@ class AgentRouter:
 _agent_router: Optional[AgentRouter] = None
 
 
-def get_agent_router() -> AgentRouter:
-    """Get or create the global query classifier instance."""
+def get_agent_router(llm_config: "LLMConfig" = None) -> AgentRouter:
+    """
+    Get or create the global agent router instance.
+    
+    On first call, creates agents using the provided LLM config.
+    Subsequent calls return the cached instance.
+    
+    Args:
+        llm_config: Optional LLM configuration for agents.
+                   If not provided, agents use default config.
+    """
     global _agent_router
     if _agent_router is None:
-        _agent_router = AgentRouter()
+        _agent_router = _create_default_router(llm_config)
     return _agent_router
+
+
+def _create_default_router(llm_config: "LLMConfig" = None) -> AgentRouter:
+    """Create router with default agent configuration."""
+    from agent_core.agents.general_agent import GeneralAgent
+    from agent_core.agents.rag_agent import RAGAgent
+    from agent_core.agents.code_agent import CodeAgent
+    from agent_core.agents.task_agent import TaskAgent
+    from agent_core.config import LLMConfig
+    
+    # Create agents - they share the same LLM config if provided
+    kwargs = {"llm_config": llm_config} if llm_config else {}
+    
+    general_agent = GeneralAgent(**kwargs)
+    rag_agent = RAGAgent(**kwargs)
+    code_agent = CodeAgent(**kwargs)
+    task_agent = TaskAgent(**kwargs)
+    
+    # Create router with all agents registered
+    router = AgentRouter(
+        agents={
+            # Map agent type names to agent instances
+            "general_chat": general_agent,
+            "knowledge_search": rag_agent,
+            "code_help": code_agent,
+            "task_planning": task_agent,
+            "task_status": task_agent,  # Task agent handles both planning and status
+            "unclear": general_agent,  # Fallback to general for unclear intent
+        },
+        intent_mapping={
+            QueryIntent.GENERAL_CHAT: "general_chat",
+            QueryIntent.KNOWLEDGE_SEARCH: "knowledge_search",
+            QueryIntent.CODE_HELP: "code_help",
+            QueryIntent.TASK_PLANNING: "task_planning",
+            QueryIntent.TASK_STATUS: "task_status",
+            QueryIntent.UNCLEAR: "unclear",
+        },
+        default_agent="general_chat"
+    )
+    
+    logger.info("Created default agent router with all agents registered")
+    return router
+
+
+def reset_agent_router() -> None:
+    """Reset the global router instance. Useful for testing or reconfiguration."""
+    global _agent_router
+    _agent_router = None

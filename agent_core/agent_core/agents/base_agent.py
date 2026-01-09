@@ -83,8 +83,8 @@ class BaseAgent(ABC):
         else:
             # Build config from individual parameters
             self._llm_config = LLMConfig(
-                provider=provider or "ollama",
-                model=model or "llama2",
+                provider=provider or "huggingface",
+                model=model or "mistral:7b-instruct",
                 api_key=api_key,
                 base_url=base_url,
                 max_tokens=max_tokens,

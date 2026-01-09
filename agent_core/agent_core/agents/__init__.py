@@ -12,6 +12,7 @@ from agent_core.agents.agent_router import (
     WorkflowState,
     RoutedResponse,
     get_agent_router,
+    reset_agent_router,
 )
 
 __all__ = [
@@ -28,5 +29,6 @@ __all__ = [
     "WorkflowState",
     "RoutedResponse",
     "get_agent_router",
+    "reset_agent_router",
 ]
 

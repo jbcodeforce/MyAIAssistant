@@ -9,7 +9,7 @@ from agent_core import LLMClient, LLMConfig, Message as LLMMessage
 from app.core.config import get_settings
 from agent_core.services.rag.service import RAGService, get_rag_service
 from agent_core.agents.query_classifier import QueryIntent
-from agent_core.agents.agent_router import AgentRouter, RoutedResponse, get_agent_router
+from agent_core.agents.agent_router import AgentRouter, RoutedResponse, get_agent_router, reset_agent_router
 
 logger = logging.getLogger(__name__)
 
@@ -69,9 +69,14 @@ class ChatService:
             max_tokens=self.max_tokens,
             temperature=self.temperature
         )
-        
+        logger.info(f"LLM config: {self._llm_config}")
         # Create LLM client
         self._llm_client = LLMClient(self._llm_config)
+        
+        # Initialize agent router with this config
+        # Reset first to ensure it uses our config
+        reset_agent_router()
+        self._agent_router = get_agent_router(self._llm_config)
 
     async def chat_with_todo(
         self,
@@ -232,7 +237,7 @@ class ChatService:
                 })
         
         # Route through agent workflow
-        routed_response: RoutedResponse = await get_agent_router().route(
+        routed_response: RoutedResponse = await self._agent_router.route(
             query=user_message,
             conversation_history=history_dicts,
             context=context or {},

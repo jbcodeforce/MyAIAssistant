@@ -76,6 +76,14 @@
         >
           <span class="toolbar-icon">1.</span>
         </button>
+        <button
+          type="button"
+          :class="{ active: editor.isActive('taskList') }"
+          @click="editor.chain().focus().toggleTaskList().run()"
+          title="Task List (Checkboxes)"
+        >
+          <span class="toolbar-icon checkbox-icon">☑</span>
+        </button>
       </div>
 
       <div class="toolbar-divider"></div>
@@ -108,6 +116,8 @@
 import { watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
 
 const props = defineProps({
   modelValue: {
@@ -124,7 +134,13 @@ const emit = defineEmits(['update:modelValue'])
 
 const editor = useEditor({
   content: props.modelValue,
-  extensions: [StarterKit],
+  extensions: [
+    StarterKit,
+    TaskList,
+    TaskItem.configure({
+      nested: true,
+    }),
+  ],
   onUpdate: ({ editor }) => {
     const html = editor.getHTML()
     // Emit empty string if content is just an empty paragraph
@@ -311,6 +327,56 @@ onBeforeUnmount(() => {
   background: none;
   padding: 0;
   color: inherit;
+}
+
+/* Task List (Checkbox) Styles */
+.editor-content :deep(.tiptap ul[data-type="taskList"]) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 0.5em 0;
+}
+
+.editor-content :deep(.tiptap ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25em 0;
+}
+
+.editor-content :deep(.tiptap ul[data-type="taskList"] li > label) {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  user-select: none;
+  margin-top: 0.15em;
+}
+
+.editor-content :deep(.tiptap ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.editor-content :deep(.tiptap ul[data-type="taskList"] li > div) {
+  flex: 1;
+  min-width: 0;
+}
+
+.editor-content :deep(.tiptap ul[data-type="taskList"] li[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+/* Nested task lists */
+.editor-content :deep(.tiptap ul[data-type="taskList"] ul[data-type="taskList"]) {
+  margin-left: 1.5rem;
+  margin-top: 0.25em;
+  margin-bottom: 0;
+}
+
+.toolbar-icon.checkbox-icon {
+  font-size: 14px;
 }
 </style>
 

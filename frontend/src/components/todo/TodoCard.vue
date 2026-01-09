@@ -339,6 +339,48 @@ function onDragEnd() {
   color: #60a5fa;
 }
 
+/* Task List (Checkbox) Styles */
+.todo-description :deep(ul[data-type="taskList"]) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0 0 0.25rem 0;
+}
+
+.todo-description :deep(ul[data-type="taskList"] li) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.375rem;
+  margin: 0.125rem 0;
+}
+
+.todo-description :deep(ul[data-type="taskList"] li > label) {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  margin-top: 0.1em;
+}
+
+.todo-description :deep(ul[data-type="taskList"] li > label input[type="checkbox"]) {
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+  accent-color: #2563eb;
+}
+
+.todo-description :deep(ul[data-type="taskList"] li > div) {
+  flex: 1;
+  min-width: 0;
+}
+
+.todo-description :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: #9ca3af;
+}
+
+:global(.dark) .todo-description :deep(ul[data-type="taskList"] li[data-checked="true"] > div) {
+  color: #64748b;
+}
+
 .todo-meta {
   display: flex;
   gap: 0.5rem;
