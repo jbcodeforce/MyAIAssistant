@@ -15,7 +15,7 @@ from agent_core.agents import (
     WorkflowState,
     RoutedResponse,
 )
-from agent_core import LLMConfig, LLMResponse
+from agent_core import LLMResponse
 
 
 class TestAgentResponse:
@@ -95,14 +95,13 @@ class TestQueryClassifier:
     @pytest.fixture
     def classifier(self):
         """Create a query classifier for testing."""
-        config = LLMConfig(
+        return QueryClassifier(
             provider="openai",
             model="gpt-4",
             api_key="test-key",
             max_tokens=500,
             temperature=0.1
         )
-        return QueryClassifier(llm_config=config)
     
     @pytest.fixture
     def mock_llm_response(self):

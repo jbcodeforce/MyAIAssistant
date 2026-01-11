@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.27.0",
     # Agent core library
     "agent-core",
+    "aiofiles>=25.1.0",
 ]
 
 [tool.uv.sources]

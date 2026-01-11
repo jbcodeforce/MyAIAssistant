@@ -1,0 +1,65 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "AgentCore Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "cwd": "${fileDirname}",
+            "env": {
+                "PYTHONPATH": "${fileWorkspaceFolder}/agent_core/src:${fileWorkspaceFolder}/agent_core/tests"
+            },
+            "python": "${workspaceFolder}/agent_core/.venv/bin/python"
+        },
+        {
+            "name": "Pytest: Current Test File",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${file}",
+                "-v",
+                "-s"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/agent_core",
+            "python": "${workspaceFolder}/agent_core/.venv/bin/python",
+            "justMyCode": false
+        },
+        {
+            "name": "Pytest: Current Test Function",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "${file}::${selectedText}",
+                "-v",
+                "-s"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/agent_core",
+            "python": "${workspaceFolder}/agent_core/.venv/bin/python",
+            "justMyCode": false
+        },
+        {
+            "name": "Pytest: test_meeting_agent.py",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "pytest",
+            "args": [
+                "tests/it/test_meeting_agent.py",
+                "-v",
+                "-s"
+            ],
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}/agent_core",
+            "python": "${workspaceFolder}/agent_core/.venv/bin/python",
+            "justMyCode": false
+        }
+    ]
+}

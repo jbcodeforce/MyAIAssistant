@@ -262,6 +262,28 @@ export const assetsApi = {
   }
 }
 
+export const personsApi = {
+  list(params = {}) {
+    return api.get('/persons/', { params })
+  },
+
+  get(id) {
+    return api.get(`/persons/${id}`)
+  },
+
+  create(person) {
+    return api.post('/persons/', person)
+  },
+
+  update(id, person) {
+    return api.put(`/persons/${id}`, person)
+  },
+
+  delete(id) {
+    return api.delete(`/persons/${id}`)
+  }
+}
+
 export const metricsApi = {
   /**
    * Get project metrics grouped by status

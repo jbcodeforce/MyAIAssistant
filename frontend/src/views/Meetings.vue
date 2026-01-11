@@ -62,6 +62,7 @@
               <th class="col-meeting-id">Meeting ID</th>
               <th class="col-org">Organization</th>
               <th class="col-project">Project</th>
+              <th class="col-presents">Attendees</th>
               <th class="col-file">File Reference</th>
               <th class="col-date">Created</th>
               <th class="col-actions">Actions</th>
@@ -81,6 +82,12 @@
               <td class="col-project">
                 <span v-if="item.project_id" class="project-badge">
                   {{ getProjectName(item.project_id) }}
+                </span>
+                <span v-else class="no-value">-</span>
+              </td>
+              <td class="col-presents">
+                <span v-if="item.presents" class="presents-text" :title="item.presents">
+                  {{ truncate(item.presents, 30) }}
                 </span>
                 <span v-else class="no-value">-</span>
               </td>
@@ -163,6 +170,17 @@
         </div>
 
         <div class="form-group">
+          <label for="presents">Attendees</label>
+          <input 
+            id="presents" 
+            v-model="createFormData.presents" 
+            type="text" 
+            placeholder="e.g., John Doe, Jane Smith, Bob Wilson"
+          />
+          <span class="form-hint">Comma or semicolon separated list of meeting attendees</span>
+        </div>
+
+        <div class="form-group">
           <label>Meeting Notes (Markdown) *</label>
           <div class="markdown-editor-container">
             <div class="editor-tabs">
@@ -188,10 +206,6 @@
               rows="15"
               required
               placeholder="# Meeting Title
-
-## Attendees
-- Name 1
-- Name 2
 
 ## Agenda
 1. Topic 1
@@ -237,6 +251,10 @@
             <span class="info-label">Project:</span>
             <span class="info-value">{{ getProjectName(editingItem?.project_id) }}</span>
           </div>
+          <div class="info-row" v-if="editingItem?.presents">
+            <span class="info-label">Attendees:</span>
+            <span class="info-value">{{ editingItem?.presents }}</span>
+          </div>
           <div class="info-row">
             <span class="info-label">File:</span>
             <span class="info-value file-path">{{ editingItem?.file_ref }}</span>
@@ -264,6 +282,17 @@
                 </option>
               </select>
             </div>
+          </div>
+
+          <div class="form-group">
+            <label for="edit_presents">Attendees</label>
+            <input 
+              id="edit_presents" 
+              v-model="editFormData.presents" 
+              type="text" 
+              placeholder="e.g., John Doe, Jane Smith, Bob Wilson"
+            />
+            <span class="form-hint">Comma or semicolon separated list of meeting attendees</span>
           </div>
 
           <div class="form-group">
@@ -343,6 +372,7 @@ const createFormData = ref({
   meeting_id: '',
   org_id: null,
   project_id: null,
+  presents: '',
   content: ''
 })
 
@@ -355,6 +385,7 @@ const viewContent = ref('')
 const editFormData = ref({
   org_id: null,
   project_id: null,
+  presents: '',
   content: ''
 })
 
@@ -471,6 +502,7 @@ function openCreateModal() {
     meeting_id: '',
     org_id: null,
     project_id: null,
+    presents: '',
     content: ''
   }
   editorTab.value = 'write'
@@ -524,6 +556,7 @@ async function openEditModal(item) {
     editFormData.value = {
       org_id: item.org_id,
       project_id: item.project_id,
+      presents: item.presents || '',
       content: result.content
     }
   } catch (err) {
@@ -531,6 +564,7 @@ async function openEditModal(item) {
     editFormData.value = {
       org_id: item.org_id,
       project_id: item.project_id,
+      presents: item.presents || '',
       content: ''
     }
   } finally {
@@ -544,6 +578,7 @@ function startEditing() {
   editFormData.value = {
     org_id: editingItem.value.org_id,
     project_id: editingItem.value.project_id,
+    presents: editingItem.value.presents || '',
     content: viewContent.value
   }
 }
@@ -797,6 +832,10 @@ function truncate(text, maxLength) {
   width: 150px;
 }
 
+.col-presents {
+  width: 180px;
+}
+
 .col-file {
   min-width: 200px;
 }
@@ -850,6 +889,15 @@ function truncate(text, maxLength) {
 
 .no-value {
   color: #d1d5db;
+}
+
+.presents-text {
+  font-size: 0.8125rem;
+  color: #4b5563;
+}
+
+:global(.dark) .presents-text {
+  color: #9ca3af;
 }
 
 .btn-icon {

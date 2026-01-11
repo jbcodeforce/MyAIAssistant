@@ -1,11 +1,13 @@
 """LLM Client - unified interface using HuggingFace InferenceClient."""
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
-from agent_core.config import LLMConfig
 from agent_core.types import Message, LLMResponse, LLMError
 from agent_core.providers.base import LLMProvider
 from agent_core.providers.huggingface import HuggingFaceProvider
+
+if TYPE_CHECKING:
+    from agent_core.agents.factory import AgentConfig
 
 
 class LLMClient:
@@ -18,7 +20,9 @@ class LLMClient:
     Provides both synchronous and asynchronous APIs for chat completions.
     
     Example (local server):
-        config = LLMConfig(
+        from agent_core import AgentConfig, LLMClient, Message
+        
+        config = AgentConfig(
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -27,7 +31,10 @@ class LLMClient:
         response = await client.chat_async([Message(role="user", content="Hello")])
     
     Example (HF Hub):
-        config = LLMConfig(
+        from agent_core import AgentConfig, LLMClient, Message
+        import os
+        
+        config = AgentConfig(
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key=os.getenv("HF_TOKEN")
@@ -41,12 +48,12 @@ class LLMClient:
         "ollama": HuggingFaceProvider,
     }
     
-    def __init__(self, config: LLMConfig):
+    def __init__(self, config: "AgentConfig"):
         """
         Initialize the LLM client.
         
         Args:
-            config: LLM configuration specifying provider, model, etc.
+            config: AgentConfig specifying provider, model, etc.
         """
         self.config = config
         self._provider: Optional[LLMProvider] = None
@@ -148,13 +155,18 @@ class LLMClient:
         
         return self.chat(messages, **kwargs)
     
-    def _merge_config(self, overrides: dict) -> LLMConfig:
+    def _merge_config(self, overrides: dict) -> "AgentConfig":
         """Merge config overrides with base config."""
+        from agent_core.agents.factory import AgentConfig
+        
         if not overrides:
             return self.config
         
         # Create new config with overrides
-        return LLMConfig(
+        return AgentConfig(
+            name=self.config.name,
+            description=self.config.description,
+            agent_class=self.config.agent_class,
             provider=overrides.get("provider", self.config.provider),
             model=overrides.get("model", self.config.model),
             api_key=overrides.get("api_key", self.config.api_key),

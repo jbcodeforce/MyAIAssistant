@@ -12,7 +12,7 @@
     <div v-else class="dashboard-content">
       <div class="dashboard-header">
         <div>
-          <h2>Dashboard</h2>
+          <h2>Tasks Dashboard</h2>
           <p class="view-description">Organize tasks by urgency and importance</p>
         </div>
         <button class="btn-new-todo" @click="uiStore.openCreateModal()">

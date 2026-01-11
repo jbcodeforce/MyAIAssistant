@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from agent_core.client import LLMClient
-from agent_core.config import LLMConfig
+from agent_core.agents.factory import AgentConfig
 from agent_core.types import Message, LLMResponse, LLMError
 from agent_core.providers.base import LLMProvider
 
@@ -15,7 +15,8 @@ class TestLLMClient:
     @pytest.fixture
     def hf_config_remote(self):
         """Create HuggingFace remote config for testing."""
-        return LLMConfig(
+        return AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -24,7 +25,8 @@ class TestLLMClient:
     @pytest.fixture
     def hf_config_local(self):
         """Create HuggingFace local config for testing."""
-        return LLMConfig(
+        return AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -62,7 +64,8 @@ class TestLLMClient:
     
     def test_unsupported_provider(self):
         """Test error for unsupported provider."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="unsupported",
             model="model"
         )
@@ -253,7 +256,8 @@ class TestLLMClientHuggingFaceProvider:
     
     def test_huggingface_provider_creation_remote(self):
         """Test HuggingFace provider is created correctly for remote."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -264,7 +268,8 @@ class TestLLMClientHuggingFaceProvider:
     
     def test_huggingface_provider_creation_local(self):
         """Test HuggingFace provider is created correctly for local."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"

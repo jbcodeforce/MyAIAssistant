@@ -60,7 +60,7 @@ from app.db.crud.slp_assessment import (
     delete_slp_assessment,
 )
 
-from app.db.crud.meeting_ref import (
+from app.db.crud.meeting import (
     create_meeting_ref,
     get_meeting_ref,
     get_meeting_ref_by_meeting_id,
@@ -79,6 +79,16 @@ from app.db.crud.asset import (
     delete_asset,
     get_assets_by_project,
     get_assets_by_todo,
+)
+
+from app.db.crud.person import (
+    create_person,
+    get_person,
+    get_persons,
+    update_person,
+    delete_person,
+    get_persons_by_project,
+    get_persons_by_organization,
 )
 
 __all__ = [
@@ -143,5 +153,13 @@ __all__ = [
     "delete_asset",
     "get_assets_by_project",
     "get_assets_by_todo",
+    # Person
+    "create_person",
+    "get_person",
+    "get_persons",
+    "update_person",
+    "delete_person",
+    "get_persons_by_project",
+    "get_persons_by_organization",
 ]
 

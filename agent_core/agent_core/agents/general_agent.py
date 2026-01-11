@@ -53,6 +53,17 @@ class GeneralAgent(BaseAgent):
 
     def build_system_prompt(self, context: Optional[dict] = None) -> str:
         """Build system prompt for general agent."""
+        # Check if system_prompt was injected from config
+        if self._system_prompt:
+            prompt = self._system_prompt
+            if context:
+                try:
+                    prompt = prompt.format(**context)
+                except KeyError:
+                    pass
+            return prompt
+        
+        # Default prompt
         prompt_parts = [
             "You are a helpful AI assistant.",
             "You provide clear, accurate, and helpful responses.",

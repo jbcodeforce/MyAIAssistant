@@ -235,6 +235,7 @@ class MeetingRef(Base):
         Integer, ForeignKey("organizations.id"), nullable=True
     )
     file_ref: Mapped[str] = mapped_column(String(2048), nullable=False)
+    presents: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -303,6 +304,50 @@ class Asset(Base):
 
     def __repr__(self) -> str:
         return f"Asset(id={self.id!r}, name={self.name!r}, reference_url={self.reference_url!r})"
+
+
+class Person(Base):
+    """Person entity for tracking interactions.
+    
+    Represents a person the user interacts with during tasks or projects.
+    Tracks relationship context, role, last meeting date, and next steps.
+    """
+    __tablename__ = "persons"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    context: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    role: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    last_met_date: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    next_step: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    
+    # Optional links to project or organization
+    project_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("projects.id"), nullable=True
+    )
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True
+    )
+    
+    # Timestamps
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    # Relationships
+    project: Mapped[Optional["Project"]] = relationship("Project", backref="persons")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", backref="persons")
+
+    def __repr__(self) -> str:
+        return f"Person(id={self.id!r}, name={self.name!r}, role={self.role!r})"
 
 
 class SLPassessment(Base):

@@ -22,7 +22,7 @@ from agent_core.services.rag.document_loader import (
 )
 from agent_core.services.rag.text_splitter import RecursiveTextSplitter, TextChunk
 from agent_core.services.rag.service import RAGService, SearchResult
-from agent_core.config import LLMConfig
+from agent_core.agents.factory import AgentConfig
 from agent_core.agents.general_agent import GeneralAgent
 from agent_core.agents.rag_agent import RAGAgent
 
@@ -122,9 +122,10 @@ def text_splitter() -> RecursiveTextSplitter:
 
 
 @pytest.fixture
-def ollama_config() -> LLMConfig:
-    """Create LLM config for Ollama integration tests."""
-    return LLMConfig(
+def ollama_config() -> AgentConfig:
+    """Create AgentConfig for Ollama integration tests."""
+    return AgentConfig(
+        name="OllamaRAGTest",
         provider="ollama",
         model=OLLAMA_MODEL,
         base_url=OLLAMA_BASE_URL,
@@ -135,16 +136,16 @@ def ollama_config() -> LLMConfig:
 
 
 @pytest.fixture
-def general_agent(ollama_config: LLMConfig) -> GeneralAgent:
+def general_agent(ollama_config: AgentConfig) -> GeneralAgent:
     """Create a GeneralAgent with Ollama config."""
-    return GeneralAgent(llm_config=ollama_config)
+    return GeneralAgent(config=ollama_config)
 
 
 @pytest.fixture
-def rag_agent(ollama_config: LLMConfig, rag_service: RAGService) -> RAGAgent:
+def rag_agent(ollama_config: AgentConfig, rag_service: RAGService) -> RAGAgent:
     """Create a RAGAgent with Ollama config and RAG service."""
     return RAGAgent(
-        llm_config=ollama_config,
+        config=ollama_config,
         rag_service=rag_service,
         n_results=5
     )

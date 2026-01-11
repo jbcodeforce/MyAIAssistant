@@ -7,9 +7,12 @@ This module implements the main routing workflow that:
 """
 
 import logging
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, TYPE_CHECKING
 
 from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from agent_core.agents.factory import AgentConfig
 
 from agent_core.agents.base_agent import BaseAgent, AgentResponse
 from agent_core.agents.query_classifier import (
@@ -351,33 +354,33 @@ class AgentRouter:
 _agent_router: Optional[AgentRouter] = None
 
 
-def get_agent_router(llm_config: "LLMConfig" = None) -> AgentRouter:
+def get_agent_router(config: "AgentConfig" = None) -> AgentRouter:
     """
     Get or create the global agent router instance.
     
-    On first call, creates agents using the provided LLM config.
+    On first call, creates agents using the provided config.
     Subsequent calls return the cached instance.
     
     Args:
-        llm_config: Optional LLM configuration for agents.
-                   If not provided, agents use default config.
+        config: Optional AgentConfig for agents.
+                If not provided, agents use default config.
     """
     global _agent_router
     if _agent_router is None:
-        _agent_router = _create_default_router(llm_config)
+        _agent_router = _create_default_router(config)
     return _agent_router
 
 
-def _create_default_router(llm_config: "LLMConfig" = None) -> AgentRouter:
+def _create_default_router(config: "AgentConfig" = None) -> AgentRouter:
     """Create router with default agent configuration."""
     from agent_core.agents.general_agent import GeneralAgent
     from agent_core.agents.rag_agent import RAGAgent
     from agent_core.agents.code_agent import CodeAgent
     from agent_core.agents.task_agent import TaskAgent
-    from agent_core.config import LLMConfig
+    from agent_core.agents.factory import AgentConfig
     
-    # Create agents - they share the same LLM config if provided
-    kwargs = {"llm_config": llm_config} if llm_config else {}
+    # Create agents - they share the same config if provided
+    kwargs = {"config": config} if config else {}
     
     general_agent = GeneralAgent(**kwargs)
     rag_agent = RAGAgent(**kwargs)

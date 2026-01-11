@@ -1,13 +1,21 @@
 """HuggingFace provider implementation using huggingface_hub InferenceClient."""
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 
 from huggingface_hub import InferenceClient, AsyncInferenceClient
 from huggingface_hub.inference._generated.types import ChatCompletionOutput
 
 from agent_core.providers.base import LLMProvider
-from agent_core.config import LLMConfig, get_hf_token
 from agent_core.types import Message, LLMResponse, LLMError
+
+if TYPE_CHECKING:
+    from agent_core.agents.factory import AgentConfig
+
+
+def get_hf_token() -> Optional[str]:
+    """Get HuggingFace token from environment."""
+    import os
+    return os.getenv("HF_TOKEN")
 
 
 class HuggingFaceProvider(LLMProvider):
@@ -18,14 +26,14 @@ class HuggingFaceProvider(LLMProvider):
     - Local inference servers (TGI, vLLM, Ollama) via OpenAI-compatible API
     
     Example (remote):
-        config = LLMConfig(
+        config = AgentConfig(
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key=os.getenv("HF_TOKEN")
         )
     
     Example (local with Ollama):
-        config = LLMConfig(
+        config = AgentConfig(
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:11434/v1"
@@ -34,18 +42,18 @@ class HuggingFaceProvider(LLMProvider):
     
     provider_name = "huggingface"
     
-    def _get_token(self, config: LLMConfig) -> Optional[str]:
+    def _get_token(self, config: "AgentConfig") -> Optional[str]:
         """Get HuggingFace token from config or environment."""
         return config.api_key or get_hf_token()
     
-    def _is_local_server(self, config: LLMConfig) -> bool:
+    def _is_local_server(self, config: "AgentConfig") -> bool:
         """Check if using a local inference server."""
         return config.base_url is not None
     
     def _parse_response(
         self,
         response: ChatCompletionOutput,
-        config: LLMConfig
+        config: "AgentConfig"
     ) -> LLMResponse:
         """Parse HuggingFace ChatCompletionOutput to LLMResponse."""
         choice = response.choices[0]
@@ -87,7 +95,7 @@ class HuggingFaceProvider(LLMProvider):
     async def chat_async(
         self,
         messages: list[Message],
-        config: LLMConfig
+        config: "AgentConfig"
     ) -> LLMResponse:
         """Send async chat completion request using HuggingFace AsyncInferenceClient."""
         token = self._get_token(config)
@@ -136,7 +144,7 @@ class HuggingFaceProvider(LLMProvider):
     def chat_sync(
         self,
         messages: list[Message],
-        config: LLMConfig
+        config: "AgentConfig"
     ) -> LLMResponse:
         """Send sync chat completion request using HuggingFace InferenceClient."""
         token = self._get_token(config)
@@ -181,4 +189,3 @@ class HuggingFaceProvider(LLMProvider):
                     provider=self.provider_name,
                 )
             self._handle_error(e)
-

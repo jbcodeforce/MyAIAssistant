@@ -11,7 +11,8 @@ import os
 import pytest
 import httpx
 
-from agent_core.config import LLMConfig, get_hf_token
+from agent_core.agents.factory import AgentConfig
+from agent_core.config import get_hf_token
 from agent_core.client import LLMClient
 from agent_core.types import Message, LLMResponse
 
@@ -68,9 +69,10 @@ requires_hf_token = pytest.mark.skipif(
 
 
 @pytest.fixture
-def local_config() -> LLMConfig:
-    """Create LLM config for local HuggingFace server."""
-    return LLMConfig(
+def local_config() -> AgentConfig:
+    """Create AgentConfig for local HuggingFace server."""
+    return AgentConfig(
+        name="LocalHFTest",
         provider="huggingface",
         model=LOCAL_MODEL,
         base_url=LOCAL_BASE_URL,
@@ -81,9 +83,10 @@ def local_config() -> LLMConfig:
 
 
 @pytest.fixture
-def remote_config() -> LLMConfig:
-    """Create LLM config for remote HuggingFace Hub."""
-    return LLMConfig(
+def remote_config() -> AgentConfig:
+    """Create AgentConfig for remote HuggingFace Hub."""
+    return AgentConfig(
+        name="RemoteHFTest",
         provider="huggingface",
         model=REMOTE_MODEL,
         api_key=HF_TOKEN,
@@ -108,7 +111,7 @@ class TestHuggingFaceProviderLocal:
     """Integration tests for HuggingFace provider with local inference server."""
 
     @pytest.mark.asyncio
-    async def test_chat_async_local(self, local_config: LLMConfig, messages: list[Message]):
+    async def test_chat_async_local(self, local_config: AgentConfig, messages: list[Message]):
         """Test async chat completion with local server."""
         client = LLMClient(local_config)
         
@@ -118,7 +121,7 @@ class TestHuggingFaceProviderLocal:
         assert len(response.content) > 0
         assert response.provider == "huggingface"
 
-    def test_chat_sync_local(self, local_config: LLMConfig, messages: list[Message]):
+    def test_chat_sync_local(self, local_config: AgentConfig, messages: list[Message]):
         """Test sync chat completion with local server."""
         client = LLMClient(local_config)
         
@@ -129,7 +132,7 @@ class TestHuggingFaceProviderLocal:
         assert response.provider == "huggingface"
 
     @pytest.mark.asyncio
-    async def test_complete_async_local(self, local_config: LLMConfig):
+    async def test_complete_async_local(self, local_config: AgentConfig):
         """Test simple completion API with local server."""
         client = LLMClient(local_config)
         
@@ -143,7 +146,7 @@ class TestHuggingFaceProviderLocal:
         # Should mention Paris in some form
         assert "paris" in response.content.lower() or len(response.content) > 0
 
-    def test_complete_sync_local(self, local_config: LLMConfig):
+    def test_complete_sync_local(self, local_config: AgentConfig):
         """Test simple completion API (sync) with local server."""
         client = LLMClient(local_config)
         
@@ -162,7 +165,7 @@ class TestHuggingFaceProviderRemote:
     """Integration tests for HuggingFace provider with HF Hub (remote)."""
 
     @pytest.mark.asyncio
-    async def test_chat_async_remote(self, remote_config: LLMConfig, messages: list[Message]):
+    async def test_chat_async_remote(self, remote_config: AgentConfig, messages: list[Message]):
         """Test async chat completion with HF Hub."""
         client = LLMClient(remote_config)
         
@@ -172,7 +175,7 @@ class TestHuggingFaceProviderRemote:
         assert len(response.content) > 0
         assert response.provider == "huggingface"
 
-    def test_chat_sync_remote(self, remote_config: LLMConfig, messages: list[Message]):
+    def test_chat_sync_remote(self, remote_config: AgentConfig, messages: list[Message]):
         """Test sync chat completion with HF Hub."""
         client = LLMClient(remote_config)
         
@@ -183,7 +186,7 @@ class TestHuggingFaceProviderRemote:
         assert response.provider == "huggingface"
 
     @pytest.mark.asyncio
-    async def test_response_includes_usage(self, remote_config: LLMConfig, messages: list[Message]):
+    async def test_response_includes_usage(self, remote_config: AgentConfig, messages: list[Message]):
         """Test that response includes token usage information."""
         client = LLMClient(remote_config)
         
@@ -195,7 +198,7 @@ class TestHuggingFaceProviderRemote:
             assert response.prompt_tokens >= 0
             assert response.completion_tokens >= 0
 
-    def test_model_override(self, remote_config: LLMConfig, messages: list[Message]):
+    def test_model_override(self, remote_config: AgentConfig, messages: list[Message]):
         """Test that model can be overridden in call."""
         client = LLMClient(remote_config)
         
@@ -212,7 +215,8 @@ class TestHuggingFaceProviderErrors:
 
     def test_invalid_model_raises_error(self):
         """Test that invalid model raises appropriate error."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="ErrorTest",
             provider="huggingface",
             model="invalid/nonexistent-model-12345",
             api_key=HF_TOKEN or "dummy_token",
@@ -227,7 +231,8 @@ class TestHuggingFaceProviderErrors:
 
     def test_connection_error_local(self):
         """Test that connection error is handled properly."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="ErrorTest",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:99999",  # Invalid port

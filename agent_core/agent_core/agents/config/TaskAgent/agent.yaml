@@ -1,0 +1,7 @@
+name: TaskAgent
+description: Task planning and management agent that helps users plan, organize, and break down tasks into actionable steps.
+class: agent_core.agents.task_agent.TaskAgent
+provider: huggingface
+model: gpt-4o-mini
+temperature: 0.5
+max_tokens: 2048

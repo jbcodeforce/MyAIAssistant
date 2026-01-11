@@ -1,10 +1,6 @@
 <template>
   <div class="todo-canvas">
-    <div class="canvas-header">
-      <h2>Eisenhower Matrix</h2>
-      <p class="canvas-description">Organize your todos by urgency and importance</p>
-    </div>
-    
+
     <div class="canvas-grid">
       <div class="axis-label vertical">
         <span>Importance</span>

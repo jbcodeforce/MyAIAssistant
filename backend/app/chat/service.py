@@ -4,7 +4,7 @@ import logging
 from dataclasses import dataclass
 from typing import Optional
 
-from agent_core import LLMClient, LLMConfig, Message as LLMMessage
+from agent_core import LLMClient, AgentConfig, Message as LLMMessage
 
 from app.core.config import get_settings
 from agent_core.services.rag.service import RAGService, get_rag_service
@@ -61,7 +61,7 @@ class ChatService:
         self.rag_service = rag_service or get_rag_service()
         
         # Create LLM client configuration
-        self._llm_config = LLMConfig(
+        self._llm_config = AgentConfig(
             provider=self.provider,
             model=self.model,
             api_key=self.api_key,

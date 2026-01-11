@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from agent_core.config import LLMConfig
+    from agent_core.agents.factory import AgentConfig
     from agent_core.types import Message, LLMResponse
 
 
@@ -20,14 +20,14 @@ class LLMProvider(ABC):
     async def chat_async(
         self,
         messages: list["Message"],
-        config: "LLMConfig"
+        config: "AgentConfig"
     ) -> "LLMResponse":
         """
         Send a chat completion request asynchronously.
         
         Args:
             messages: List of chat messages
-            config: LLM configuration
+            config: Agent configuration
             
         Returns:
             LLMResponse with the completion
@@ -38,17 +38,16 @@ class LLMProvider(ABC):
     def chat_sync(
         self,
         messages: list["Message"],
-        config: "LLMConfig"
+        config: "AgentConfig"
     ) -> "LLMResponse":
         """
         Send a chat completion request synchronously.
         
         Args:
             messages: List of chat messages
-            config: LLM configuration
+            config: Agent configuration
             
         Returns:
             LLMResponse with the completion
         """
         pass
-

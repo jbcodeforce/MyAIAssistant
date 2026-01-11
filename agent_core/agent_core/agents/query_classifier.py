@@ -10,9 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from agent_core.client import LLMClient
-from agent_core.config import LLMConfig
-from agent_core.types import Message as LLMMessage
+from agent_core.agents.base_agent import BaseAgent, AgentResponse
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +36,7 @@ class QueryIntent(str, Enum):
 
 
 @dataclass
-class ClassificationResult:
+class ClassificationResult[AgentResponse]:
     """Result of query classification."""
     intent: QueryIntent
     confidence: float
@@ -47,6 +45,7 @@ class ClassificationResult:
     suggested_context: Optional[str] = None
 
 
+# Default classification prompt (used if no prompt.md is provided)
 CLASSIFICATION_PROMPT = """You are a query classification agent. Analyze the user's query and determine its intent.
 
 Classify the query into one of these categories:
@@ -75,65 +74,98 @@ User Query: {query}
 Respond ONLY with the JSON object, no additional text."""
 
 
-class QueryClassifier:
+class QueryClassifier(BaseAgent):
     """
     Agent that classifies user queries to determine routing.
     
+    Extends BaseAgent to support factory-based creation and config injection.
     Uses LLMClient to analyze query intent and extract relevant entities.
     
     Example:
+        # Direct instantiation
         config = LLMConfig(provider="openai", model="gpt-4", api_key="...")
         classifier = QueryClassifier(llm_config=config)
         
         result = await classifier.classify("How do I implement OAuth?")
         print(result.intent)  # QueryIntent.CODE_HELP
+        
+        # Or via factory
+        factory = AgentFactory()
+        classifier = factory.create_agent("QueryClassifier")
     """
+    
+    agent_type = "query_classifier"
     
     def __init__(
         self,
-        llm_config: LLMConfig = None,
-        llm_client: LLMClient = None,
         # Convenience parameters for creating config
         provider: str = None,
         model: str = None,
         api_key: str = None,
-        base_url: str = None
+        base_url: str = None,
+        max_tokens: int = 500,
+        temperature: float = 0.1,
+        # System prompt from factory
+        system_prompt: str = None
     ):
         """
         Initialize the classifier with LLM configuration.
         
         Args:
-            llm_config: Pre-built LLM configuration (takes precedence)
-            llm_client: Pre-built LLM client (takes precedence over config)
             provider: LLM provider name
             model: Model name
             api_key: API key for the provider
             base_url: Custom base URL for the API
+            max_tokens: Maximum tokens in response
+            temperature: Sampling temperature (low for consistent classification)
+            system_prompt: System prompt loaded from config
         """
-        if llm_client:
-            self._llm_client = llm_client
-            self._llm_config = llm_client.config
-        elif llm_config:
-            self._llm_config = llm_config
-            self._llm_client = LLMClient(llm_config)
-        else:
-            # Build config from individual parameters
-            # Use low temperature for consistent classification
-            # Default to huggingface with local server
-            self._llm_config = LLMConfig(
-                provider=provider or "huggingface",
-                model=model or "llama3",
-                api_key=api_key,
-                base_url=base_url or "http://localhost:8080",
-                max_tokens=500,
-                temperature=0.1,
-                timeout=30.0,
-                response_format=None
-            )
-            self._llm_client = LLMClient(self._llm_config)
+        # Call BaseAgent constructor
+        super().__init__(
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system_prompt=system_prompt
+        )
+
+    async def execute(
+        self,
+        query: str,
+        conversation_history: Optional[list[dict]] = None,
+        context: Optional[dict] = None
+    ) -> AgentResponse:
+        """
+        Execute the classifier agent (BaseAgent interface).
         
-        self.provider = self._llm_config.provider
-        self.model = self._llm_config.model
+        This wraps the classify method for compatibility with the
+        standard agent interface.
+        
+        Args:
+            query: User's input query
+            conversation_history: Previous messages in conversation
+            context: Additional context
+            
+        Returns:
+            AgentResponse with classification result in metadata
+        """
+        result = await self.classify(query, conversation_history)
+        
+        return AgentResponse(
+            message=result.reasoning,
+            context_used=[],
+            model=self.model,
+            provider=self.provider,
+            agent_type=self.agent_type,
+            metadata={
+                "intent": result.intent.value,
+                "confidence": result.confidence,
+                "entities": result.entities,
+                "suggested_context": result.suggested_context
+            }
+        )
 
     async def classify(
         self,
@@ -150,7 +182,7 @@ class QueryClassifier:
         Returns:
             ClassificationResult with intent and metadata
         """
-        prompt = CLASSIFICATION_PROMPT.format(query=query)
+        prompt = self.build_system_prompt({"query": query})
         
         # Add conversation context if available
         if conversation_context:
@@ -158,7 +190,7 @@ class QueryClassifier:
             prompt = f"Previous conversation context:\n{context_summary}\n\n{prompt}"
         
         try:
-            response_text = await self._call_llm(prompt)
+            response_text = await self._call_llm_for_classification(prompt)
             return self._parse_response(response_text)
         except Exception as e:
             logger.error(f"Classification failed: {e}")
@@ -184,14 +216,14 @@ class QueryClassifier:
         Returns:
             ClassificationResult with intent and metadata
         """
-        prompt = CLASSIFICATION_PROMPT.format(query=query)
+        prompt = self.build_system_prompt({"query": query})
         
         if conversation_context:
             context_summary = self._summarize_context(conversation_context)
             prompt = f"Previous conversation context:\n{context_summary}\n\n{prompt}"
         
         try:
-            response_text = self._call_llm_sync(prompt)
+            response_text = self._call_llm_sync_for_classification(prompt)
             return self._parse_response(response_text)
         except Exception as e:
             logger.error(f"Classification failed: {e}")
@@ -201,6 +233,32 @@ class QueryClassifier:
                 reasoning=f"Classification failed, defaulting to general chat: {str(e)}",
                 entities={}
             )
+
+    def build_system_prompt(self, context: Optional[dict] = None) -> str:
+        """
+        Build the classification prompt.
+        
+        Uses injected system_prompt if available, otherwise falls back
+        to the default CLASSIFICATION_PROMPT.
+        
+        Args:
+            context: Dict containing 'query' for template substitution
+            
+        Returns:
+            The prompt string with query substituted
+        """
+        context = context or {}
+        query = context.get("query", "")
+        
+        if self._system_prompt:
+            # Use injected prompt from config
+            try:
+                return self._system_prompt.format(query=query)
+            except KeyError:
+                return self._system_prompt
+        
+        # Fall back to default prompt
+        return CLASSIFICATION_PROMPT.format(query=query)
 
     def _summarize_context(self, context: list[dict]) -> str:
         """Summarize conversation context for classification."""
@@ -245,17 +303,15 @@ class QueryClassifier:
                 entities={}
             )
 
-    async def _call_llm(self, prompt: str) -> str:
-        """Call the LLM asynchronously."""
-        messages = [LLMMessage(role="user", content=prompt)]
-        response = await self._llm_client.chat_async(messages)
-        return response.content
+    async def _call_llm_for_classification(self, prompt: str) -> str:
+        """Call the LLM asynchronously for classification."""
+        messages = [{"role": "user", "content": prompt}]
+        return await self._call_llm(messages)
 
-    def _call_llm_sync(self, prompt: str) -> str:
-        """Call the LLM synchronously."""
-        messages = [LLMMessage(role="user", content=prompt)]
-        response = self._llm_client.chat(messages)
-        return response.content
+    def _call_llm_sync_for_classification(self, prompt: str) -> str:
+        """Call the LLM synchronously for classification."""
+        messages = [{"role": "user", "content": prompt}]
+        return self._call_llm_sync(messages)
 
 
 # Singleton instance
@@ -268,3 +324,9 @@ def get_query_classifier() -> QueryClassifier:
     if _classifier is None:
         _classifier = QueryClassifier()
     return _classifier
+
+
+def reset_query_classifier() -> None:
+    """Reset the global classifier instance. Useful for testing."""
+    global _classifier
+    _classifier = None

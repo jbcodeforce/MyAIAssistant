@@ -135,7 +135,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_knowledge_search(self, classifier, mock_llm_response_knowledge):
         """Test classifying a knowledge search query."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_llm_response_knowledge
             
             result = await classifier.classify(
@@ -150,7 +150,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_task_planning(self, classifier, mock_llm_response_task):
         """Test classifying a task planning query."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_llm_response_task
             
             result = await classifier.classify(
@@ -164,7 +164,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_code_help(self, classifier, mock_llm_response_code):
         """Test classifying a code help query."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_llm_response_code
             
             result = await classifier.classify(
@@ -178,7 +178,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_general_chat(self, classifier, mock_llm_response_general):
         """Test classifying a general chat query."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_llm_response_general
             
             result = await classifier.classify("Hello, how are you today?")
@@ -190,7 +190,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_with_conversation_context(self, classifier, mock_llm_response_knowledge):
         """Test classification with conversation context."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.return_value = mock_llm_response_knowledge
             
             context = [
@@ -211,7 +211,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_classify_handles_llm_error(self, classifier):
         """Test that classification handles LLM errors gracefully."""
-        with patch.object(classifier, '_call_llm', new_callable=AsyncMock) as mock_call:
+        with patch.object(classifier, '_call_llm_for_classification', new_callable=AsyncMock) as mock_call:
             mock_call.side_effect = Exception("API Error")
             
             result = await classifier.classify("Any query")
@@ -287,9 +287,9 @@ class TestQueryClassifierLLMClient:
         assert hasattr(classifier, '_llm_client')
         assert isinstance(classifier._llm_client, LLMClient)
     
-    def test_classifier_has_llm_config(self):
-        """Test that classifier creates LLMConfig."""
-        from agent_core import LLMConfig
+    def test_classifier_has_agent_config(self):
+        """Test that classifier creates AgentConfig."""
+        from agent_core import AgentConfig
         
         classifier = QueryClassifier(
             provider="openai",
@@ -297,14 +297,14 @@ class TestQueryClassifierLLMClient:
             api_key="test-key"
         )
         
-        assert hasattr(classifier, '_llm_config')
-        assert isinstance(classifier._llm_config, LLMConfig)
-        assert classifier._llm_config.provider == "openai"
-        assert classifier._llm_config.temperature == 0.1  # Low for classification
+        assert hasattr(classifier, '_config')
+        assert isinstance(classifier._config, AgentConfig)
+        assert classifier._config.provider == "openai"
+        assert classifier._config.temperature == 0.1  # Low for classification
     
     @pytest.mark.asyncio
     async def test_call_llm_uses_client(self):
-        """Test that _call_llm uses LLMClient."""
+        """Test that _call_llm_for_classification uses LLMClient."""
         from agent_core import LLMResponse
         
         classifier = QueryClassifier(
@@ -321,7 +321,7 @@ class TestQueryClassifierLLMClient:
         
         classifier._llm_client.chat_async = AsyncMock(return_value=mock_response)
         
-        result = await classifier._call_llm("Test prompt")
+        result = await classifier._call_llm_for_classification("Test prompt")
         
         assert result == mock_response.content
         classifier._llm_client.chat_async.assert_called_once()
@@ -335,14 +335,15 @@ class TestQueryClassifierLLMClient:
         )
         
         # HuggingFace provider doesn't use response_format
-        assert classifier._llm_config.response_format is None
+        assert classifier._config.response_format is None
     
     def test_default_config_uses_huggingface(self):
         """Test default config uses HuggingFace provider."""
         classifier = QueryClassifier()
         
-        assert classifier._llm_config.provider == "huggingface"
-        assert classifier._llm_config.base_url == "http://localhost:8080"
+        assert classifier._config.provider == "huggingface"
+        # base_url is None by default, provider handles default URL
+        assert classifier._config.base_url is None
 
 
 class TestClassificationPrompt:

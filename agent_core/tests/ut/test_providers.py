@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agent_core.config import LLMConfig
+from agent_core.agents.factory import AgentConfig
 from agent_core.types import Message, LLMError
 from agent_core.providers.huggingface import HuggingFaceProvider
 
@@ -18,7 +18,8 @@ class TestHuggingFaceProvider:
     @pytest.fixture
     def config_remote(self):
         """Config for remote HF Hub model."""
-        return LLMConfig(
+        return AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -27,7 +28,8 @@ class TestHuggingFaceProvider:
     @pytest.fixture
     def config_local(self):
         """Config for local inference server."""
-        return LLMConfig(
+        return AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -55,15 +57,13 @@ class TestHuggingFaceProvider:
             token = provider._get_token(config_local)
             assert token == "hf_env_token"
     
-    def test_get_model_or_base_url_remote(self, provider, config_remote):
-        """Test model identifier for remote HF Hub."""
-        result = provider._get_model_or_base_url(config_remote)
-        assert result == "meta-llama/Meta-Llama-3-8B-Instruct"
+    def test_is_local_server_remote(self, provider, config_remote):
+        """Test is_local_server returns False for remote HF Hub."""
+        assert provider._is_local_server(config_remote) is False
     
-    def test_get_model_or_base_url_local(self, provider, config_local):
-        """Test base URL for local server."""
-        result = provider._get_model_or_base_url(config_local)
-        assert result == "http://localhost:8080"
+    def test_is_local_server_local(self, provider, config_local):
+        """Test is_local_server returns True for local server."""
+        assert provider._is_local_server(config_local) is True
     
     def test_parse_response(self, provider, config_remote):
         """Test response parsing from HuggingFace ChatCompletionOutput."""

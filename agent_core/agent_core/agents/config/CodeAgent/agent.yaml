@@ -1,0 +1,7 @@
+name: CodeAgent
+description: Code assistance agent for programming questions, code review, debugging, and technical implementation guidance.
+class: agent_core.agents.code_agent.CodeAgent
+provider: huggingface
+model: gpt-4o-mini
+temperature: 0.3
+max_tokens: 4096

@@ -287,9 +287,9 @@ class TestQueryClassifierLLMClient:
         assert hasattr(classifier, '_llm_client')
         assert isinstance(classifier._llm_client, LLMClient)
     
-    def test_classifier_has_llm_config(self):
-        """Test that classifier creates LLMConfig."""
-        from agent_core import LLMConfig
+    def test_classifier_has_agent_config(self):
+        """Test that classifier creates AgentConfig."""
+        from agent_core import AgentConfig
         
         classifier = QueryClassifier(
             provider="openai",
@@ -297,10 +297,10 @@ class TestQueryClassifierLLMClient:
             api_key="test-key"
         )
         
-        assert hasattr(classifier, '_llm_config')
-        assert isinstance(classifier._llm_config, LLMConfig)
-        assert classifier._llm_config.provider == "openai"
-        assert classifier._llm_config.temperature == 0.1  # Low for classification
+        assert hasattr(classifier, '_config')
+        assert isinstance(classifier._config, AgentConfig)
+        assert classifier._config.provider == "openai"
+        assert classifier._config.temperature == 0.1  # Low for classification
     
     @pytest.mark.asyncio
     async def test_call_llm_uses_client(self):
@@ -335,14 +335,14 @@ class TestQueryClassifierLLMClient:
         )
         
         # HuggingFace provider doesn't use response_format
-        assert classifier._llm_config.response_format is None
+        assert classifier._config.response_format is None
     
     def test_default_config_uses_huggingface(self):
         """Test default config uses HuggingFace provider."""
         classifier = QueryClassifier()
         
-        assert classifier._llm_config.provider == "huggingface"
-        assert classifier._llm_config.base_url == "http://localhost:8080"
+        assert classifier._config.provider == "huggingface"
+        assert classifier._config.base_url == "http://localhost:8080"
 
 
 class TestClassificationPrompt:

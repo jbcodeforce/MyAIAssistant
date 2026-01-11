@@ -15,6 +15,7 @@ from app.api.metrics import router as metrics_router
 from app.api.slp_assessments import router as slp_assessments_router
 from app.api.meeting_refs import router as meeting_refs_router
 from app.api.assets import router as assets_router
+from app.api.persons import router as persons_router
 
 
 @asynccontextmanager
@@ -56,6 +57,7 @@ def create_app() -> FastAPI:
     application.include_router(slp_assessments_router, prefix="/api")
     application.include_router(meeting_refs_router, prefix="/api")
     application.include_router(assets_router, prefix="/api")
+    application.include_router(persons_router, prefix="/api")
 
     return application
 

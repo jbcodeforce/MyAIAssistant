@@ -12,6 +12,7 @@ async def create_meeting_ref(
     file_ref: str,
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
+    presents: Optional[str] = None,
 ) -> MeetingRef:
     """Create a new meeting reference."""
     db_meeting_ref = MeetingRef(
@@ -19,6 +20,7 @@ async def create_meeting_ref(
         file_ref=file_ref,
         project_id=project_id,
         org_id=org_id,
+        presents=presents,
     )
     db.add(db_meeting_ref)
     await db.commit()
@@ -72,8 +74,10 @@ async def update_meeting_ref(
     meeting_ref_id: int,
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
+    presents: Optional[str] = None,
     update_project_id: bool = False,
     update_org_id: bool = False,
+    update_presents: bool = False,
 ) -> Optional[MeetingRef]:
     """Update an existing meeting reference.
     
@@ -82,8 +86,10 @@ async def update_meeting_ref(
         meeting_ref_id: ID of the meeting reference to update
         project_id: New project ID (only applied if update_project_id is True)
         org_id: New organization ID (only applied if update_org_id is True)
+        presents: Comma or semicolon separated list of attendees (only applied if update_presents is True)
         update_project_id: Whether to update project_id (allows setting to None)
         update_org_id: Whether to update org_id (allows setting to None)
+        update_presents: Whether to update presents (allows setting to None)
     """
     db_meeting_ref = await get_meeting_ref(db, meeting_ref_id)
     if not db_meeting_ref:
@@ -93,6 +99,8 @@ async def update_meeting_ref(
         db_meeting_ref.project_id = project_id
     if update_org_id:
         db_meeting_ref.org_id = org_id
+    if update_presents:
+        db_meeting_ref.presents = presents
     
     await db.commit()
     await db.refresh(db_meeting_ref)

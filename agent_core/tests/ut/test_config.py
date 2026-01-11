@@ -1,16 +1,18 @@
-"""Tests for LLM configuration."""
+"""Tests for Agent configuration."""
 
 import pytest
 
-from agent_core.config import LLMConfig, DEFAULT_BASE_URLS
+from agent_core.agents.factory import AgentConfig
+from agent_core.config import DEFAULT_BASE_URLS
 
 
-class TestLLMConfig:
-    """Tests for LLMConfig dataclass."""
+class TestAgentConfig:
+    """Tests for AgentConfig dataclass."""
     
     def test_create_config(self):
         """Test creating a configuration."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -22,7 +24,8 @@ class TestLLMConfig:
     
     def test_default_values(self):
         """Test default configuration values."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -35,7 +38,8 @@ class TestLLMConfig:
     
     def test_get_base_url_custom(self):
         """Test getting custom base URL."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -45,7 +49,8 @@ class TestLLMConfig:
     
     def test_get_base_url_default_is_none(self):
         """Test getting default base URL for HuggingFace (None for HF Hub)."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -55,7 +60,8 @@ class TestLLMConfig:
     
     def test_validate_valid_config_remote(self):
         """Test validating a valid remote configuration."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -66,7 +72,8 @@ class TestLLMConfig:
     
     def test_validate_valid_config_local(self):
         """Test validating a valid local configuration."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -77,7 +84,8 @@ class TestLLMConfig:
     
     def test_validate_unsupported_provider(self):
         """Test validation fails for unsupported provider."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="unsupported",
             model="model"
         )
@@ -87,7 +95,8 @@ class TestLLMConfig:
     
     def test_validate_missing_model(self):
         """Test validation fails for missing model."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="",
             base_url="http://localhost:8080"
@@ -98,7 +107,8 @@ class TestLLMConfig:
     
     def test_validate_huggingface_remote_requires_token(self):
         """Test HuggingFace remote (no base_url) requires API key."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct"
         )
@@ -108,7 +118,8 @@ class TestLLMConfig:
     
     def test_validate_huggingface_remote_with_token(self):
         """Test HuggingFace remote with token passes validation."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
@@ -119,7 +130,8 @@ class TestLLMConfig:
     
     def test_validate_huggingface_local_no_token_required(self):
         """Test HuggingFace local (with base_url) doesn't require token."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
@@ -130,7 +142,8 @@ class TestLLMConfig:
     
     def test_validate_invalid_temperature(self):
         """Test validation fails for invalid temperature."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",
@@ -140,7 +153,8 @@ class TestLLMConfig:
         with pytest.raises(ValueError, match="Temperature must be"):
             config.validate()
         
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",
@@ -152,7 +166,8 @@ class TestLLMConfig:
     
     def test_validate_invalid_max_tokens(self):
         """Test validation fails for invalid max_tokens."""
-        config = LLMConfig(
+        config = AgentConfig(
+            name="TestAgent",
             provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",

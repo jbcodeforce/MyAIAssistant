@@ -1,0 +1,7 @@
+name: RAGAgent
+description: Knowledge base search and retrieval agent using RAG (Retrieval-Augmented Generation).
+class: agent_core.agents.rag_agent.RAGAgent
+provider: huggingface
+model: gpt-4o-mini
+temperature: 0.3
+max_tokens: 2048

@@ -10,9 +10,9 @@ Supported Backends:
     - Local inference servers (TGI, vLLM, Ollama, etc.)
 
 Example - LLM Client with local server:
-    from agent_core import LLMClient, LLMConfig, Message
+    from agent_core import LLMClient, AgentConfig, Message
     
-    config = LLMConfig(
+    config = AgentConfig(
         provider="huggingface",
         model="llama3",
         base_url="http://localhost:8080"
@@ -24,10 +24,10 @@ Example - LLM Client with local server:
     ])
 
 Example - LLM Client with HuggingFace Hub:
-    from agent_core import LLMClient, LLMConfig, Message
+    from agent_core import LLMClient, AgentConfig, Message
     import os
     
-    config = LLMConfig(
+    config = AgentConfig(
         provider="huggingface",
         model="meta-llama/Meta-Llama-3-8B-Instruct",
         api_key=os.getenv("HF_TOKEN")
@@ -52,7 +52,7 @@ Example - Agent Framework:
             return "You are a helpful assistant."
 """
 
-from agent_core.config import LLMConfig, ProviderType, get_hf_token
+from agent_core.config import ProviderType, get_hf_token
 from agent_core.types import Message, LLMResponse, LLMError, MessageRole
 from agent_core.client import LLMClient
 from agent_core.providers import (
@@ -60,9 +60,15 @@ from agent_core.providers import (
     HuggingFaceProvider,
 )
 from agent_core.agents import (
-    # Base agent
+    # Base agent and types
     BaseAgent,
     AgentResponse,
+    AgentInput,
+    # Agent factory and config
+    AgentFactory,
+    AgentConfig,
+    get_agent_factory,
+    reset_agent_factory,
     # Query classification
     QueryClassifier,
     QueryIntent,
@@ -72,6 +78,8 @@ from agent_core.agents import (
     AgentRouter,
     WorkflowState,
     RoutedResponse,
+    get_agent_router,
+    reset_agent_router,
 )
 
 __version__ = "0.1.0"
@@ -80,7 +88,7 @@ __all__ = [
     # Main client
     "LLMClient",
     # Configuration
-    "LLMConfig",
+    "AgentConfig",
     "ProviderType",
     "get_hf_token",
     # Types
@@ -94,6 +102,11 @@ __all__ = [
     # Agent framework
     "BaseAgent",
     "AgentResponse",
+    "AgentInput",
+    # Agent factory
+    "AgentFactory",
+    "get_agent_factory",
+    "reset_agent_factory",
     # Query classification
     "QueryClassifier",
     "QueryIntent",
@@ -103,4 +116,6 @@ __all__ = [
     "AgentRouter",
     "WorkflowState",
     "RoutedResponse",
+    "get_agent_router",
+    "reset_agent_router",
 ]

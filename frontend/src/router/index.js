@@ -12,6 +12,7 @@ import Meetings from '@/views/Meetings.vue'
 import Assets from '@/views/Assets.vue'
 import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
+import Persons from '@/views/Persons.vue'
 
 const routes = [
   {
@@ -116,6 +117,14 @@ const routes = [
     component: SLPAssessments,
     meta: {
       title: 'Life Portfolio - MyAIAssistant'
+    }
+  },
+  {
+    path: '/persons',
+    name: 'Persons',
+    component: Persons,
+    meta: {
+      title: 'Persons - MyAIAssistant'
     }
   }
 ]

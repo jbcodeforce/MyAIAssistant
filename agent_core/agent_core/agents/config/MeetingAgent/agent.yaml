@@ -1,0 +1,26 @@
+name: MeetingAgent
+description: Process Meeting note to extract presents, key points and next steps.
+class: agent_core.agents.meeting_agent.MeetingAgent
+provider: huggingface
+base_url: http://localhost:11434/v1
+model: mistral:7b-instruct
+temperature: 0.5
+max_tokens: 2048
+
+# Output schema definitions
+output_schema:
+  person:
+    name: string
+    last_met_date: string  # Format: YYYY-MM-DD or null
+  
+  next_step:
+    what: string  # Description of the action
+    who: string   # Person responsible or "to_be_decided"
+  
+  key_point:
+    point: string  # Key discussion point from the meeting
+  
+  meeting_output:
+    persons: list[person]
+    next_steps: list[next_step]
+    key_points: list[key_point]

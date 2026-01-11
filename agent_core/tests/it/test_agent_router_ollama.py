@@ -8,7 +8,7 @@ import os
 import pytest
 import httpx
 
-from agent_core.config import LLMConfig
+from agent_core.agents.factory import AgentConfig
 from agent_core.agents.query_classifier import (
     QueryClassifier,
     QueryIntent,
@@ -57,9 +57,10 @@ requires_model = pytest.mark.skipif(
 
 
 @pytest.fixture
-def ollama_config() -> LLMConfig:
-    """Create LLM config for Ollama integration tests."""
-    return LLMConfig(
+def ollama_config() -> AgentConfig:
+    """Create AgentConfig for Ollama integration tests."""
+    return AgentConfig(
+        name="OllamaClassifierTest",
         provider="ollama",
         model=OLLAMA_MODEL,
         base_url=OLLAMA_BASE_URL,
@@ -70,9 +71,9 @@ def ollama_config() -> LLMConfig:
 
 
 @pytest.fixture
-def classifier(ollama_config: LLMConfig) -> QueryClassifier:
+def classifier(ollama_config: AgentConfig) -> QueryClassifier:
     """Create a QueryClassifier with Ollama config."""
-    return QueryClassifier(llm_config=ollama_config)
+    return QueryClassifier(config=ollama_config)
 
 
 @pytest.mark.integration
@@ -231,9 +232,9 @@ class TestClassificationAccuracy:
     ]
 
     @pytest.fixture
-    def classifier(self, ollama_config: LLMConfig) -> QueryClassifier:
+    def classifier(self, ollama_config: AgentConfig) -> QueryClassifier:
         """Create classifier for accuracy tests."""
-        return QueryClassifier(llm_config=ollama_config)
+        return QueryClassifier(config=ollama_config)
 
     @pytest.mark.asyncio
     async def test_knowledge_search_accuracy(self, classifier: QueryClassifier):
