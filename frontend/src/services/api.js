@@ -237,6 +237,10 @@ export const meetingRefsApi = {
 
   delete(id) {
     return api.delete(`/meeting-refs/${id}`)
+  },
+
+  extract(id) {
+    return api.post(`/meeting-refs/${id}/extract`)
   }
 }
 

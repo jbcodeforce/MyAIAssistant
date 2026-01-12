@@ -17,6 +17,35 @@
       </div>
     </div>
 
+    <div class="search-bar" v-if="!loading && !error">
+      <div class="search-input-wrapper">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="search-icon">
+          <circle cx="11" cy="11" r="8"/>
+          <path d="m21 21-4.3-4.3"/>
+        </svg>
+        <input 
+          v-model="searchQuery"
+          type="text"
+          placeholder="Search organizations..."
+          class="search-input"
+        />
+        <button 
+          v-if="searchQuery"
+          class="clear-search"
+          @click="searchQuery = ''"
+          title="Clear search"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18"/>
+            <path d="m6 6 12 12"/>
+          </svg>
+        </button>
+      </div>
+      <span v-if="searchQuery && filteredOrganizations.length !== organizations.length" class="search-results-count">
+        {{ filteredOrganizations.length }} of {{ organizations.length }} shown
+      </span>
+    </div>
+
     <div v-if="loading" class="loading-state">
       <p>Loading organizations...</p>
     </div>
@@ -34,9 +63,16 @@
         </p>
       </div>
 
+      <div v-else-if="filteredOrganizations.length === 0" class="empty-state">
+        <p>No organizations match "{{ searchQuery }}"</p>
+        <p class="empty-state-hint">
+          Try a different search term
+        </p>
+      </div>
+
       <div v-else class="organizations-grid">
         <div 
-          v-for="organization in organizations" 
+          v-for="organization in filteredOrganizations" 
           :key="organization.id" 
           class="organization-card"
         >
@@ -348,6 +384,7 @@ const currentSkip = ref(0)
 const limit = 50
 const loading = ref(false)
 const error = ref(null)
+const searchQuery = ref('')
 
 // Modal state
 const showModal = ref(false)
@@ -374,6 +411,16 @@ const viewingSection = ref('')
 
 const hasMore = computed(() => {
   return organizations.value.length < totalCount.value
+})
+
+const filteredOrganizations = computed(() => {
+  if (!searchQuery.value.trim()) {
+    return organizations.value
+  }
+  const query = searchQuery.value.toLowerCase().trim()
+  return organizations.value.filter(org => 
+    org.name.toLowerCase().includes(query)
+  )
 })
 
 const isFormValid = computed(() => {
@@ -604,6 +651,86 @@ function formatDate(dateString) {
 :global(.dark) .organization-count {
   background: #312e81;
   color: #a5b4fc;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.search-input-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #9ca3af;
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 0.625rem 2.25rem 0.625rem 2.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.9375rem;
+  background: white;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+:global(.dark) .search-input {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.search-input::placeholder {
+  color: #9ca3af;
+}
+
+.clear-search {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  cursor: pointer;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-search:hover {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+:global(.dark) .clear-search:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.search-results-count {
+  font-size: 0.8125rem;
+  color: #6b7280;
+  white-space: nowrap;
 }
 
 .loading-state,

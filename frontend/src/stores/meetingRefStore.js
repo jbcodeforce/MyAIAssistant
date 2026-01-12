@@ -132,6 +132,20 @@ export const useMeetingRefStore = defineStore('meetingRef', () => {
     }
   }
 
+  async function extractInfo(id) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await meetingRefsApi.extract(id)
+      return response.data
+    } catch (err) {
+      error.value = err.response?.data?.detail || 'Failed to extract meeting information'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchOrganizations() {
     try {
       const response = await organizationsApi.list({ limit: 500 })
@@ -191,6 +205,7 @@ export const useMeetingRefStore = defineStore('meetingRef', () => {
     createItem,
     updateItem,
     deleteItem,
+    extractInfo,
     fetchOrganizations,
     fetchProjects,
     getOrganizationName,

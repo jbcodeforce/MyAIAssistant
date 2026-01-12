@@ -246,9 +246,6 @@ async def extract_meeting_info(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Meeting note file not found")
     
-    # Get settings for LLM configuration
-    settings = get_settings()
-    
     # Create MeetingAgent using AgentFactory with settings overrides
     factory = AgentFactory()
     agent = factory.create_agent(
@@ -260,6 +257,7 @@ async def extract_meeting_info(
         "organization_id": meeting_ref.org_id,
         "project_id": meeting_ref.project_id,
         "meeting_id": meeting_ref.meeting_id,
+        ""
     }
     
     # Execute the agent

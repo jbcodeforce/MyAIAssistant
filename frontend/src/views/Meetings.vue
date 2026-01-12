@@ -104,6 +104,11 @@
                     <circle cx="12" cy="12" r="3"/>
                   </svg>
                 </button>
+                <button class="btn-icon ai" @click="handleExtract(item)" title="AI Extract">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </button>
                 <button class="btn-icon" @click="openEditModal(item)" title="Edit">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
@@ -342,6 +347,85 @@
         </button>
       </template>
     </Modal>
+
+    <!-- AI Extraction Modal -->
+    <Modal :show="showExtractModal" title="AI Meeting Extraction" size="large" @close="closeExtractModal">
+      <div v-if="extracting" class="loading-content">
+        <div class="extract-loading">
+          <div class="spinner"></div>
+          <p>Analyzing meeting content with AI...</p>
+          <p class="extract-hint">Extracting attendees, key points, and action items</p>
+        </div>
+      </div>
+      <div v-else-if="extractionResult" class="extraction-results">
+        <div class="extract-header">
+          <span class="meeting-id-badge">{{ extractionResult.meeting_id }}</span>
+        </div>
+
+        <div v-if="extractionResult.meeting_output" class="extract-sections">
+          <!-- Persons Section -->
+          <div class="extract-section" v-if="extractionResult.meeting_output.persons?.length">
+            <h4 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+              </svg>
+              Attendees
+            </h4>
+            <div class="persons-list">
+              <div v-for="(person, idx) in extractionResult.meeting_output.persons" :key="idx" class="person-item">
+                <span class="person-name">{{ person.name }}</span>
+                <span v-if="person.last_met_date" class="person-date">Last met: {{ person.last_met_date }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Key Points Section -->
+          <div class="extract-section" v-if="extractionResult.meeting_output.key_points?.length">
+            <h4 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+              </svg>
+              Key Points
+            </h4>
+            <ul class="key-points-list">
+              <li v-for="(kp, idx) in extractionResult.meeting_output.key_points" :key="idx">
+                {{ kp.point }}
+              </li>
+            </ul>
+          </div>
+
+          <!-- Next Steps Section -->
+          <div class="extract-section" v-if="extractionResult.meeting_output.next_steps?.length">
+            <h4 class="section-title">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+                <polyline points="22 4 12 14.01 9 11.01"/>
+              </svg>
+              Action Items
+            </h4>
+            <div class="next-steps-list">
+              <div v-for="(step, idx) in extractionResult.meeting_output.next_steps" :key="idx" class="next-step-item">
+                <span class="step-what">{{ step.what }}</span>
+                <span class="step-who" :class="{ 'tbd': step.who === 'to_be_decided' }">
+                  {{ step.who === 'to_be_decided' ? 'TBD' : step.who }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="no-extraction">
+          <p>No structured information could be extracted from this meeting.</p>
+        </div>
+      </div>
+
+      <template #footer>
+        <button type="button" class="btn-secondary" @click="closeExtractModal">Close</button>
+      </template>
+    </Modal>
   </div>
 </template>
 
@@ -388,6 +472,11 @@ const editFormData = ref({
   presents: '',
   content: ''
 })
+
+// AI Extraction modal state
+const showExtractModal = ref(false)
+const extracting = ref(false)
+const extractionResult = ref(null)
 
 // Computed
 const organizations = computed(() => store.organizations)
@@ -615,6 +704,28 @@ async function handleDelete(item) {
       alert('Failed to delete meeting note: ' + (err.response?.data?.detail || err.message))
     }
   }
+}
+
+async function handleExtract(item) {
+  showExtractModal.value = true
+  extracting.value = true
+  extractionResult.value = null
+  
+  try {
+    const result = await store.extractInfo(item.id)
+    extractionResult.value = result
+  } catch (err) {
+    console.error('Failed to extract meeting info:', err)
+    alert('Failed to extract meeting information: ' + (err.response?.data?.detail || err.message))
+    showExtractModal.value = false
+  } finally {
+    extracting.value = false
+  }
+}
+
+function closeExtractModal() {
+  showExtractModal.value = false
+  extractionResult.value = null
 }
 
 function formatDate(dateString) {
@@ -846,7 +957,7 @@ function truncate(text, maxLength) {
 }
 
 .col-actions {
-  width: 100px;
+  width: 130px;
   text-align: center;
 }
 
@@ -918,6 +1029,15 @@ function truncate(text, maxLength) {
 .btn-icon.danger:hover {
   background: #fee2e2;
   color: #dc2626;
+}
+
+.btn-icon.ai {
+  color: #7c3aed;
+}
+
+.btn-icon.ai:hover {
+  background: #f3e8ff;
+  color: #6d28d9;
 }
 
 .load-more {
@@ -1195,6 +1315,181 @@ function truncate(text, maxLength) {
   align-items: center;
   justify-content: center;
   min-height: 300px;
+  color: #6b7280;
+}
+
+/* AI Extraction Modal Styles */
+.extract-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e5e7eb;
+  border-top-color: #7c3aed;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.extract-hint {
+  font-size: 0.875rem;
+  color: #9ca3af;
+}
+
+.extraction-results {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.extract-header {
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.extract-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.extract-section {
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+:global(.dark) .extract-section {
+  background: #1e293b;
+}
+
+.section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.875rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+:global(.dark) .section-title {
+  color: #e2e8f0;
+}
+
+.section-title svg {
+  color: #7c3aed;
+}
+
+.persons-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.person-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  padding: 0.5rem 0.75rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+:global(.dark) .person-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.person-name {
+  font-weight: 500;
+  color: #111827;
+}
+
+:global(.dark) .person-name {
+  color: #f1f5f9;
+}
+
+.person-date {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.key-points-list {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.key-points-list li {
+  margin: 0.375rem 0;
+  color: #374151;
+  line-height: 1.5;
+}
+
+:global(.dark) .key-points-list li {
+  color: #cbd5e1;
+}
+
+.next-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.next-step-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 0.625rem 0.875rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+}
+
+:global(.dark) .next-step-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.step-what {
+  flex: 1;
+  color: #374151;
+  line-height: 1.4;
+}
+
+:global(.dark) .step-what {
+  color: #e2e8f0;
+}
+
+.step-who {
+  flex-shrink: 0;
+  padding: 0.25rem 0.625rem;
+  background: #dbeafe;
+  color: #1e40af;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.step-who.tbd {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.no-extraction {
+  text-align: center;
+  padding: 2rem;
   color: #6b7280;
 }
 
