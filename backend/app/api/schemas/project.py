@@ -4,6 +4,12 @@ from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
+class Step(BaseModel):
+    """A step with action and assignee."""
+    what: str = Field(..., description="Description of the step/action")
+    who: str = Field(..., description="Person responsible for this step")
+
+
 class ProjectEntity(BaseModel):
     """Base project entity with all fields optional (used for updates)."""
     name: Optional[str] = Field(
@@ -22,11 +28,11 @@ class ProjectEntity(BaseModel):
         None,
         description="Bullet list of small tasks (markdown format)"
     )
-    past_steps: Optional[str] = Field(
+    past_steps: Optional[list[Step]] = Field(
         None,
         description="Past steps taken to address the project's challenges"
     )
-    next_steps: Optional[str] = Field(
+    next_steps: Optional[list[Step]] = Field(
         None,
         description="Next steps planned to move the project forward"
     )
@@ -37,8 +43,14 @@ class ProjectEntity(BaseModel):
                 {
                     "status": "Active",
                     "tasks": "- Review requirements\n- Setup environment\n- Run migration",
-                    "past_steps": "- Completed initial analysis\n- Met with stakeholders",
-                    "next_steps": "- Finalize design\n- Begin implementation"
+                    "past_steps": [
+                        {"what": "Completed initial analysis", "who": "John"},
+                        {"what": "Met with stakeholders", "who": "Jane"}
+                    ],
+                    "next_steps": [
+                        {"what": "Finalize design", "who": "John"},
+                        {"what": "Begin implementation", "who": "Team"}
+                    ]
                 }
             ]
         }
@@ -62,8 +74,14 @@ class ProjectCreate(ProjectEntity):
                     "organization_id": 1,
                     "status": "Active",
                     "tasks": "- Review requirements\n- Setup environment\n- Run migration",
-                    "past_steps": "- Completed initial analysis\n- Met with stakeholders",
-                    "next_steps": "- Finalize design\n- Begin implementation"
+                    "past_steps": [
+                        {"what": "Completed initial analysis", "who": "John"},
+                        {"what": "Met with stakeholders", "who": "Jane"}
+                    ],
+                    "next_steps": [
+                        {"what": "Finalize design", "who": "John"},
+                        {"what": "Begin implementation", "who": "Team"}
+                    ]
                 }
             ]
         }

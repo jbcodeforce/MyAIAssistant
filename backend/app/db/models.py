@@ -45,6 +45,11 @@ class Organization(Base):
         return f"Organization(id={self.id!r}, name={self.name!r})"
 
 
+# Type alias for Step JSON structure
+# Step contains: {"what": str, "who": str}
+StepType = dict[str, str]
+
+
 class Project(Base):
     __tablename__ = "projects"
 
@@ -58,10 +63,10 @@ class Project(Base):
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="Draft")
     # Bullet list of small tasks stored as markdown text
     tasks: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    # Past steps taken to address the project's challenges
-    past_steps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    # Next steps planned to move the project forward
-    next_steps: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Past steps taken to address the project's challenges (list of Step objects)
+    past_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+    # Next steps planned to move the project forward (list of Step objects)
+    next_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(

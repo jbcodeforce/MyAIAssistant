@@ -17,7 +17,7 @@ from app.api.schemas.meeting_ref import (
     KeyPointResponse,
 )
 from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_service
-from app.api.schemas.project import ProjectEntity
+from app.api.schemas.project import ProjectEntity, Step
 from agent_core.agents.factory import AgentFactory
 from agent_core.agents.meeting_agent import MeetingAgentResponse
 
@@ -285,10 +285,12 @@ async def extract_meeting_info(
         agent_response.cleaned_notes = "\n## Next Steps\n"
         agent_response.cleaned_notes += "\n".join([f"- {ns.what} (assigned to {ns.who})" for ns in agent_response.next_steps])
         agent_response.cleaned_notes += "\n"
+        # Convert NextStep objects from agent to Step objects for ProjectEntity
+        steps = [Step(what=ns.what, who=ns.who) for ns in agent_response.next_steps]
         await crud.update_project(
             db=db,
             project_id=meeting_ref.project_id,
-            project_update= ProjectEntity(next_steps=agent_response.next_steps)
+            project_update=ProjectEntity(next_steps=steps)
         )
 
     await notes_service.update_note(
