@@ -218,13 +218,13 @@ class TaskPlan(Base):
         return f"TaskPlan(id={self.id!r}, todo_id={self.todo_id!r})"
 
 
-class MeetingRef(Base):
-    """Meeting note reference entity.
+class Meeting(Base):
+    """Meeting note entity.
     
     Stores references to meeting notes with optional links to projects and organizations.
     The actual content is stored in the file system, referenced by file_ref.
     """
-    __tablename__ = "meeting_refs"
+    __tablename__ = "meetings"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     meeting_id: Mapped[str] = mapped_column(String(255), nullable=False, unique=True)
@@ -235,7 +235,7 @@ class MeetingRef(Base):
         Integer, ForeignKey("organizations.id"), nullable=True
     )
     file_ref: Mapped[str] = mapped_column(String(2048), nullable=False)
-    presents: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
+    attendees: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -251,11 +251,11 @@ class MeetingRef(Base):
     )
 
     # Relationships
-    project: Mapped[Optional["Project"]] = relationship("Project", backref="meeting_refs")
-    organization: Mapped[Optional["Organization"]] = relationship("Organization", backref="meeting_refs")
+    project: Mapped[Optional["Project"]] = relationship("Project", backref="meetings")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", backref="meetings")
 
     def __repr__(self) -> str:
-        return f"MeetingRef(id={self.id!r}, meeting_id={self.meeting_id!r}, file_ref={self.file_ref!r})"
+        return f"Meeting(id={self.id!r}, meeting_id={self.meeting_id!r}, file_ref={self.file_ref!r})"
 
 
 class Asset(Base):

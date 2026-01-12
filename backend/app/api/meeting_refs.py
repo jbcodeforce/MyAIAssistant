@@ -11,14 +11,13 @@ from app.api.schemas.meeting_ref import (
     MeetingRefUpdate,
     MeetingRefResponse,
     MeetingRefListResponse,
-    MeetingAgentResponse,
     MeetingAgentOutputResponse,
     PersonResponse,
     NextStepResponse,
     KeyPointResponse,
 )
 from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_service
-from app.core.config import get_settings
+from app.api.schemas.project import ProjectEntity
 from agent_core.agents.factory import AgentFactory
 from agent_core.agents.meeting_agent import MeetingAgentResponse
 
@@ -83,7 +82,7 @@ async def create_meeting_ref(
         file_ref=save_result.file_ref,
         project_id=meeting_ref.project_id,
         org_id=meeting_ref.org_id,
-        presents=meeting_ref.presents,
+        attendees=meeting_ref.attendees,
     )
     
     return db_meeting_ref
@@ -179,7 +178,7 @@ async def update_meeting_ref(
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Meeting note file not found")
     
-    # Update database record (project_id, org_id, and presents)
+    # Update database record (project_id, org_id, and attendees)
     update_data = meeting_ref_update.model_dump(exclude_unset=True, exclude={"content"})
     
     meeting_ref = await crud.update_meeting_ref(
@@ -187,10 +186,10 @@ async def update_meeting_ref(
         meeting_ref_id=meeting_ref_id,
         project_id=update_data.get("project_id"),
         org_id=update_data.get("org_id"),
-        presents=update_data.get("presents"),
+        attendees=update_data.get("attendees"),
         update_project_id="project_id" in update_data,
         update_org_id="org_id" in update_data,
-        update_presents="presents" in update_data,
+        update_attendees="attendees" in update_data,
     )
     
     return meeting_ref
@@ -221,7 +220,7 @@ async def delete_meeting_ref(
     return None
 
 
-@router.post("/{meeting_ref_id}/extract", response_model=MeetingAgentResponse)
+@router.post("/{meeting_ref_id}/extract", response_model=MeetingAgentOutputResponse)
 async def extract_meeting_info(
     meeting_ref_id: int,
     db: AsyncSession = Depends(get_db),
@@ -246,6 +245,17 @@ async def extract_meeting_info(
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Meeting note file not found")
     
+    org_description = ""
+    if meeting_ref.org_id:
+        org = await crud.get_organization(db=db, organization_id=meeting_ref.org_id)
+        if org:
+            org_description = org.description
+    project_description = ""
+    if meeting_ref.project_id:
+        project = await crud.get_project(db=db, project_id=meeting_ref.project_id)
+        if project:
+            project_description = project.description
+
     # Create MeetingAgent using AgentFactory with settings overrides
     factory = AgentFactory()
     agent = factory.create_agent(
@@ -254,41 +264,63 @@ async def extract_meeting_info(
     
     # Build context with meeting metadata
     context = {
-        "organization_id": meeting_ref.org_id,
-        "project_id": meeting_ref.project_id,
-        "meeting_id": meeting_ref.meeting_id,
-        ""
+        "organization": org_description,
+        "project": project_description,
+        "attendees": meeting_ref.attendees
     }
     
     # Execute the agent
     try:
-        agent_response = await agent.execute(query=content, context=context)
+        agent_response: MeetingAgentResponse = await agent.execute(query=content, context=context)
     except Exception as e:
         logger.error(f"MeetingAgent execution failed: {e}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
     
-    # Convert agent output to API response
-    meeting_output = None
-    if agent_response.meeting_output:
-        meeting_output = MeetingAgentOutputResponse(
-            persons=[
-                PersonResponse(name=p.name, last_met_date=p.last_met_date)
-                for p in agent_response.meeting_output.persons
-            ],
-            next_steps=[
-                NextStepResponse(what=ns.what, who=ns.who)
-                for ns in agent_response.meeting_output.next_steps
-            ],
-            key_points=[
-                KeyPointResponse(point=kp.point)
-                for kp in agent_response.meeting_output.key_points
-            ],
+    if agent_response.key_points is not None:
+        agent_response.cleaned_notes = "\n## Key Points\n"
+        agent_response.cleaned_notes += "\n".join([f"- {kp.point}" for kp in agent_response.key_points])
+        agent_response.cleaned_notes += "\n"
+
+    if agent_response.next_steps is not None:
+        agent_response.cleaned_notes = "\n## Next Steps\n"
+        agent_response.cleaned_notes += "\n".join([f"- {ns.what} (assigned to {ns.who})" for ns in agent_response.next_steps])
+        agent_response.cleaned_notes += "\n"
+        await crud.update_project(
+            db=db,
+            project_id=meeting_ref.project_id,
+            project_update= ProjectEntity(next_steps=agent_response.next_steps)
+        )
+
+    await notes_service.update_note(
+            file_ref=meeting_ref.file_ref,
+            content=agent_response.cleaned_notes,
         )
     
-    return MeetingAgentResponse(
+    await crud.update_meeting_ref(
+        db=db,
+        meeting_ref_id=meeting_ref_id,
+        project_id=meeting_ref.project_id,
+        org_id=meeting_ref.org_id,
+        attendees=agent_response.attendees,
+        update_attendees=agent_response.attendees is not None,
+    )
+    # Convert agent output to API response
+  
+    return MeetingAgentOutputResponse(
         meeting_ref_id=meeting_ref_id,
         meeting_id=meeting_ref.meeting_id,
-        meeting_output=meeting_output,
-        raw_response=agent_response.message
-
+        attendees=[
+            PersonResponse(name=p.name, last_met_date=p.last_met_date)
+            for p in agent_response.meeting_output.persons
+        ],
+        next_steps=[
+            NextStepResponse(what=ns.what, who=ns.who)
+            for ns in agent_response.meeting_output.next_steps
+        ],
+        key_points=[
+            KeyPointResponse(point=kp.point)
+            for kp in agent_response.meeting_output.key_points
+        ],
+        notes=agent_response.cleaned_notes,
     )
+    

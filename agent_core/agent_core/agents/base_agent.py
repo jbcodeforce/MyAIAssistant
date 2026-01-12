@@ -275,7 +275,7 @@ class BaseAgent:
         
         return "\n\n---\n\n".join(context_parts)
 
-    def build_system_prompt(self, context: Optional[dict] = None) -> str:
+    def  build_system_prompt(self, context: Optional[dict] = None) -> str:
         """
         Build the system prompt for this agent.
         

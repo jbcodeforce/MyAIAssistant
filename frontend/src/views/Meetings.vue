@@ -256,9 +256,13 @@
             <span class="info-label">Project:</span>
             <span class="info-value">{{ getProjectName(editingItem?.project_id) }}</span>
           </div>
-          <div class="info-row" v-if="editingItem?.presents">
+          <div class="info-row">
             <span class="info-label">Attendees:</span>
-            <span class="info-value">{{ editingItem?.presents }}</span>
+            <span class="info-value">{{ editingItem?.presents || '-' }}</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Meeting Date:</span>
+            <span class="info-value">{{ editingItem?.created_at ? formatDate(editingItem.created_at) : '-' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">File:</span>
@@ -362,9 +366,9 @@
           <span class="meeting-id-badge">{{ extractionResult.meeting_id }}</span>
         </div>
 
-        <div v-if="extractionResult.meeting_output" class="extract-sections">
-          <!-- Persons Section -->
-          <div class="extract-section" v-if="extractionResult.meeting_output.persons?.length">
+        <div v-if="extractionResult.attendees?.length || extractionResult.key_points?.length || extractionResult.next_steps?.length" class="extract-sections">
+          <!-- Attendees Section -->
+          <div class="extract-section" v-if="extractionResult.attendees?.length">
             <h4 class="section-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
@@ -375,7 +379,7 @@
               Attendees
             </h4>
             <div class="persons-list">
-              <div v-for="(person, idx) in extractionResult.meeting_output.persons" :key="idx" class="person-item">
+              <div v-for="(person, idx) in extractionResult.attendees" :key="idx" class="person-item">
                 <span class="person-name">{{ person.name }}</span>
                 <span v-if="person.last_met_date" class="person-date">Last met: {{ person.last_met_date }}</span>
               </div>
@@ -383,7 +387,7 @@
           </div>
 
           <!-- Key Points Section -->
-          <div class="extract-section" v-if="extractionResult.meeting_output.key_points?.length">
+          <div class="extract-section" v-if="extractionResult.key_points?.length">
             <h4 class="section-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
@@ -391,14 +395,14 @@
               Key Points
             </h4>
             <ul class="key-points-list">
-              <li v-for="(kp, idx) in extractionResult.meeting_output.key_points" :key="idx">
+              <li v-for="(kp, idx) in extractionResult.key_points" :key="idx">
                 {{ kp.point }}
               </li>
             </ul>
           </div>
 
           <!-- Next Steps Section -->
-          <div class="extract-section" v-if="extractionResult.meeting_output.next_steps?.length">
+          <div class="extract-section" v-if="extractionResult.next_steps?.length">
             <h4 class="section-title">
               <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
@@ -407,7 +411,7 @@
               Action Items
             </h4>
             <div class="next-steps-list">
-              <div v-for="(step, idx) in extractionResult.meeting_output.next_steps" :key="idx" class="next-step-item">
+              <div v-for="(step, idx) in extractionResult.next_steps" :key="idx" class="next-step-item">
                 <span class="step-what">{{ step.what }}</span>
                 <span class="step-who" :class="{ 'tbd': step.who === 'to_be_decided' }">
                   {{ step.who === 'to_be_decided' ? 'TBD' : step.who }}

@@ -28,17 +28,12 @@ class KeyPoint(BaseModel):
     """A key discussion point from the meeting."""
     point: str
 
-
-class MeetingOutput(BaseModel):
-    """Structured output from meeting note extraction."""
-    persons: list[Person] = Field(default_factory=list)
-    next_steps: list[NextStep] = Field(default_factory=list)
-    key_points: list[KeyPoint] = Field(default_factory=list)
-
-
 class MeetingAgentResponse(AgentResponse):
     """Extended response from MeetingAgent with structured meeting data."""
-    meeting_output: Optional[MeetingOutput] = None
+    attendees: list[Person] = Field(default_factory=list)
+    next_steps: list[NextStep] = Field(default_factory=list)
+    key_points: list[KeyPoint] = Field(default_factory=list)
+    cleaned_notes: str = Field(..., description="Cleaned meeting notes")
     parse_error: Optional[str] = None
 
 
@@ -67,19 +62,15 @@ class MeetingAgent(BaseAgent):
         Args:
             query: The meeting notes text
             conversation_history: Previous messages in conversation
-            context: Additional context (organization_id, project_id, etc.)
+            context: Additional context (may be extract of project description, or organization description.)
             
         Returns:
             MeetingAgentResponse with structured meeting data
         """
-        context = context or {}
+        context = context or "No additional context provided"  # TODO assess when it will be needed
         
-        # Get context metadata
-        org_id = context.get("organization_id")
-        project_id = context.get("project_id")
-
         # Build messages with query substitution in prompt
-        system_prompt = self.build_system_prompt({"query": query})
+        system_prompt = self.build_system_prompt({"context": context})
         messages = [{"role": "system", "content": system_prompt}]
         
         if conversation_history:
@@ -95,31 +86,49 @@ class MeetingAgent(BaseAgent):
         response_text = await self._call_llm(messages)
         
         # Parse the JSON response
-        meeting_output, parse_error = self._parse_meeting_output(response_text)
+        parsed_data, parse_error = self._parse_meeting_output(response_text)
         
-        return MeetingAgentResponse(
-            message=response_text,
-            meeting_output=meeting_output,
-            parse_error=parse_error,
-            model=self.model,
-            provider=self.provider,
-            agent_type=self.agent_type,
-            metadata={
-                "organization_id": org_id,
-                "project_id": project_id,
-                "parsed_successfully": parse_error is None
-            }
-        )
+        # Build response with parsed data or defaults if parsing failed
+        if parsed_data:
+            return MeetingAgentResponse(
+                message=response_text,
+                attendees=parsed_data["attendees"],
+                next_steps=parsed_data["next_steps"],
+                key_points=parsed_data["key_points"],
+                cleaned_notes=parsed_data["cleaned_notes"],
+                parse_error=None,
+                model=self.model,
+                provider=self.provider,
+                agent_type=self.agent_type,
+                metadata={
+                    "parsed_successfully": True
+                }
+            )
+        else:
+            return MeetingAgentResponse(
+                message=response_text,
+                attendees=[],
+                next_steps=[],
+                key_points=[],
+                cleaned_notes=response_text,  # Use raw response as fallback
+                parse_error=parse_error,
+                model=self.model,
+                provider=self.provider,
+                agent_type=self.agent_type,
+                metadata={
+                    "parsed_successfully": False
+                }
+            )
     
-    def _parse_meeting_output(self, response_text: str) -> tuple[Optional[MeetingOutput], Optional[str]]:
+    def _parse_meeting_output(self, response_text: str) -> tuple[Optional[dict], Optional[str]]:
         """
-        Parse the LLM response into structured MeetingOutput.
+        Parse the LLM response into structured meeting data.
         
         Args:
             response_text: Raw text response from LLM
             
         Returns:
-            Tuple of (MeetingOutput or None, error message or None)
+            Tuple of (parsed data dict or None, error message or None)
         """
         try:
             # Try to extract JSON from the response
@@ -127,16 +136,17 @@ class MeetingAgent(BaseAgent):
             data = json.loads(json_text)
             
             # Parse into Pydantic models
-            persons = [Person(**p) for p in data.get("persons", [])]
+            attendees = [Person(**p) for p in data.get("attendees", [])]
             next_steps = [NextStep(**ns) for ns in data.get("next_steps", [])]
             key_points = [KeyPoint(**kp) if isinstance(kp, dict) else KeyPoint(point=str(kp)) 
                          for kp in data.get("key_points", [])]
             
-            return MeetingOutput(
-                persons=persons,
-                next_steps=next_steps,
-                key_points=key_points
-            ), None
+            return {
+                "attendees": attendees,
+                "next_steps": next_steps,
+                "key_points": key_points,
+                "cleaned_notes": data.get("cleaned_notes", "")
+            }, None
             
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse JSON from LLM response: {e}")

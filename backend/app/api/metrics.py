@@ -6,7 +6,7 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db.models import Project, Todo, Organization, MeetingRef, Asset
+from app.db.models import Project, Todo, Organization, Meeting, Asset
 from app.api.schemas.metrics import (
     StatusCount,
     ProjectMetrics,
@@ -244,15 +244,15 @@ async def get_meetings_over_time(
     start_date = datetime.now() - timedelta(days=days)
     
     query = select(
-        func.date(MeetingRef.created_at).label("created_date"),
-        func.count(MeetingRef.id).label("count")
+        func.date(Meeting.created_at).label("created_date"),
+        func.count(Meeting.id).label("count")
     ).where(
-        MeetingRef.created_at >= start_date,
-        MeetingRef.created_at <= end_date
+        Meeting.created_at >= start_date,
+        Meeting.created_at <= end_date
     ).group_by(
-        func.date(MeetingRef.created_at)
+        func.date(Meeting.created_at)
     ).order_by(
-        func.date(MeetingRef.created_at)
+        func.date(Meeting.created_at)
     )
     
     result = await db.execute(query)

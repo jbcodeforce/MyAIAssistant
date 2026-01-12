@@ -3,7 +3,7 @@ from typing import Optional
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import MeetingRef
+from app.db.models import Meeting
 
 
 async def create_meeting_ref(
@@ -12,15 +12,15 @@ async def create_meeting_ref(
     file_ref: str,
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
-    presents: Optional[str] = None,
-) -> MeetingRef:
+    attendees: Optional[str] = None,
+) -> Meeting:
     """Create a new meeting reference."""
-    db_meeting_ref = MeetingRef(
+    db_meeting_ref = Meeting(
         meeting_id=meeting_id,
         file_ref=file_ref,
         project_id=project_id,
         org_id=org_id,
-        presents=presents,
+        attendees=attendees,
     )
     db.add(db_meeting_ref)
     await db.commit()
@@ -28,15 +28,15 @@ async def create_meeting_ref(
     return db_meeting_ref
 
 
-async def get_meeting_ref(db: AsyncSession, meeting_ref_id: int) -> Optional[MeetingRef]:
+async def get_meeting_ref(db: AsyncSession, meeting_ref_id: int) -> Optional[Meeting]:
     """Get a meeting reference by ID."""
-    result = await db.execute(select(MeetingRef).where(MeetingRef.id == meeting_ref_id))
+    result = await db.execute(select(Meeting).where(Meeting.id == meeting_ref_id))
     return result.scalar_one_or_none()
 
 
-async def get_meeting_ref_by_meeting_id(db: AsyncSession, meeting_id: str) -> Optional[MeetingRef]:
+async def get_meeting_ref_by_meeting_id(db: AsyncSession, meeting_id: str) -> Optional[Meeting]:
     """Get a meeting reference by meeting_id."""
-    result = await db.execute(select(MeetingRef).where(MeetingRef.meeting_id == meeting_id))
+    result = await db.execute(select(Meeting).where(Meeting.meeting_id == meeting_id))
     return result.scalar_one_or_none()
 
 
@@ -46,15 +46,15 @@ async def get_meeting_refs(
     limit: int = 100,
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
-) -> tuple[list[MeetingRef], int]:
+) -> tuple[list[Meeting], int]:
     """Get all meeting references with pagination and optional filters."""
-    query = select(MeetingRef)
+    query = select(Meeting)
     
     # Apply filters
     if project_id is not None:
-        query = query.where(MeetingRef.project_id == project_id)
+        query = query.where(Meeting.project_id == project_id)
     if org_id is not None:
-        query = query.where(MeetingRef.org_id == org_id)
+        query = query.where(Meeting.org_id == org_id)
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
@@ -62,7 +62,7 @@ async def get_meeting_refs(
     total = total_result.scalar_one()
     
     # Get paginated results
-    query = query.order_by(MeetingRef.created_at.desc()).offset(skip).limit(limit)
+    query = query.order_by(Meeting.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     meeting_refs = list(result.scalars().all())
     
@@ -74,11 +74,11 @@ async def update_meeting_ref(
     meeting_ref_id: int,
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
-    presents: Optional[str] = None,
+    attendees: Optional[str] = None,
     update_project_id: bool = False,
     update_org_id: bool = False,
-    update_presents: bool = False,
-) -> Optional[MeetingRef]:
+    update_attendees: bool = False,
+) -> Optional[Meeting]:
     """Update an existing meeting reference.
     
     Args:
@@ -86,10 +86,10 @@ async def update_meeting_ref(
         meeting_ref_id: ID of the meeting reference to update
         project_id: New project ID (only applied if update_project_id is True)
         org_id: New organization ID (only applied if update_org_id is True)
-        presents: Comma or semicolon separated list of attendees (only applied if update_presents is True)
+        attendees: Comma or semicolon separated list of attendees (only applied if update_attendees is True)
         update_project_id: Whether to update project_id (allows setting to None)
         update_org_id: Whether to update org_id (allows setting to None)
-        update_presents: Whether to update presents (allows setting to None)
+        update_attendees: Whether to update attendees (allows setting to None)
     """
     db_meeting_ref = await get_meeting_ref(db, meeting_ref_id)
     if not db_meeting_ref:
@@ -99,8 +99,8 @@ async def update_meeting_ref(
         db_meeting_ref.project_id = project_id
     if update_org_id:
         db_meeting_ref.org_id = org_id
-    if update_presents:
-        db_meeting_ref.presents = presents
+    if update_attendees:
+        db_meeting_ref.attendees = attendees
     
     await db.commit()
     await db.refresh(db_meeting_ref)
@@ -123,7 +123,7 @@ async def get_meeting_refs_by_project(
     project_id: int,
     skip: int = 0,
     limit: int = 100,
-) -> tuple[list[MeetingRef], int]:
+) -> tuple[list[Meeting], int]:
     """Get all meeting references for a specific project."""
     return await get_meeting_refs(db, skip=skip, limit=limit, project_id=project_id)
 
@@ -133,6 +133,6 @@ async def get_meeting_refs_by_organization(
     org_id: int,
     skip: int = 0,
     limit: int = 100,
-) -> tuple[list[MeetingRef], int]:
+) -> tuple[list[Meeting], int]:
     """Get all meeting references for a specific organization."""
     return await get_meeting_refs(db, skip=skip, limit=limit, org_id=org_id)

@@ -5,7 +5,7 @@ import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.crud import meeting as crud
-from app.db.models import MeetingRef, Project, Organization
+from app.db.models import Meeting, Project, Organization
 from app.services.meeting_notes import MeetingNotesService
 from app.api.schemas.meeting_ref import MeetingRefCreate
 
@@ -52,7 +52,7 @@ class TestCreateMeetingRef:
         assert meeting_ref.file_ref == "docs/meetings/mtg-2026-01-10-test.md"
         assert meeting_ref.project_id is None
         assert meeting_ref.org_id is None
-        assert meeting_ref.presents is None
+        assert meeting_ref.attendees is None
         assert meeting_ref.created_at is not None
         assert meeting_ref.updated_at is not None
     
@@ -85,16 +85,16 @@ class TestCreateMeetingRef:
         assert meeting_ref.org_id == organization.id
     
     @pytest.mark.asyncio
-    async def test_create_meeting_ref_with_presents(self, db_session: AsyncSession):
+    async def test_create_meeting_ref_with_attendees(self, db_session: AsyncSession):
         """Test creating a meeting ref with attendees."""
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
-            meeting_id="mtg-presents",
-            file_ref="docs/meetings/mtg-presents.md",
-            presents="John Doe, Jane Smith, Bob Wilson",
+            meeting_id="mtg-attendees",
+            file_ref="docs/meetings/mtg-attendees.md",
+            attendees="John Doe, Jane Smith, Bob Wilson",
         )
         
-        assert meeting_ref.presents == "John Doe, Jane Smith, Bob Wilson"
+        assert meeting_ref.attendees == "John Doe, Jane Smith, Bob Wilson"
     
     @pytest.mark.asyncio
     async def test_create_meeting_ref_full(
@@ -107,14 +107,14 @@ class TestCreateMeetingRef:
             file_ref="docs/meetings/org/project/mtg-full.md",
             project_id=project.id,
             org_id=organization.id,
-            presents="Alice; Bob; Carol",
+            attendees="Alice; Bob; Carol",
         )
         
         assert meeting_ref.meeting_id == "mtg-full"
         assert meeting_ref.file_ref == "docs/meetings/org/project/mtg-full.md"
         assert meeting_ref.project_id == project.id
         assert meeting_ref.org_id == organization.id
-        assert meeting_ref.presents == "Alice; Bob; Carol"
+        assert meeting_ref.attendees == "Alice; Bob; Carol"
 
 
 class TestGetMeetingRef:
@@ -338,24 +338,24 @@ class TestUpdateMeetingRef:
         assert updated.org_id == organization.id
     
     @pytest.mark.asyncio
-    async def test_update_meeting_ref_presents(self, db_session: AsyncSession):
-        """Test updating the presents field of a meeting ref."""
+    async def test_update_meeting_ref_attendees(self, db_session: AsyncSession):
+        """Test updating the attendees field of a meeting ref."""
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
-            meeting_id="mtg-update-presents",
-            file_ref="docs/mtg-update-presents.md",
-            presents="Original Attendee",
+            meeting_id="mtg-update-attendees",
+            file_ref="docs/mtg-update-attendees.md",
+            attendees="Original Attendee",
         )
         
         updated = await crud.update_meeting_ref(
             db=db_session,
             meeting_ref_id=meeting_ref.id,
-            presents="New Attendee 1, New Attendee 2",
-            update_presents=True,
+            attendees="New Attendee 1, New Attendee 2",
+            update_attendees=True,
         )
         
         assert updated is not None
-        assert updated.presents == "New Attendee 1, New Attendee 2"
+        assert updated.attendees == "New Attendee 1, New Attendee 2"
     
     @pytest.mark.asyncio
     async def test_update_meeting_ref_clear_project(
@@ -380,24 +380,24 @@ class TestUpdateMeetingRef:
         assert updated.project_id is None
     
     @pytest.mark.asyncio
-    async def test_update_meeting_ref_clear_presents(self, db_session: AsyncSession):
-        """Test clearing the presents field of a meeting ref."""
+    async def test_update_meeting_ref_clear_attendees(self, db_session: AsyncSession):
+        """Test clearing the attendees field of a meeting ref."""
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
-            meeting_id="mtg-clear-presents",
-            file_ref="docs/mtg-clear-presents.md",
-            presents="Some Attendee",
+            meeting_id="mtg-clear-attendees",
+            file_ref="docs/mtg-clear-attendees.md",
+            attendees="Some Attendee",
         )
         
         updated = await crud.update_meeting_ref(
             db=db_session,
             meeting_ref_id=meeting_ref.id,
-            presents=None,
-            update_presents=True,
+            attendees=None,
+            update_attendees=True,
         )
         
         assert updated is not None
-        assert updated.presents is None
+        assert updated.attendees is None
     
     @pytest.mark.asyncio
     async def test_update_meeting_ref_no_change_without_flag(
@@ -408,7 +408,7 @@ class TestUpdateMeetingRef:
             db=db_session,
             meeting_id="mtg-no-change",
             file_ref="docs/mtg-no-change.md",
-            presents="Original",
+            attendees="Original",
         )
         
         # Pass new values but don't set update flags
@@ -416,14 +416,14 @@ class TestUpdateMeetingRef:
             db=db_session,
             meeting_ref_id=meeting_ref.id,
             project_id=project.id,
-            presents="New Value",
+            attendees="New Value",
             update_project_id=False,
-            update_presents=False,
+            update_attendees=False,
         )
         
         assert updated is not None
         assert updated.project_id is None  # Not changed
-        assert updated.presents == "Original"  # Not changed
+        assert updated.attendees == "Original"  # Not changed
     
     @pytest.mark.asyncio
     async def test_update_meeting_ref_not_found(self, db_session: AsyncSession):
@@ -431,8 +431,8 @@ class TestUpdateMeetingRef:
         updated = await crud.update_meeting_ref(
             db=db_session,
             meeting_ref_id=9999,
-            presents="Test",
-            update_presents=True,
+            attendees="Test",
+            update_attendees=True,
         )
         
         assert updated is None
@@ -453,16 +453,16 @@ class TestUpdateMeetingRef:
             meeting_ref_id=meeting_ref.id,
             project_id=project.id,
             org_id=organization.id,
-            presents="Multiple, Updates",
+            attendees="Multiple, Updates",
             update_project_id=True,
             update_org_id=True,
-            update_presents=True,
+            update_attendees=True,
         )
         
         assert updated is not None
         assert updated.project_id == project.id
         assert updated.org_id == organization.id
-        assert updated.presents == "Multiple, Updates"
+        assert updated.attendees == "Multiple, Updates"
 
 
 class TestDeleteMeetingRef:
@@ -646,6 +646,6 @@ class TestRealScenario:
         assert extracted_info.org_id == organization.id
         assert extracted_info.meeting_id == "mtg-real-scenario"
        
-        assert extracted_info.presents is None
+        assert extracted_info.attendees is None
         assert extracted_info.created_at is not None
         assert extracted_info.updated_at is not None
