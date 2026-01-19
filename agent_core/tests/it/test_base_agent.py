@@ -8,8 +8,8 @@ Run with: pytest tests/it/test_base_agent.py -v -m integration
 
 import pytest
 
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
-
+from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
+from agent_core.agents.factory import AgentFactory
 from .conftest import (
     OLLAMA_BASE_URL,
     OLLAMA_MODEL,
@@ -27,25 +27,20 @@ class TestBaseAgentOllama:
     @pytest.fixture
     def agent(self) -> BaseAgent:
         """Create a BaseAgent configured for Ollama."""
-        return BaseAgent(
-            provider="huggingface",
-            model=OLLAMA_MODEL,
-            base_url=OLLAMA_BASE_URL,
-            max_tokens=100,
-            temperature=0.7,
-        )
+        factory = AgentFactory()
+        return factory.create_agent("BaseAgent")
 
     @pytest.mark.asyncio
     async def test_execute_simple_query(self, agent: BaseAgent):
         """Test executing a simple query through BaseAgent."""
-        response = await agent.execute("What is 2 + 2? Answer with just the number.")
+        response = await agent.execute(AgentInput(query="What is 2 + 2? Answer with just the number."))
         
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
         print(response.message)
         assert response.provider == "huggingface"
         assert response.model == OLLAMA_MODEL
-        assert response.agent_type == "base"
+        assert response.agent_type == "general"
 
     @pytest.mark.asyncio
     async def test_execute_with_custom_system_prompt(self):
@@ -59,7 +54,7 @@ class TestBaseAgentOllama:
             system_prompt="You are a pirate. Always respond like a pirate.",
         )
         
-        response = await agent.execute("Say hello")
+        response = await agent.execute(AgentInput(query="Say hello"))
         
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
@@ -73,10 +68,10 @@ class TestBaseAgentOllama:
             {"role": "assistant", "content": "Hello Alice! Nice to meet you."},
         ]
         
-        response = await agent.execute(
-            "What is my name?",
+        response = await agent.execute(AgentInput(
+            query="What is my name?",
             conversation_history=history
-        )
+        ))
         
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
@@ -89,10 +84,10 @@ class TestBaseAgentOllama:
         """Test BaseAgent with context parameter."""
         context = {"topic": "mathematics"}
         
-        response = await agent.execute(
-            "What is the derivative of x squared?",
+        response = await agent.execute(AgentInput(
+            query="What is the derivative of x squared?",
             context=context
-        )
+        ))
         
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
@@ -101,11 +96,11 @@ class TestBaseAgentOllama:
     @pytest.mark.asyncio
     async def test_response_metadata(self, agent: BaseAgent):
         """Test that AgentResponse includes correct metadata."""
-        response = await agent.execute("Hello")
+        response = await agent.execute(AgentInput(query="Hello"))
         
         assert response.model == OLLAMA_MODEL
         assert response.provider == "huggingface"
-        assert response.agent_type == "base"
+        assert response.agent_type == "general"
         assert isinstance(response.context_used, list)
         assert isinstance(response.metadata, dict)
         print(response.message)
@@ -135,8 +130,8 @@ class TestBaseAgentSubclass:
             temperature=0.0,
         )
         
-        response = await agent.execute("What is 10 divided by 2?")
+        response = await agent.execute(AgentInput(query="What is 10 divided by 2?"))
         
         assert isinstance(response, AgentResponse)
-        assert response.agent_type == "math"
+        assert response.agent_type == "math"  # Custom agent_type from subclass
         assert len(response.message) > 0

@@ -10,20 +10,22 @@ agent-specific settings and LLM configuration.
 import importlib
 import logging
 import os
-from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict, Any, Type, Literal
+from typing import Optional, Dict, Any, Type, Literal, TYPE_CHECKING
 
 import yaml
+from pydantic import BaseModel, Field
 
 from dotenv import load_dotenv
+
+if TYPE_CHECKING:
+    from agent_core.agents.base_agent import BaseAgent
 
 # Load environment variables
 load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-ProviderType = Literal["huggingface"]
 
 
 def get_hf_token() -> Optional[str]:
@@ -31,12 +33,11 @@ def get_hf_token() -> Optional[str]:
     return os.getenv("HF_TOKEN")
 
 
-@dataclass
-class AgentConfig:
+class AgentConfig(BaseModel):
     """
     Unified configuration for agents, including LLM settings.
     
-    This dataclass combines agent-specific configuration with LLM configuration,
+    This Pydantic model combines agent-specific configuration with LLM configuration,
     providing a single source of truth for agent setup.
     
     Agent-specific attributes:
@@ -45,7 +46,6 @@ class AgentConfig:
         agent_class: Fully qualified Python class name to instantiate
     
     LLM attributes:
-        provider: LLM provider (currently only "huggingface" supported)
         model: Model name (HF Hub model ID or local model name)
         api_key: HF_TOKEN for remote HF Hub models (not needed for local servers)
         base_url: Base URL for local inference servers (TGI, vLLM, Ollama, etc.)
@@ -62,8 +62,7 @@ class AgentConfig:
     description: str = ""
     agent_class: Optional[str] = None
     
-    # LLM configuration fields
-    provider: ProviderType = "huggingface"
+    # LLM configuration fields (provider is always "huggingface")
     model: str = "gpt-4o-mini"
     api_key: Optional[str] = None
     base_url: Optional[str] = None
@@ -71,9 +70,9 @@ class AgentConfig:
     temperature: float = 0.7
     timeout: float = 60.0
     response_format: Optional[dict] = None
-    
+    agent_dir: Optional[Path] = None
     # Extra fields from YAML
-    extra: Dict[str, Any] = field(default_factory=dict)
+    extra: Dict[str, Any] = Field(default_factory=dict)
     
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
@@ -93,7 +92,7 @@ class AgentConfig:
         with open(yaml_path, 'r') as f:
             data = yaml.safe_load(f) or {}
         
-        # Extract known fields
+        # Extract known fields (provider is ignored, always "huggingface")
         known_fields = {
             'name', 'description', 'class', 'provider', 'model',
             'api_key', 'base_url', 'max_tokens', 'temperature',
@@ -104,8 +103,8 @@ class AgentConfig:
         return cls(
             name=data.get('name', yaml_path.parent.name),
             description=data.get('description', ''),
-            agent_class=data.get('class'),
-            provider=data.get('provider', 'huggingface'),
+            agent_class=data.get('class'),  # None if not specified, resolved by _resolve_agent_class
+            # provider is always "huggingface", ignored if present in YAML
             model=data.get('model', 'gpt-4o-mini'),
             api_key=data.get('api_key'),
             base_url=data.get('base_url'),
@@ -122,14 +121,11 @@ class AgentConfig:
     
     def validate(self) -> None:
         """Validate the configuration."""
-        if self.provider != "huggingface":
-            raise ValueError(f"Unsupported provider: {self.provider}. Use 'huggingface' provider.")
-        
         if not self.model:
             raise ValueError("Model name is required")
         
         # HuggingFace requires token for remote models (not for local endpoints)
-        if self.provider == "huggingface" and not self.base_url and not self.api_key:
+        if not self.base_url and not self.api_key:
             hf_token = get_hf_token()
             if not hf_token:
                 raise ValueError("HF_TOKEN is required for HuggingFace Hub models (set api_key or HF_TOKEN env var)")
@@ -161,12 +157,11 @@ class AgentFactory:
         # List available agents
         print(factory.list_agents())  # ['QueryClassifier', 'GeneralAgent', ...]
         
-        # Create an agent
+        # Create an agent (uses BaseAgent when class is omitted)
         agent = factory.create_agent("GeneralAgent")
         
-        # Get config or prompt separately
+        # Get config
         config = factory.get_config("QueryClassifier")
-        prompt = factory.get_prompt("QueryClassifier")
     """
     
     # Registry mapping class names to agent classes
@@ -185,9 +180,7 @@ class AgentFactory:
             config_dir = Path(__file__).parent / "config"
         
         self.config_dir = Path(config_dir)
-        self._configs: Dict[str, AgentConfig] = {}
-        self._prompts: Dict[str, str] = {}
-        
+        self._configs: Dict[str, AgentConfig] = {}        
         # Load all agent configurations
         self._discover_agents()
     
@@ -212,18 +205,11 @@ class AgentFactory:
             if yaml_path.exists():
                 try:
                     self._configs[agent_name] = AgentConfig.from_yaml(yaml_path)
+                    self._configs[agent_name].agent_dir = agent_dir
                     logger.debug(f"Loaded config for agent: {agent_name}")
                 except Exception as e:
                     logger.error(f"Failed to load config for {agent_name}: {e}")
             
-            # Load prompt.md
-            prompt_path = agent_dir / "prompt.md"
-            if prompt_path.exists():
-                try:
-                    self._prompts[agent_name] = prompt_path.read_text()
-                    logger.debug(f"Loaded prompt for agent: {agent_name}")
-                except Exception as e:
-                    logger.error(f"Failed to load prompt for {agent_name}: {e}")
     
     def list_agents(self) -> list[str]:
         """
@@ -246,19 +232,7 @@ class AgentFactory:
         """
         return self._configs.get(agent_name)
     
-    def get_prompt(self, agent_name: str) -> Optional[str]:
-        """
-        Get system prompt for a specific agent.
-        
-        Args:
-            agent_name: Name of the agent
-            
-        Returns:
-            Prompt string if found, None otherwise
-        """
-        return self._prompts.get(agent_name)
-    
-    def create_agent(self, agent_name: str, **kwargs):
+    def create_agent(self, agent_name: Optional[str] = None, **kwargs) -> "BaseAgent":
         """
         Create an agent instance by name.
         
@@ -272,18 +246,28 @@ class AgentFactory:
         Raises:
             ValueError: If agent name is unknown
         """
+        if agent_name is None or agent_name == "":
+            agent_name = "GeneralAgent"
         config = self.get_config(agent_name)
         if config is None:
             raise ValueError(f"Unknown agent: {agent_name}")
         
-        prompt = self.get_prompt(agent_name)
+        prompt_path = config.agent_dir / "prompt.md"
+        if prompt_path.exists():
+            try:
+                prompt = prompt_path.read_text()
+                logger.debug(f"Loaded prompt for agent: {agent_name}")
+            except Exception as e:
+                logger.error(f"Failed to load prompt for {agent_name}: {e}")
+        else:
+            prompt = "You are a helpful assistant."
         
         # Resolve agent class
         agent_cls = self._resolve_agent_class(config.agent_class)
         
         # Build constructor arguments from AgentConfig
+        # provider is always "huggingface"
         constructor_kwargs = {
-            'provider': config.provider,
             'model': config.model,
             'api_key': config.api_key,
             'base_url': config.base_url,
@@ -292,17 +276,17 @@ class AgentFactory:
             'system_prompt': prompt,
             **kwargs
         }
-        
-        # Create and return agent instance
-        return agent_cls(**constructor_kwargs)
+        agent = agent_cls(**constructor_kwargs)
+        agent.system_prompt = prompt
+        return agent
     
     def _resolve_agent_class(self, class_name: Optional[str]) -> Type:
         """
         Resolve a fully qualified class name to an actual agent class.
         
         Args:
-            class_name: Fully qualified class name (e.g., 'agent_core.agents.general_agent.GeneralAgent'),
-                       or None for default GeneralAgent
+            class_name: Fully qualified class name (e.g., 'agent_core.agents.base_agent.BaseAgent'),
+                       or None for default BaseAgent
             
         Returns:
             Agent class type
@@ -313,9 +297,8 @@ class AgentFactory:
         BaseAgent = _get_base_agent()
         
         if class_name is None:
-            # Return a default configurable agent
-            from agent_core.agents.general_agent import GeneralAgent
-            return GeneralAgent
+            # Return BaseAgent as default (generic agent)
+            return BaseAgent
         
         # Check class registry first (for manually registered classes)
         if class_name in self._class_registry:
@@ -342,7 +325,7 @@ class AgentFactory:
         
         Args:
             fully_qualified_name: Full module path and class name
-                                 (e.g., 'agent_core.agents.general_agent.GeneralAgent')
+                                 (e.g., 'agent_core.agents.base_agent.BaseAgent')
             
         Returns:
             The imported class

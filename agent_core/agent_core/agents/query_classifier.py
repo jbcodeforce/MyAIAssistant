@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
+from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
 
 logger = logging.getLogger(__name__)
 
@@ -133,9 +133,7 @@ class QueryClassifier(BaseAgent):
 
     async def execute(
         self,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None
+        input_data: AgentInput
     ) -> AgentResponse:
         """
         Execute the classifier agent (BaseAgent interface).
@@ -144,20 +142,18 @@ class QueryClassifier(BaseAgent):
         standard agent interface.
         
         Args:
-            query: User's input query
-            conversation_history: Previous messages in conversation
-            context: Additional context
+            input_data: AgentInput containing query and conversation history
             
         Returns:
             AgentResponse with classification result in metadata
         """
-        result = await self.classify(query, conversation_history)
+        result = await self.classify(input_data.query, input_data.conversation_history)
         
         return AgentResponse(
             message=result.reasoning,
             context_used=[],
             model=self.model,
-            provider=self.provider,
+            provider="huggingface",
             agent_type=self.agent_type,
             metadata={
                 "intent": result.intent.value,

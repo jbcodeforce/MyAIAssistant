@@ -7,6 +7,7 @@ import json
 from agent_core.agents import (
     BaseAgent,
     AgentResponse,
+    AgentInput,
     QueryClassifier,
     QueryIntent,
     ClassificationResult,
@@ -16,6 +17,7 @@ from agent_core.agents import (
     RoutedResponse,
 )
 from agent_core import LLMResponse
+from agent_core.agents.factory import AgentFactory
 
 
 class TestAgentResponse:
@@ -45,6 +47,63 @@ class TestAgentResponse:
         assert response.context_used == []
         assert response.model == ""
 
+
+class TestBaseAgent:
+    """Tests for BaseAgent class."""
+    
+    def test_create_base_agent(self):
+        """Test creating a base agent."""
+        factory = AgentFactory()
+        agent = factory.create_agent()
+        assert agent is not None
+        assert agent._config is not None
+        assert agent._config.model == "gpt-oss:20b"
+        assert agent._config.api_key is None
+        assert agent._config.max_tokens == 2048
+        assert agent._config.temperature == 0.7
+        assert agent._config.timeout == 60.0
+        assert agent._system_prompt is not None
+        assert "helpful ai assistant" in agent._system_prompt.lower()
+
+    @pytest.mark.asyncio
+    async def test_execute_agent(self):
+        """Test executing a base agent."""
+        factory = AgentFactory()
+        agent = factory.create_agent()
+        
+        # Mock the _call_llm method to return a fake response
+        agent._call_llm = AsyncMock(return_value="Python is a high-level programming language known for its simplicity and readability.")
+        
+        response = await agent.execute(AgentInput(query="What is Python?"))
+        assert response is not None
+        assert response.message is not None
+        assert response.model is not None
+        assert response.provider is not None
+        assert response.agent_type is not None
+        assert response.context_used is not None
+        assert response.metadata is not None
+        assert "python is a high-level programming language" in response.message.lower()
+        
+        # Verify _call_llm was called
+        agent._call_llm.assert_called_once()
+
+    async def test_execute_agent_with_rag(self):
+        """Test executing a base agent with RAG."""
+        factory = AgentFactory()
+        agent = factory.create_agent()
+        
+        # Mock the _call_llm method to return a fake response
+        agent._call_llm = AsyncMock(return_value="Python is a high-level programming language known for its simplicity and readability.")
+        
+        response = await agent.execute(AgentInput(query="What is Python?", use_rag=True))   
+        assert response is not None
+        assert response.message is not None
+        assert response.model is not None
+        assert response.provider is not None
+        assert response.agent_type is not None
+        assert response.context_used is not None
+        assert response.metadata is not None
+        assert "python is a high-level programming language" in response.message.lower()
 
 class TestQueryIntent:
     """Tests for QueryIntent enum."""
@@ -244,33 +303,4 @@ class TestAgentRouter:
         
         assert router.intent_mapping[QueryIntent.CODE_HELP] == "custom"
 
-
-class TestBaseAgent:
-    """Tests for BaseAgent abstract class."""
-    
-    def test_cannot_instantiate_directly(self):
-        """Test that BaseAgent cannot be instantiated."""
-        with pytest.raises(TypeError):
-            BaseAgent(provider="openai", model="gpt-4", api_key="key")
-    
-    def test_concrete_implementation(self):
-        """Test creating a concrete agent implementation."""
-        class ConcreteAgent(BaseAgent):
-            agent_type = "test"
-            
-            async def execute(self, query, conversation_history=None, context=None):
-                return AgentResponse(message="test")
-            
-            def build_system_prompt(self, context=None):
-                return "test prompt"
-        
-        agent = ConcreteAgent(
-            provider="openai",
-            model="gpt-4",
-            api_key="test-key"
-        )
-        
-        assert agent.agent_type == "test"
-        assert agent.provider == "openai"
-        assert agent.model == "gpt-4"
 

@@ -3,7 +3,7 @@
 import logging
 from typing import Optional
 
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
+from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
 from agent_core.services.rag.service import RAGService, get_rag_service
 
 logger = logging.getLogger(__name__)
@@ -31,12 +31,10 @@ class TaskAgent(BaseAgent):
 
     async def execute(
         self,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None
+        input_data: AgentInput
     ) -> AgentResponse:
         """Execute task planning with optional RAG context."""
-        context = context or {}
+        context = input_data.context or {}
         context_used = []
         rag_context = ""
         
@@ -44,9 +42,12 @@ class TaskAgent(BaseAgent):
         task_title = context.get("task_title")
         task_description = context.get("task_description")
         
+        # Determine if RAG should be used (input_data.use_rag overrides instance setting)
+        use_rag = input_data.use_rag if input_data.use_rag is not None else self.use_rag
+        
         # Optionally search for relevant context
-        if self.use_rag:
-            search_query = task_title or query
+        if use_rag:
+            search_query = task_title or input_data.query
             rag_results = await self.rag_service.search(search_query, n_results=3)
             
             if rag_results:
@@ -73,14 +74,14 @@ class TaskAgent(BaseAgent):
         })
         messages = [{"role": "system", "content": system_prompt}]
         
-        if conversation_history:
-            for msg in conversation_history:
+        if input_data.conversation_history:
+            for msg in input_data.conversation_history:
                 messages.append({
                     "role": msg.get("role", "user"),
                     "content": msg.get("content", "")
                 })
         
-        messages.append({"role": "user", "content": query})
+        messages.append({"role": "user", "content": input_data.query})
         
         # Generate response
         response_text = await self._call_llm(messages)
@@ -89,11 +90,11 @@ class TaskAgent(BaseAgent):
             message=response_text,
             context_used=context_used,
             model=self.model,
-            provider=self.provider,
+            provider="huggingface",
             agent_type=self.agent_type,
             metadata={
                 "task_title": task_title,
-                "rag_used": self.use_rag
+                "rag_used": use_rag
             }
         )
 

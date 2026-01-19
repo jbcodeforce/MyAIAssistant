@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 if TYPE_CHECKING:
     from agent_core.agents.factory import AgentConfig
 
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
+from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
 from agent_core.agents.query_classifier import (
     QueryClassifier,
     get_query_classifier,
@@ -291,11 +291,12 @@ class AgentRouter:
         }
         
         try:
-            state.agent_response = await agent.execute(
+            input_data = AgentInput(
                 query=state.query,
                 conversation_history=state.conversation_history,
                 context=agent_context
             )
+            state.agent_response = await agent.execute(input_data)
         except Exception as e:
             logger.error(f"Agent execution failed: {e}")
             state.error = f"Agent execution failed: {str(e)}"
@@ -311,7 +312,7 @@ class AgentRouter:
             message=response.message,
             context_used=response.context_used,
             model=response.model,
-            provider=response.provider,
+            provider="huggingface",
             intent=classification.intent,
             confidence=classification.confidence,
             agent_type=response.agent_type,
@@ -373,17 +374,18 @@ def get_agent_router(config: "AgentConfig" = None) -> AgentRouter:
 
 def _create_default_router(config: "AgentConfig" = None) -> AgentRouter:
     """Create router with default agent configuration."""
-    from agent_core.agents.general_agent import GeneralAgent
-    from agent_core.agents.rag_agent import RAGAgent
+    from agent_core.agents.base_agent import BaseAgent
     from agent_core.agents.code_agent import CodeAgent
     from agent_core.agents.task_agent import TaskAgent
     from agent_core.agents.factory import AgentConfig
+    from agent_core.services.rag.service import get_rag_service
     
     # Create agents - they share the same config if provided
     kwargs = {"config": config} if config else {}
     
-    general_agent = GeneralAgent(**kwargs)
-    rag_agent = RAGAgent(**kwargs)
+    general_agent = BaseAgent(**kwargs)
+    # RAGAgent is now BaseAgent with RAG enabled
+    rag_agent = BaseAgent(use_rag=True, rag_service=get_rag_service(), **kwargs)
     code_agent = CodeAgent(**kwargs)
     task_agent = TaskAgent(**kwargs)
     

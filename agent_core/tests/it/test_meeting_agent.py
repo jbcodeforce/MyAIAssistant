@@ -9,6 +9,7 @@ import pytest
 
 from agent_core.agents.meeting_agent import MeetingAgentResponse
 from agent_core.agents.factory import AgentFactory
+from agent_core.agents.base_agent import AgentInput
 
 from .conftest import requires_ollama, requires_model
 
@@ -35,7 +36,7 @@ class TestMeetingAgent:
 * Less degraded statement alert reported since beginning of the year.
         """
         
-        result = await agent.execute(query=meeting_note)
+        result = await agent.execute(AgentInput(query=meeting_note))
         
         # Verify response type and basic fields
         assert isinstance(result, MeetingAgentResponse)
@@ -84,7 +85,7 @@ class TestMeetingAgent:
        "project": "realtime data processing from their AWS RDS, to Iceberg tables."
        }
        """
-        result = await agent.execute(query=meeting_note, context=context)
+        result = await agent.execute(AgentInput(query=meeting_note, context={"context": context}))
         assert isinstance(result, MeetingAgentResponse)
         assert len(result.cleaned_notes) > 0
         print(f"Cleaned notes:\n{result.cleaned_notes}")

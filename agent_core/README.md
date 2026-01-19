@@ -8,6 +8,7 @@ A library for building agentic AI applications with unified LLM integration via 
 - Supports both local inference servers (TGI, vLLM, Ollama) and HuggingFace Hub remote models
 - Both synchronous and asynchronous APIs
 - Config-driven agent framework with YAML-based agent definitions
+- Generic agent implementation - create agents from YAML without writing Python code
 - Agent factory for creating agents from configuration
 - Query classification for intent detection
 - Agent router for intelligent query routing
@@ -30,11 +31,9 @@ agent_core/
 │   │   ├── QueryClassifier/
 │   │   │   ├── agent.yaml         # Agent configuration
 │   │   │   └── prompt.md          # System prompt template
-│   │   ├── GeneralAgent/
-│   │   ├── RAGAgent/
 │   │   ├── CodeAgent/
 │   │   └── TaskAgent/
-│   ├── base_agent.py              # BaseAgent, AgentInput, AgentOutput
+│   ├── base_agent.py              # BaseAgent, AgentInput, AgentResponse
 │   ├── factory.py                 # AgentFactory, AgentConfig
 │   ├── query_classifier.py        # QueryClassifier agent
 │   ├── agent_router.py            # AgentRouter for query routing
@@ -42,6 +41,238 @@ agent_core/
 ├── client.py                      # LLMClient
 ├── config.py                      # Configuration utilities
 └── types.py                       # Message, LLMResponse
+```
+
+### Class Diagram
+
+The following diagram shows the main classes and their relationships:
+
+```mermaid
+classDiagram
+    class AgentConfig {
+        +str name
+        +str description
+        +str agent_class
+        +str provider
+        +str model
+        +str api_key
+        +str base_url
+        +int max_tokens
+        +float temperature
+        +from_yaml(Path) AgentConfig
+        +validate() void
+    }
+
+    class AgentFactory {
+        -Dict[str, AgentConfig] _configs
+        -Dict[str, str] _prompts
+        +__init__(config_dir)
+        +list_agents() list[str]
+        +get_config(name) AgentConfig
+        +get_prompt(name) str
+        +create_agent(name) BaseAgent
+        -_discover_agents() void
+        -_resolve_agent_class(class_name) Type
+    }
+
+    class BaseAgent {
+        +str agent_type
+        -AgentConfig _config
+        -LLMClient _llm_client
+        -str _system_prompt
+        -RAGService _rag_service
+        +execute(query, history, context) AgentResponse
+        +build_system_prompt(context) str
+        -_call_llm(messages) str
+        -_retrieve_rag_context(query, context) list[dict]
+    }
+
+
+    class QueryClassifier {
+        +str agent_type = "query_classifier"
+        +classify(query) ClassificationResult
+        +execute(query, history, context) AgentResponse
+    }
+
+    class CodeAgent {
+        +str agent_type = "code_help"
+        +execute(query, history, context) AgentResponse
+    }
+
+    class TaskAgent {
+        +str agent_type = "task_planning"
+        +execute(query, history, context) AgentResponse
+    }
+
+    class AgentRouter {
+        -QueryClassifier classifier
+        -Dict[str, BaseAgent] agents
+        -Dict[QueryIntent, str] intent_mapping
+        +route(query, history, context) RoutedResponse
+        -_classify_step(state) WorkflowState
+        -_route_step(state) WorkflowState
+        -_build_response(state) RoutedResponse
+    }
+
+    class LLMClient {
+        -AgentConfig config
+        -LLMProvider _provider
+        +chat_async(messages) LLMResponse
+        +chat(messages) LLMResponse
+    }
+
+    class LLMProvider {
+        <<interface>>
+        +chat_async(messages, config) LLMResponse
+        +chat(messages, config) LLMResponse
+    }
+
+    class HuggingFaceProvider {
+        +chat_async(messages, config) LLMResponse
+        +chat(messages, config) LLMResponse
+    }
+
+    class AgentInput {
+        +str query
+        +list[dict] conversation_history
+        +dict context
+    }
+
+    class AgentResponse {
+        +str message
+        +list[dict] context_used
+        +str model
+        +str provider
+        +str agent_type
+        +dict metadata
+    }
+
+    class RoutedResponse {
+        +str message
+        +list[dict] context_used
+        +str model
+        +str provider
+        +QueryIntent intent
+        +float confidence
+        +str agent_type
+        +str classification_reasoning
+        +dict metadata
+    }
+
+    class WorkflowState {
+        +str query
+        +list[dict] conversation_history
+        +ClassificationResult classification
+        +AgentResponse agent_response
+        +dict context
+        +str error
+    }
+
+    class ClassificationResult {
+        +QueryIntent intent
+        +float confidence
+        +str reasoning
+        +dict entities
+        +str suggested_context
+    }
+
+    class QueryIntent {
+        <<enumeration>>
+        KNOWLEDGE_SEARCH
+        TASK_PLANNING
+        TASK_STATUS
+        CODE_HELP
+        GENERAL_CHAT
+        RESEARCH
+        UNCLEAR
+    }
+
+    BaseAgent <|-- QueryClassifier
+    BaseAgent <|-- CodeAgent
+    BaseAgent <|-- TaskAgent
+    
+    AgentFactory --> AgentConfig : creates
+    AgentFactory --> BaseAgent : creates
+    
+    BaseAgent --> AgentConfig : uses
+    BaseAgent --> LLMClient : uses
+    BaseAgent --> AgentResponse : returns
+    
+    AgentRouter --> QueryClassifier : uses
+    AgentRouter --> BaseAgent : routes to
+    AgentRouter --> WorkflowState : uses
+    AgentRouter --> RoutedResponse : returns
+    
+    QueryClassifier --> ClassificationResult : returns
+    ClassificationResult --> QueryIntent : uses
+    
+    LLMClient --> AgentConfig : uses
+    LLMClient --> LLMProvider : uses
+    LLMProvider <|.. HuggingFaceProvider : implements
+    
+    BaseAgent ..> AgentInput : accepts
+```
+
+### Sequence Diagram
+
+The following diagram shows the flow of a query through the agent routing system:
+
+```mermaid
+sequenceDiagram
+    participant User
+    participant Router as AgentRouter
+    participant Classifier as QueryClassifier
+    participant Factory as AgentFactory
+    participant Agent as BaseAgent
+    participant LLMClient
+    participant Provider as LLMProvider
+    participant RAG as RAGService
+
+    User->>Router: route(query, history, context)
+    
+    Note over Router: Step 1: Classification
+    Router->>Classifier: classify(query)
+    Classifier->>Factory: get_config("QueryClassifier")
+    Factory-->>Classifier: AgentConfig
+    Classifier->>LLMClient: chat_async(messages)
+    LLMClient->>Provider: chat_async(messages, config)
+    Provider-->>LLMClient: LLMResponse
+    LLMClient-->>Classifier: response content
+    Classifier->>Classifier: parse JSON classification
+    Classifier-->>Router: ClassificationResult(intent, confidence, reasoning)
+    
+    Note over Router: Step 2: Agent Selection
+    Router->>Router: map intent to agent_type
+    Router->>Factory: create_agent(agent_name)
+    Factory->>Factory: load agent.yaml & prompt.md
+    Factory->>Factory: resolve agent class
+    Factory->>Agent: __init__(config, system_prompt)
+    Agent->>LLMClient: __init__(config)
+    Factory-->>Router: Agent instance
+    
+    Note over Router: Step 3: Agent Execution
+    Router->>Router: create AgentInput(query, history, context)
+    Router->>Agent: execute(AgentInput)
+    
+    alt RAG enabled
+        Agent->>RAG: search(query, n_results, category)
+        RAG-->>Agent: list[SearchResult]
+        Agent->>Agent: format_rag_context(results)
+    end
+    
+    Agent->>Agent: build_system_prompt(context)
+    Agent->>Agent: build messages (system, history, query)
+    Agent->>LLMClient: chat_async(messages)
+    LLMClient->>Provider: chat_async(messages, config)
+    Provider-->>LLMClient: LLMResponse
+    LLMClient-->>Agent: response content
+    Agent->>Agent: create AgentResponse
+    Agent-->>Router: AgentResponse(message, context_used, metadata)
+    
+    Note over Router: Step 4: Build Response
+    Router->>Router: _build_response(state)
+    Router->>Router: create RoutedResponse
+    Router-->>User: RoutedResponse(message, intent, agent_type, metadata)
 ```
 
 ## Agent Factory
@@ -59,14 +290,20 @@ factory = AgentFactory()
 # List available agents
 print(factory.list_agents())
 # ['QueryClassifier', 'GeneralAgent', 'RAGAgent', 'CodeAgent', 'TaskAgent']
+# Note: RAGAgent uses BaseAgent with RAG enabled
 
 # Create an agent by name, the name matches the directory name
 agent = factory.create_agent("GeneralAgent")
 
 # Execute the agent
-response = await agent.execute("Hello, how are you?")
+from agent_core.agents import AgentInput
+response = await agent.execute(AgentInput(query="Hello, how are you?"))
 print(response.message)
+print(response.agent_type)  # "general"
+print(response.model)       # "gpt-4o-mini"
 ```
+
+The factory automatically loads agents from YAML configurations. Agents can be defined with or without a `class` field - if omitted, the generic agent implementation is used with the configured prompt and settings.
 
 ### Agent Configuration Schema
 
@@ -75,8 +312,8 @@ print(response.message)
 ```yaml
 name: GeneralAgent
 description: General purpose assistant for conversation
-class: agent_core.agents.general_agent.GeneralAgent  # Fully qualified class name
-provider: huggingface        # LLM provider
+# class field omitted - uses BaseAgent (generic agent)
+# provider is always "huggingface", not configurable
 model: gpt-4o-mini           # Model identifier
 api_key: null                # API key (optional, uses HF_TOKEN env var)
 base_url: null               # Base URL for local servers (optional)
@@ -85,14 +322,25 @@ max_tokens: 2048             # Max response tokens
 timeout: 60.0                # Request timeout in seconds
 ```
 
+**Generic Agent Usage**: You can create any agent from YAML without specifying a `class` field. When omitted, the factory uses a generic agent implementation that works with any configuration. This allows you to define new agents purely through YAML configuration and prompt templates:
+
+```yaml
+name: MyCustomAgent
+description: A custom agent defined purely in YAML
+# class field omitted - uses generic agent
+# provider is always "huggingface", not configurable
+model: gpt-4o-mini
+temperature: 0.7
+max_tokens: 2048
+```
+
 Configuration fields:
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `name` | string | Agent name (matches directory name) |
 | `description` | string | Human-readable description |
-| `class` | string | Fully qualified Python class name (e.g., `module.path.ClassName`) |
-| `provider` | string | LLM provider (default: huggingface) |
+| `class` | string | Fully qualified Python class name (optional - if omitted, uses generic agent) |
 | `model` | string | Model identifier |
 | `api_key` | string | API key for remote models (optional) |
 | `base_url` | string | Base URL for local inference servers (optional) |
@@ -100,7 +348,7 @@ Configuration fields:
 | `max_tokens` | int | Maximum response tokens (default: 2048) |
 | `timeout` | float | Request timeout in seconds (default: 60.0) |
 
-The `class` field uses fully qualified class names to enable dynamic import. If omitted, `GeneralAgent` is used as the default.
+The `class` field is optional. If omitted, the factory uses a generic agent implementation that works with any YAML configuration and prompt template.
 
 ### Using AgentConfig Programmatically
 
@@ -110,7 +358,6 @@ from agent_core import AgentConfig, LLMClient
 # Create configuration
 config = AgentConfig(
     name="MyAgent",
-    provider="huggingface",
     model="gpt-4o-mini",
     base_url="http://localhost:8080",
     temperature=0.5
@@ -151,7 +398,11 @@ Framework: {framework}
 
 ### Creating Custom Agents
 
-Define a new agent by creating a config directory:
+You can create agents in two ways:
+
+#### Method 1: Generic Agent (YAML-only)
+
+Define a new agent purely through YAML configuration and prompt template. No Python code required:
 
 ```
 agents/config/MyCustomAgent/
@@ -159,19 +410,45 @@ agents/config/MyCustomAgent/
 └── prompt.md
 ```
 
-Create the `agent.yaml` with your fully qualified class name:
+Create the `agent.yaml` without a `class` field:
 
 ```yaml
 name: MyCustomAgent
-description: My custom agent
-class: my_package.agents.MyCustomAgent
-provider: huggingface
+description: My custom agent defined in YAML
+# class field omitted - uses generic agent
+# provider is always "huggingface", not configurable
 model: gpt-4o-mini
 temperature: 0.7
 max_tokens: 2048
 ```
 
-Create a Python class extending `BaseAgent`:
+Create a `prompt.md` with the system prompt:
+
+```markdown
+You are a specialized assistant for my custom domain.
+
+## Instructions
+- Provide accurate and helpful responses
+- Use the context provided to inform your answers
+```
+
+The factory will automatically use the generic agent implementation with your configuration and prompt.
+
+#### Method 2: Custom Python Class
+
+For agents requiring custom logic, create a Python class extending `BaseAgent`:
+
+```yaml
+name: MyCustomAgent
+description: My custom agent with specialized logic
+class: my_package.agents.MyCustomAgent
+# provider is always "huggingface", not configurable
+model: gpt-4o-mini
+temperature: 0.7
+max_tokens: 2048
+```
+
+Create the Python class:
 
 ```python
 # my_package/agents.py
@@ -191,7 +468,7 @@ class MyCustomAgent(BaseAgent):
         return AgentResponse(
             message=response,
             model=self.model,
-            provider=self.provider,
+            provider="huggingface",
             agent_type=self.agent_type
         )
 ```
@@ -226,22 +503,17 @@ input_data = AgentInput(
 )
 ```
 
-### AgentOutput
+Input fields:
 
-Standard output structure from agent execution:
-
-```python
-from agent_core.agents import AgentOutput
-
-output = AgentOutput(
-    message="OAuth is an authorization protocol...",
-    metadata={"intent": "code_help", "confidence": 0.95}
-)
-```
+| Field | Type | Description |
+|-------|------|-------------|
+| `query` | string | The user's input query |
+| `conversation_history` | list[dict] | Previous messages in the conversation |
+| `context` | dict | Additional context (entities, metadata, task info, etc.) |
 
 ### AgentResponse
 
-Extended output with full execution context:
+Standard response structure from agent execution with full execution context:
 
 ```python
 from agent_core.agents import AgentResponse
@@ -256,6 +528,17 @@ response = AgentResponse(
 )
 ```
 
+Response fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message` | string | The agent's response message |
+| `context_used` | list[dict] | List of context documents used (for RAG agents) |
+| `model` | string | Model identifier used for generation |
+| `provider` | string | LLM provider name |
+| `agent_type` | string | Type identifier of the agent |
+| `metadata` | dict | Additional metadata (intent, confidence, etc.) |
+
 ## LLM Client Usage
 
 ### Local Inference Server (TGI, vLLM, Ollama)
@@ -265,7 +548,6 @@ from agent_core import LLMClient, AgentConfig, Message
 
 config = AgentConfig(
     name="LocalLLM",
-    provider="huggingface",
     model="llama3",
     base_url="http://localhost:8080"
 )
@@ -294,7 +576,6 @@ from agent_core import LLMClient, AgentConfig, Message
 
 config = AgentConfig(
     name="HFHub",
-    provider="huggingface",
     model="meta-llama/Meta-Llama-3-8B-Instruct",
     api_key=os.getenv("HF_TOKEN")
 )
@@ -314,7 +595,6 @@ The `QueryClassifier` analyzes user queries to determine intent for routing:
 from agent_core.agents import QueryClassifier
 
 classifier = QueryClassifier(
-    provider="huggingface",
     model="gpt-4o-mini"
 )
 
@@ -333,7 +613,7 @@ factory = AgentFactory()
 classifier = factory.create_agent("QueryClassifier")
 
 # Use the execute() method for standard agent interface
-response = await classifier.execute("How do I implement OAuth?")
+response = await classifier.execute(AgentInput(query="How do I implement OAuth?"))
 print(response.metadata["intent"])  # "code_help"
 
 # Or use classify() for ClassificationResult
@@ -381,9 +661,10 @@ response = await router.route(
 from agent_core.agents import AgentRouter, QueryClassifier, QueryIntent
 
 # Create custom agents
+# RAGAgent is BaseAgent with RAG enabled (configured via agent.yaml)
 rag_agent = factory.create_agent("RAGAgent")
 code_agent = factory.create_agent("CodeAgent")
-general_agent = factory.create_agent("GeneralAgent")
+general_agent = factory.create_agent("GeneralAgent")  # Uses BaseAgent
 
 # Create router with custom configuration
 router = AgentRouter(
@@ -415,7 +696,7 @@ config = AgentConfig(
     name="MyAgent",
     description="My custom agent",
     agent_class="my_module.MyAgent",  # Fully qualified class name
-    provider="huggingface",
+    # provider is always "huggingface", not configurable
     model="gpt-4o-mini",
     base_url="http://localhost:8080",
     temperature=0.7,
@@ -437,7 +718,6 @@ Configuration fields:
 | `name` | string | Agent name (matches directory name) |
 | `description` | string | Human-readable description |
 | `agent_class` | string | Fully qualified Python class name |
-| `provider` | string | LLM provider (default: huggingface) |
 | `model` | string | Model name (HF model ID or local model name) |
 | `api_key` | string | HF_TOKEN for remote models (not needed for local) |
 | `base_url` | string | Base URL for local inference servers |
@@ -460,8 +740,8 @@ The library automatically loads environment variables using `python-dotenv`.
 | Agent | Description | Use Case |
 |-------|-------------|----------|
 | `QueryClassifier` | Classifies user queries for routing | Intent detection |
-| `GeneralAgent` | General-purpose assistant | Conversation, Q&A |
-| `RAGAgent` | Knowledge base search with RAG | Document retrieval |
+| `BaseAgent` (as GeneralAgent) | General-purpose assistant | Conversation, Q&A |
+| `BaseAgent` (as RAGAgent) | Knowledge base search with RAG | Document retrieval |
 | `CodeAgent` | Programming assistance | Code help, debugging |
 | `TaskAgent` | Task planning and management | Task breakdown |
 
@@ -485,7 +765,7 @@ uv run pytest tests/ut/test_agent_factory.py -v
 ```python
 from agent_core.agents import (
     AgentFactory,           # Factory class
-    AgentConfig,            # Configuration dataclass
+    AgentConfig,            # Configuration model (Pydantic BaseModel)
     get_agent_factory,      # Get singleton factory
     reset_agent_factory,    # Reset singleton (for testing)
 )
@@ -495,10 +775,9 @@ from agent_core.agents import (
 
 ```python
 from agent_core.agents import (
-    BaseAgent,              # Abstract base class
+    BaseAgent,              # Base agent class (can be used generically)
     AgentInput,             # Standard input structure
-    AgentOutput,            # Standard output structure
-    AgentResponse,          # Extended response with context
+    AgentResponse,          # Standard response structure with context
 )
 ```
 

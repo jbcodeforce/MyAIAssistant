@@ -6,7 +6,6 @@ in agentic AI applications, along with base input/output Pydantic models.
 
 import logging
 from typing import Optional, TYPE_CHECKING
-
 from pydantic import BaseModel, Field
 
 from agent_core.client import LLMClient
@@ -30,18 +29,18 @@ class AgentInput(BaseModel):
         query: The user's input query
         conversation_history: Previous messages in the conversation
         context: Additional context (entities, metadata, task info, etc.)
+        use_rag: Override RAG setting for this call (None uses instance default)
     """
     query: str
     conversation_history: list[dict] = Field(default_factory=list)
     context: dict = Field(default_factory=dict)
+    use_rag: Optional[bool] = None
 
 
 class AgentResponse(BaseModel):
     """Response from an agent execution (extended output with full context)."""
     message: str
     context_used: list[dict] = Field(default_factory=list)
-    model: str = ""
-    provider: str = ""
     agent_type: str = ""
     metadata: dict = Field(default_factory=dict)
 
@@ -59,7 +58,7 @@ class BaseAgent:
     Example:
         # Direct usage
         agent = BaseAgent(provider="huggingface", model="llama3")
-        response = await agent.execute("What is Python?")
+        response = await agent.execute(AgentInput(query="What is Python?"))
         
         # Subclass for custom behavior
         class MyAgent(BaseAgent):
@@ -69,16 +68,17 @@ class BaseAgent:
                 return "You are an expert in Python programming."
     """
     
-    agent_type: str = "base"
+    agent_type: str = "general"
     
     def __init__(
         self,
         # AgentConfig for unified configuration
         config: "AgentConfig" = None,
         # Convenience parameters for creating config
+        # provider is always "huggingface", parameter is ignored for backward compatibility
         provider: str = None,
         model: str = None,
-        api_key: str = None,
+        api_key: str = "",
         base_url: str = None,
         max_tokens: int = 2048,
         temperature: float = 0.7,
@@ -115,8 +115,8 @@ class BaseAgent:
             self._system_prompt = system_prompt
         else:
             # Build config from individual parameters
+            # provider is always "huggingface"
             self._config = AgentConfig(
-                provider=provider or "huggingface",
                 model=model or "mistral:7b-instruct",
                 api_key=api_key,
                 base_url=base_url,
@@ -127,8 +127,8 @@ class BaseAgent:
         
         self._llm_client = LLMClient(self._config)
         
-        # Expose config values for convenience
-        self.provider = self._config.provider
+        # Expose provider for backward compatibility (always "huggingface")
+        self.provider = "huggingface"
         self.model = self._config.model
         
         # RAG configuration
@@ -139,37 +139,31 @@ class BaseAgent:
 
     async def execute(
         self,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None,
-        use_rag: Optional[bool] = None
+        input_data: AgentInput
     ) -> AgentResponse:
         """
-        Execute the agent with the given query.
+        Execute the agent with the given input.
         
         Default implementation passes the query directly to the LLM
         with the system prompt and conversation history. If RAG is enabled,
         retrieves relevant context from the knowledge base first.
         
         Args:
-            query: User's input query
-            conversation_history: Previous messages in conversation
-            context: Additional context (entities, metadata, etc.)
-            use_rag: Override RAG setting for this call (None uses default)
+            input_data: AgentInput containing query, conversation history, context, and use_rag override
             
         Returns:
             AgentResponse with the result
         """
-        context = context or {}
+        context = input_data.context or {}
         context_used = []
         
         # Determine if RAG should be used
-        should_use_rag = use_rag if use_rag is not None else self._use_rag
+        should_use_rag = input_data.use_rag if input_data.use_rag is not None else self._use_rag
         
         # Retrieve RAG context if enabled
         rag_context = ""
         if should_use_rag and self._rag_service:
-            rag_results = await self._retrieve_rag_context(query, context)
+            rag_results = await self._retrieve_rag_context(input_data.query, context)
             if rag_results:
                 context_used = rag_results
                 rag_context = self._format_rag_context(rag_results)
@@ -189,11 +183,11 @@ class BaseAgent:
             })
         
         # Add conversation history
-        if conversation_history:
-            messages.extend(conversation_history)
+        if input_data.conversation_history:
+            messages.extend(input_data.conversation_history)
         
         # Add user query
-        messages.append({"role": "user", "content": query})
+        messages.append({"role": "user", "content": input_data.query})
         
         # Call LLM
         response = await self._call_llm(messages)
@@ -201,8 +195,8 @@ class BaseAgent:
         return AgentResponse(
             message=response,
             context_used=context_used,
-            model=self.model,
-            provider=self.provider,
+            model=self._config.model,
+            provider="huggingface",
             agent_type=self.agent_type,
             metadata={"rag_enabled": should_use_rag and self._rag_service is not None}
         )

@@ -62,11 +62,12 @@ class LLMClient:
     def provider(self) -> LLMProvider:
         """Get the provider instance, creating it if necessary."""
         if self._provider is None:
-            provider_class = self.PROVIDERS.get(self.config.provider)
+            # Provider is always "huggingface"
+            provider_class = self.PROVIDERS.get("huggingface")
             if provider_class is None:
                 raise LLMError(
-                    message=f"Unsupported provider: {self.config.provider}. Use 'huggingface' provider.",
-                    provider=self.config.provider,
+                    message="HuggingFace provider not available.",
+                    provider="huggingface",
                 )
             self._provider = provider_class()
         return self._provider
@@ -167,7 +168,7 @@ class LLMClient:
             name=self.config.name,
             description=self.config.description,
             agent_class=self.config.agent_class,
-            provider=overrides.get("provider", self.config.provider),
+            # provider is always "huggingface", not configurable
             model=overrides.get("model", self.config.model),
             api_key=overrides.get("api_key", self.config.api_key),
             base_url=overrides.get("base_url", self.config.base_url),

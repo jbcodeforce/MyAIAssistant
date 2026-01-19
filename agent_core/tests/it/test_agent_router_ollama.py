@@ -8,13 +8,15 @@ import os
 import pytest
 import httpx
 
-from agent_core.agents.factory import AgentConfig
+
+from agent_core.agents.factory import AgentConfig, AgentFactory
 from agent_core.agents.query_classifier import (
     QueryClassifier,
     QueryIntent,
     ClassificationResult,
 )
 from agent_core.agents.agent_router import AgentRouter, get_agent_router
+from agent_core.agents.base_agent import BaseAgent, AgentInput, AgentResponse
 
 
 # Default model for integration tests - can be overridden via env var
@@ -50,46 +52,26 @@ requires_ollama = pytest.mark.skipif(
     reason="Ollama is not running or not accessible"
 )
 
-requires_model = pytest.mark.skipif(
-    not is_model_available(OLLAMA_MODEL),
-    reason=f"Model {OLLAMA_MODEL} is not available in Ollama"
-)
-
 
 @pytest.fixture
-def ollama_config() -> AgentConfig:
-    """Create AgentConfig for Ollama integration tests."""
-    return AgentConfig(
-        name="OllamaClassifierTest",
-        provider="ollama",
-        model=OLLAMA_MODEL,
-        base_url=OLLAMA_BASE_URL,
-        max_tokens=500,
-        temperature=0.1,  # Low temperature for consistent classification
-        timeout=120.0,
-    )
-
-
-@pytest.fixture
-def classifier(ollama_config: AgentConfig) -> QueryClassifier:
+def classifier() -> QueryClassifier:
     """Create a QueryClassifier with Ollama config."""
-    return QueryClassifier(config=ollama_config)
-
+    factory = AgentFactory()
+    classifier = factory.create_agent("QueryClassifier")
+    return classifier
 
 @pytest.mark.integration
 @requires_ollama
-@requires_model
 class TestQueryClassifierOllama:
-    """Integration tests for QueryClassifier with real Ollama calls."""
 
     @pytest.mark.asyncio
-    async def test_classify_knowledge_search_query(self, classifier: QueryClassifier):
+    async def test_classify_knowledge_search_query(self, classifier: BaseAgent):
         """Test classification of a knowledge search query."""
         query = "What does our documentation say about OAuth authentication?"
         
-        result = await classifier.classify(query)
+        result = await classifier.execute(AgentInput(query=query))
         
-        assert isinstance(result, ClassificationResult)
+        assert isinstance(result, AgentResponse)
         assert result.intent == QueryIntent.KNOWLEDGE_SEARCH
         assert result.confidence >= 0.5
         assert len(result.reasoning) > 0
@@ -195,7 +177,6 @@ class TestQueryClassifierOllama:
 
 @pytest.mark.integration
 @requires_ollama
-@requires_model
 class TestClassificationAccuracy:
     """Tests for assessing classification accuracy with various query types."""
 
@@ -230,11 +211,6 @@ class TestClassificationAccuracy:
         "What time is it?",
         "Tell me a joke",
     ]
-
-    @pytest.fixture
-    def classifier(self, ollama_config: AgentConfig) -> QueryClassifier:
-        """Create classifier for accuracy tests."""
-        return QueryClassifier(config=ollama_config)
 
     @pytest.mark.asyncio
     async def test_knowledge_search_accuracy(self, classifier: QueryClassifier):

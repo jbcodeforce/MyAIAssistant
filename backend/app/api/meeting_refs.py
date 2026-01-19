@@ -275,14 +275,14 @@ async def extract_meeting_info(
     except Exception as e:
         logger.error(f"MeetingAgent execution failed: {e}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
-    
+    print(f"Agent response: {agent_response}")
     if agent_response.key_points is not None:
-        agent_response.cleaned_notes = "\n## Key Points\n"
+        agent_response.cleaned_notes += "\n## Key Points\n"
         agent_response.cleaned_notes += "\n".join([f"- {kp.point}" for kp in agent_response.key_points])
         agent_response.cleaned_notes += "\n"
 
     if agent_response.next_steps is not None:
-        agent_response.cleaned_notes = "\n## Next Steps\n"
+        agent_response.cleaned_notes += "\n## Next Steps\n"
         agent_response.cleaned_notes += "\n".join([f"- {ns.what} (assigned to {ns.who})" for ns in agent_response.next_steps])
         agent_response.cleaned_notes += "\n"
         # Convert NextStep objects from agent to Step objects for ProjectEntity
@@ -298,12 +298,14 @@ async def extract_meeting_info(
             content=agent_response.cleaned_notes,
         )
     
+    # Convert list of Person objects to comma-separated string for database storage
+    attendees_str = ", ".join([p.name for p in agent_response.attendees]) if agent_response.attendees else None
     await crud.update_meeting_ref(
         db=db,
         meeting_ref_id=meeting_ref_id,
         project_id=meeting_ref.project_id,
         org_id=meeting_ref.org_id,
-        attendees=agent_response.attendees,
+        attendees=attendees_str,
         update_attendees=agent_response.attendees is not None,
     )
     # Convert agent output to API response
@@ -311,17 +313,14 @@ async def extract_meeting_info(
     return MeetingAgentOutputResponse(
         meeting_ref_id=meeting_ref_id,
         meeting_id=meeting_ref.meeting_id,
-        attendees=[
-            PersonResponse(name=p.name, last_met_date=p.last_met_date)
-            for p in agent_response.meeting_output.persons
-        ],
+        attendees=attendees_str,
         next_steps=[
             NextStepResponse(what=ns.what, who=ns.who)
-            for ns in agent_response.meeting_output.next_steps
+            for ns in agent_response.next_steps
         ],
         key_points=[
             KeyPointResponse(point=kp.point)
-            for kp in agent_response.meeting_output.key_points
+            for kp in agent_response.key_points
         ],
         notes=agent_response.cleaned_notes,
     )

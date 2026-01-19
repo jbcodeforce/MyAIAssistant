@@ -98,7 +98,7 @@ class MeetingAgent(BaseAgent):
                 cleaned_notes=parsed_data["cleaned_notes"],
                 parse_error=None,
                 model=self.model,
-                provider=self.provider,
+                provider="huggingface",
                 agent_type=self.agent_type,
                 metadata={
                     "parsed_successfully": True
@@ -113,7 +113,7 @@ class MeetingAgent(BaseAgent):
                 cleaned_notes=response_text,  # Use raw response as fallback
                 parse_error=parse_error,
                 model=self.model,
-                provider=self.provider,
+                provider="huggingface",
                 agent_type=self.agent_type,
                 metadata={
                     "parsed_successfully": False

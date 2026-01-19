@@ -3,6 +3,7 @@
 import pytest
 from agent_core.agents.query_classifier import QueryClassifier
 from agent_core.agents.factory import AgentFactory
+from agent_core.agents.base_agent import AgentInput
 
 
 class TestQueryClassifier:
@@ -22,7 +23,7 @@ class TestQueryClassifier:
 * Issue with ARRAY_AGG function. In Java the Array_agg ROW seems to work
 * Less degraded statement alert reported since beginning of the year. 
         """
-        result = classifier.execute(query=meeting_note)
+        result = classifier.execute(AgentInput(query=meeting_note))
         print(result)
         assert result.confidence == 0.95
         assert result.reasoning == "The user is asking to process a meeting notes."

@@ -83,7 +83,7 @@ class TestLoadDirectory:
             documents = self.loader._load_directory(tmpdir)
             assert documents == []
 
-    def test_load_directory_only_processes_md_files(self):
+    def test_load_directory_only_processes_md_text_files(self):
         """Test that only .md files are processed."""
         with tempfile.TemporaryDirectory() as tmpdir:
             # Create a markdown file
@@ -100,8 +100,7 @@ class TestLoadDirectory:
             
             documents = self.loader._load_directory(tmpdir)
             
-            assert len(documents) == 1
-            assert documents[0].title == "Test"
+            assert len(documents) == 2
 
     def test_load_directory_document_content_not_empty(self):
         """Test that loaded documents have non-empty content."""

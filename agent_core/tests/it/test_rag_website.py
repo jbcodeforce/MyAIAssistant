@@ -23,8 +23,7 @@ from agent_core.services.rag.document_loader import (
 from agent_core.services.rag.text_splitter import RecursiveTextSplitter, TextChunk
 from agent_core.services.rag.service import RAGService, SearchResult
 from agent_core.agents.factory import AgentConfig
-from agent_core.agents.general_agent import GeneralAgent
-from agent_core.agents.rag_agent import RAGAgent
+from agent_core.agents.base_agent import BaseAgent, AgentInput
 
 
 # Test website URL - Apache Flink Process Table Functions documentation
@@ -136,19 +135,23 @@ def ollama_config() -> AgentConfig:
 
 
 @pytest.fixture
-def general_agent(ollama_config: AgentConfig) -> GeneralAgent:
-    """Create a GeneralAgent with Ollama config."""
-    return GeneralAgent(config=ollama_config)
+def general_agent(ollama_config: AgentConfig) -> BaseAgent:
+    """Create a BaseAgent (general agent) with Ollama config."""
+    return BaseAgent(config=ollama_config)
 
 
 @pytest.fixture
-def rag_agent(ollama_config: AgentConfig, rag_service: RAGService) -> RAGAgent:
-    """Create a RAGAgent with Ollama config and RAG service."""
-    return RAGAgent(
+def rag_agent(ollama_config: AgentConfig, rag_service: RAGService) -> BaseAgent:
+    """Create a BaseAgent with RAG enabled for Ollama config and RAG service."""
+    agent = BaseAgent(
         config=ollama_config,
         rag_service=rag_service,
-        n_results=5
+        use_rag=True,
+        rag_top_k=5
     )
+    # Set agent_type to "rag" for backward compatibility with tests
+    agent.agent_type = "rag"
+    return agent
 
 
 @pytest.mark.integration
@@ -987,7 +990,7 @@ class TestRAGWithLLMSummarization:
     async def test_summarize_ptf_content_with_general_agent(
         self,
         rag_service: RAGService,
-        general_agent: GeneralAgent
+        general_agent: BaseAgent
     ):
         """Test using GeneralAgent to summarize retrieved PTF content."""
         # Index the website
@@ -1020,7 +1023,7 @@ Documentation Context:
 Provide a summary in 3-5 sentences."""
         
         # Use GeneralAgent to summarize
-        response = await general_agent.execute(query=prompt)
+        response = await general_agent.execute(AgentInput(query=prompt))
         
         assert response.message is not None
         assert len(response.message) > 100  # Should have meaningful content
@@ -1042,7 +1045,7 @@ Provide a summary in 3-5 sentences."""
     async def test_rag_agent_answers_ptf_question(
         self,
         rag_service: RAGService,
-        rag_agent: RAGAgent
+        rag_agent: BaseAgent
     ):
         """Test using RAGAgent to answer questions about PTF documentation."""
         # Index the website
@@ -1056,9 +1059,9 @@ Provide a summary in 3-5 sentences."""
         )
         
         # Use RAGAgent to answer a question
-        response = await rag_agent.execute(
+        response = await rag_agent.execute(AgentInput(
             query="What is a Process Table Function in Flink and how is it different from a regular table function?"
-        )
+        ))
         
         assert response.message is not None
         assert len(response.message) > 50
@@ -1079,7 +1082,7 @@ Provide a summary in 3-5 sentences."""
     async def test_summarize_state_management(
         self,
         rag_service: RAGService,
-        general_agent: GeneralAgent
+        general_agent: BaseAgent
     ):
         """Test summarizing state management concepts from PTF documentation."""
         # Index the website
@@ -1111,7 +1114,7 @@ Documentation:
 
 Provide a technical summary."""
         
-        response = await general_agent.execute(query=prompt)
+        response = await general_agent.execute(AgentInput(query=prompt))
         
         assert response.message is not None
         assert len(response.message) > 100
@@ -1132,7 +1135,7 @@ Provide a technical summary."""
     async def test_explain_shopping_cart_example(
         self,
         rag_service: RAGService,
-        general_agent: GeneralAgent
+        general_agent: BaseAgent
     ):
         """Test explaining the shopping cart example from PTF documentation."""
         # Index the website
@@ -1161,7 +1164,7 @@ Documentation:
 
 Provide a 2-3 sentence summary."""
         
-        response = await general_agent.execute(query=prompt)
+        response = await general_agent.execute(AgentInput(query=prompt))
         
         assert response.message is not None
         assert len(response.message) > 50
@@ -1182,7 +1185,7 @@ Provide a 2-3 sentence summary."""
     async def test_rag_agent_with_conversation_history(
         self,
         rag_service: RAGService,
-        rag_agent: RAGAgent
+        rag_agent: BaseAgent
     ):
         """Test RAGAgent with conversation context for follow-up questions."""
         # Index the website
@@ -1202,10 +1205,10 @@ Provide a 2-3 sentence summary."""
         ]
         
         # Follow-up question with conversation history
-        response = await rag_agent.execute(
+        response = await rag_agent.execute(AgentInput(
             query="How do I manage state in PTF?",
             conversation_history=conversation_history
-        )
+        ))
         
         assert response.message is not None
         assert len(response.message) > 50
@@ -1229,7 +1232,7 @@ Provide a 2-3 sentence summary."""
     async def test_generate_code_example_explanation(
         self,
         rag_service: RAGService,
-        general_agent: GeneralAgent
+        general_agent: BaseAgent
     ):
         """Test generating explanation for PTF code examples."""
         # Index the website
@@ -1258,7 +1261,7 @@ Documentation:
 
 Provide a 2-3 sentence summary focusing on class structure and eval method."""
         
-        response = await general_agent.execute(query=prompt)
+        response = await general_agent.execute(AgentInput(query=prompt))
         
         assert response.message is not None
         assert len(response.message) > 50
@@ -1278,7 +1281,7 @@ Provide a 2-3 sentence summary focusing on class structure and eval method."""
     async def test_compare_ptf_limitations(
         self,
         rag_service: RAGService,
-        general_agent: GeneralAgent
+        general_agent: BaseAgent
     ):
         """Test summarizing PTF limitations from documentation."""
         # Index the website
@@ -1307,7 +1310,7 @@ Documentation:
 
 Provide a concise bullet-point list of limitations."""
         
-        response = await general_agent.execute(query=prompt)
+        response = await general_agent.execute(AgentInput(query=prompt))
         
         assert response.message is not None
         assert len(response.message) > 50

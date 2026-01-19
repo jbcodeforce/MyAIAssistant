@@ -7,9 +7,7 @@ that loads agent definitions from YAML config files.
 
 import pytest
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, patch
-import tempfile
-import os
+from unittest.mock import MagicMock, patch
 
 from agent_core.agents.factory import AgentFactory, AgentConfig
 from agent_core.agents.base_agent import BaseAgent, AgentInput
@@ -24,22 +22,21 @@ class TestAgentConfig:
         agent_dir = tmp_path / "TestAgent"
         agent_dir.mkdir()
         yaml_content = """
-name: TestAgent
-description: A test agent
-class: null
-provider: huggingface
-model: gpt-4o-mini
-temperature: 0.5
-max_tokens: 1000
-"""
+            name: TestAgent
+            description: A test agent
+            provider: huggingface
+            model: gpt-4o-mini
+            temperature: 0.5
+            max_tokens: 1000
+        """
         (agent_dir / "agent.yaml").write_text(yaml_content)
         
         config = AgentConfig.from_yaml(agent_dir / "agent.yaml")
         
         assert config.name == "TestAgent"
         assert config.description == "A test agent"
-        assert config.agent_class is None
-        assert config.provider == "huggingface"
+        assert config.agent_class is None  # Uses BaseAgent when class is omitted
+        # provider is always "huggingface", not stored in config
         assert config.model == "gpt-4o-mini"
         assert config.temperature == 0.5
         assert config.max_tokens == 1000
@@ -80,13 +77,12 @@ max_tokens: 500
 
     def test_agent_config_validate_invalid_provider(self):
         """Test AgentConfig validation fails for invalid provider."""
-        config = AgentConfig(
-            name="TestAgent",
-            provider="invalid",
-            model="gpt-4"
-        )
-        
-        with pytest.raises(ValueError, match="Unsupported provider"):
+        with pytest.raises(ValueError, match="validation error"):
+            config = AgentConfig(
+                name="TestAgent",
+                provider="invalid",
+                model="gpt-4"
+            )
             config.validate()
 
     def test_agent_config_validate_invalid_temperature(self):
@@ -127,13 +123,13 @@ Classify the user's query into categories.
 User Query: {query}
 """)
         
-        # Create GeneralAgent config with fully qualified class name
+        # Create GeneralAgent config without class (uses BaseAgent)
         ga_dir = tmp_path / "GeneralAgent"
         ga_dir.mkdir()
         (ga_dir / "agent.yaml").write_text("""
 name: GeneralAgent
 description: General purpose assistant
-class: agent_core.agents.general_agent.GeneralAgent
+# class field omitted - uses BaseAgent
 provider: huggingface
 model: gpt-4o-mini
 temperature: 0.7
@@ -165,7 +161,7 @@ Be clear and concise in your responses.
         assert config is not None
         assert config.name == "QueryClassifier"
         assert config.description == "Classifies user queries for routing"
-        assert config.provider == "huggingface"
+        # provider is always "huggingface", not stored in config
         assert config.model == "gpt-4o-mini"
         assert config.temperature == 0.0
         assert config.max_tokens == 500
@@ -208,7 +204,7 @@ Be clear and concise in your responses.
             
             # Verify config was passed to constructor
             call_kwargs = MockAgent.call_args.kwargs
-            assert call_kwargs.get('provider') == 'huggingface'
+            # provider is always "huggingface", not passed to agent constructor
             assert call_kwargs.get('model') == 'gpt-4o-mini'
             assert call_kwargs.get('temperature') == 0.7
             assert call_kwargs.get('max_tokens') == 2000
@@ -273,10 +269,11 @@ class TestAgentFactoryDynamicImport:
         """Test successful dynamic import of a class."""
         factory = AgentFactory()
         
-        cls = factory._import_class("agent_core.agents.general_agent.GeneralAgent")
+        # Test importing BaseAgent directly
+        cls = factory._import_class("agent_core.agents.base_agent.BaseAgent")
         
-        from agent_core.agents.general_agent import GeneralAgent
-        assert cls is GeneralAgent
+        from agent_core.agents.base_agent import BaseAgent
+        assert cls is BaseAgent
 
     def test_import_class_invalid_format(self):
         """Test import with invalid format raises ImportError."""
@@ -297,7 +294,7 @@ class TestAgentFactoryDynamicImport:
         factory = AgentFactory()
         
         with pytest.raises(AttributeError):
-            factory._import_class("agent_core.agents.general_agent.NonExistentClass")
+            factory._import_class("agent_core.agents.base_agent.NonExistentClass")
 
     def test_resolve_agent_class_not_base_agent(self):
         """Test that non-BaseAgent class raises ValueError."""
@@ -308,13 +305,13 @@ class TestAgentFactoryDynamicImport:
             factory._resolve_agent_class("agent_core.agents.factory.AgentConfig")
 
     def test_resolve_agent_class_none_returns_default(self):
-        """Test that None class returns GeneralAgent."""
+        """Test that None class returns BaseAgent."""
         factory = AgentFactory()
         
         cls = factory._resolve_agent_class(None)
         
-        from agent_core.agents.general_agent import GeneralAgent
-        assert cls is GeneralAgent
+        from agent_core.agents.base_agent import BaseAgent
+        assert cls is BaseAgent
 
 
 class TestAgentFactoryWithRealAgents:
@@ -334,7 +331,7 @@ class TestAgentFactoryWithRealAgents:
         
         assert config is not None
         assert config.name == "QueryClassifier"
-        assert config.provider is not None
+        # provider is always "huggingface", not stored in config
         assert config.model is not None
         # Verify fully qualified class name
         assert "agent_core.agents" in config.agent_class
@@ -356,6 +353,6 @@ class TestAgentFactoryWithRealAgents:
         
         agent = real_factory.create_agent("GeneralAgent")
         
-        from agent_core.agents.general_agent import GeneralAgent
-        assert isinstance(agent, GeneralAgent)
+        from agent_core.agents.base_agent import BaseAgent
+        assert isinstance(agent, BaseAgent)
         assert agent._system_prompt is not None

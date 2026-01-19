@@ -90,7 +90,7 @@ class MeetingAgentOutputResponse(BaseModel):
     """Structured output from meeting agent extraction."""
     meeting_ref_id: int
     meeting_id: str
-    attendees: list[PersonResponse] = Field(default_factory=list)
+    attendees: str
     next_steps: list[NextStepResponse] = Field(default_factory=list)
     key_points: list[KeyPointResponse] = Field(default_factory=list)
     notes: str = Field(..., description="Meeting notes")

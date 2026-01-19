@@ -13,12 +13,11 @@ class TestAgentConfig:
         """Test creating a configuration."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
         )
         
-        assert config.provider == "huggingface"
+        # provider is always "huggingface", not stored in config
         assert config.model == "meta-llama/Meta-Llama-3-8B-Instruct"
         assert config.api_key == "hf_test_token"
     
@@ -26,7 +25,6 @@ class TestAgentConfig:
         """Test default configuration values."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
         )
@@ -40,7 +38,6 @@ class TestAgentConfig:
         """Test getting custom base URL."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
         )
@@ -51,7 +48,6 @@ class TestAgentConfig:
         """Test getting default base URL for HuggingFace (None for HF Hub)."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
         )
@@ -62,7 +58,6 @@ class TestAgentConfig:
         """Test validating a valid remote configuration."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
         )
@@ -74,7 +69,6 @@ class TestAgentConfig:
         """Test validating a valid local configuration."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
         )
@@ -83,21 +77,20 @@ class TestAgentConfig:
         config.validate()
     
     def test_validate_unsupported_provider(self):
-        """Test validation fails for unsupported provider."""
+        """Test that provider field is no longer in AgentConfig."""
+        # Provider is always "huggingface" and not configurable
+        # This test is no longer relevant, but kept for documentation
         config = AgentConfig(
             name="TestAgent",
-            provider="unsupported",
             model="model"
         )
-        
-        with pytest.raises(ValueError, match="Unsupported provider"):
-            config.validate()
+        # Validation should pass since provider is not configurable
+        config.validate()
     
     def test_validate_missing_model(self):
         """Test validation fails for missing model."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="",
             base_url="http://localhost:8080"
         )
@@ -109,7 +102,6 @@ class TestAgentConfig:
         """Test HuggingFace remote (no base_url) requires API key."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct"
         )
         
@@ -120,7 +112,6 @@ class TestAgentConfig:
         """Test HuggingFace remote with token passes validation."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
         )
@@ -132,7 +123,6 @@ class TestAgentConfig:
         """Test HuggingFace local (with base_url) doesn't require token."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
         )
@@ -144,7 +134,6 @@ class TestAgentConfig:
         """Test validation fails for invalid temperature."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",
             temperature=-0.1
@@ -155,7 +144,6 @@ class TestAgentConfig:
         
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",
             temperature=2.5
@@ -168,7 +156,6 @@ class TestAgentConfig:
         """Test validation fails for invalid max_tokens."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080",
             max_tokens=0

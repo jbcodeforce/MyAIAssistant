@@ -100,7 +100,7 @@
           <div class="section-content markdown-preview" v-html="renderedTasks"></div>
         </div>
 
-        <div class="section-card" v-if="project.past_steps">
+        <div class="section-card" v-if="project.past_steps && project.past_steps.length > 0">
           <div class="section-header">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
@@ -108,10 +108,26 @@
             </svg>
             <h3>Past Steps</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedPastSteps"></div>
+          <div class="section-content">
+            <div class="steps-list-view">
+              <div v-for="(step, index) in project.past_steps" :key="index" class="step-view-item">
+                <div class="step-number">{{ index + 1 }}</div>
+                <div class="step-content">
+                  <div class="step-what">{{ step.what }}</div>
+                  <div class="step-who" v-if="step.who">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ step.who }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="section-card" v-if="project.next_steps">
+        <div class="section-card" v-if="project.next_steps && project.next_steps.length > 0">
           <div class="section-header">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M5 12h14"/>
@@ -119,7 +135,23 @@
             </svg>
             <h3>Next Steps</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedNextSteps"></div>
+          <div class="section-content">
+            <div class="steps-list-view">
+              <div v-for="(step, index) in project.next_steps" :key="index" class="step-view-item">
+                <div class="step-number">{{ index + 1 }}</div>
+                <div class="step-content">
+                  <div class="step-what">{{ step.what }}</div>
+                  <div class="step-who" v-if="step.who">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ step.who }}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -234,66 +266,148 @@ Describe the project goals, scope, and key deliverables."
           </div>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label>Past Steps</label>
-            <div class="markdown-editor-container">
-              <div class="editor-tabs">
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: pastStepsTab === 'write' }]"
-                  @click="pastStepsTab = 'write'"
-                >
-                  Write
-                </button>
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: pastStepsTab === 'preview' }]"
-                  @click="pastStepsTab = 'preview'"
-                >
-                  Preview
-                </button>
-              </div>
-              <textarea 
-                v-if="pastStepsTab === 'write'"
-                v-model="formData.past_steps" 
-                class="markdown-textarea"
-                rows="5"
-                placeholder="- Completed initial analysis
-- Met with stakeholders"
-              ></textarea>
-              <div v-else class="markdown-preview form-preview" v-html="formRenderedPastSteps"></div>
-            </div>
+        <!-- Steps Editor with Drag and Drop -->
+        <div class="steps-editor-section">
+          <div class="steps-header">
+            <h4>Project Steps</h4>
+            <p class="steps-hint">Drag steps between lists to move them. Click the grip handle to drag.</p>
           </div>
-
-          <div class="form-group">
-            <label>Next Steps</label>
-            <div class="markdown-editor-container">
-              <div class="editor-tabs">
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: nextStepsTab === 'write' }]"
-                  @click="nextStepsTab = 'write'"
-                >
-                  Write
-                </button>
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: nextStepsTab === 'preview' }]"
-                  @click="nextStepsTab = 'preview'"
-                >
-                  Preview
-                </button>
+          
+          <div class="steps-columns">
+            <!-- Past Steps -->
+            <div class="steps-column">
+              <div class="steps-column-header past">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                  <path d="M3 3v5h5"/>
+                </svg>
+                Past Steps
+                <span class="step-count">{{ formData.past_steps.length }}</span>
               </div>
-              <textarea 
-                v-if="nextStepsTab === 'write'"
-                v-model="formData.next_steps" 
-                class="markdown-textarea"
-                rows="5"
-                placeholder="- Finalize design
-- Begin implementation"
-              ></textarea>
-              <div v-else class="markdown-preview form-preview" v-html="formRenderedNextSteps"></div>
+              
+              <div 
+                class="steps-drop-zone"
+                :class="{ 'drag-over': dragOverZone === 'past' }"
+                @dragover.prevent="handleDragOver($event, 'past')"
+                @dragleave="handleDragLeave"
+                @drop="handleDrop($event, 'past')"
+              >
+                <div v-if="formData.past_steps.length === 0" class="empty-drop-zone">
+                  <span>No past steps yet</span>
+                  <span class="drop-hint">Drop steps here or add new</span>
+                </div>
+                
+                <div 
+                  v-for="(step, index) in formData.past_steps" 
+                  :key="'past-' + index"
+                  class="step-item"
+                  :class="{ dragging: isDragging && dragSource.list === 'past' && dragSource.index === index }"
+                  draggable="true"
+                  @dragstart="handleDragStart($event, 'past', index)"
+                  @dragend="handleDragEnd"
+                >
+                  <div class="step-drag-handle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                      <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                    </svg>
+                  </div>
+                  <div class="step-fields">
+                    <input 
+                      type="text" 
+                      v-model="step.what" 
+                      placeholder="What was done?"
+                      class="step-what-input"
+                    />
+                    <input 
+                      type="text" 
+                      v-model="step.who" 
+                      placeholder="By whom?"
+                      class="step-who-input"
+                    />
+                  </div>
+                  <button type="button" class="step-remove-btn" @click="removeStep('past', index)" title="Remove step">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <button type="button" class="add-step-btn" @click="addStep('past')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14"/><path d="M5 12h14"/>
+                </svg>
+                Add Past Step
+              </button>
+            </div>
+
+            <!-- Next Steps -->
+            <div class="steps-column">
+              <div class="steps-column-header next">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M5 12h14"/>
+                  <path d="m12 5 7 7-7 7"/>
+                </svg>
+                Next Steps
+                <span class="step-count">{{ formData.next_steps.length }}</span>
+              </div>
+              
+              <div 
+                class="steps-drop-zone"
+                :class="{ 'drag-over': dragOverZone === 'next' }"
+                @dragover.prevent="handleDragOver($event, 'next')"
+                @dragleave="handleDragLeave"
+                @drop="handleDrop($event, 'next')"
+              >
+                <div v-if="formData.next_steps.length === 0" class="empty-drop-zone">
+                  <span>No next steps yet</span>
+                  <span class="drop-hint">Drop steps here or add new</span>
+                </div>
+                
+                <div 
+                  v-for="(step, index) in formData.next_steps" 
+                  :key="'next-' + index"
+                  class="step-item"
+                  :class="{ dragging: isDragging && dragSource.list === 'next' && dragSource.index === index }"
+                  draggable="true"
+                  @dragstart="handleDragStart($event, 'next', index)"
+                  @dragend="handleDragEnd"
+                >
+                  <div class="step-drag-handle">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/>
+                      <circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/>
+                    </svg>
+                  </div>
+                  <div class="step-fields">
+                    <input 
+                      type="text" 
+                      v-model="step.what" 
+                      placeholder="What needs to be done?"
+                      class="step-what-input"
+                    />
+                    <input 
+                      type="text" 
+                      v-model="step.who" 
+                      placeholder="By whom?"
+                      class="step-who-input"
+                    />
+                  </div>
+                  <button type="button" class="step-remove-btn" @click="removeStep('next', index)" title="Remove step">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              
+              <button type="button" class="add-step-btn" @click="addStep('next')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14"/><path d="M5 12h14"/>
+                </svg>
+                Add Next Step
+              </button>
             </div>
           </div>
         </div>
@@ -332,27 +446,26 @@ const formData = ref({
   organization_id: null,
   status: 'Draft',
   tasks: '',
-  past_steps: '',
-  next_steps: ''
+  past_steps: [],
+  next_steps: []
 })
 
 // Editor tabs
 const descriptionTab = ref('write')
 const tasksTab = ref('write')
-const pastStepsTab = ref('write')
-const nextStepsTab = ref('write')
+
+// Drag and drop state
+const isDragging = ref(false)
+const dragSource = ref({ list: null, index: null })
+const dragOverZone = ref(null)
 
 // Computed for rendered markdown (view mode)
 const renderedDescription = computed(() => marked(project.value?.description || ''))
 const renderedTasks = computed(() => marked(project.value?.tasks || ''))
-const renderedPastSteps = computed(() => marked(project.value?.past_steps || ''))
-const renderedNextSteps = computed(() => marked(project.value?.next_steps || ''))
 
 // Computed for form rendered markdown
 const formRenderedDescription = computed(() => marked(formData.value.description || ''))
 const formRenderedTasks = computed(() => marked(formData.value.tasks || ''))
-const formRenderedPastSteps = computed(() => marked(formData.value.past_steps || ''))
-const formRenderedNextSteps = computed(() => marked(formData.value.next_steps || ''))
 
 const organizationName = computed(() => {
   if (!project.value?.organization_id) return null
@@ -364,8 +477,8 @@ const hasContent = computed(() => {
   if (!project.value) return false
   return project.value.description || 
          project.value.tasks || 
-         project.value.past_steps || 
-         project.value.next_steps
+         (project.value.past_steps && project.value.past_steps.length > 0) || 
+         (project.value.next_steps && project.value.next_steps.length > 0)
 })
 
 const isFormValid = computed(() => {
@@ -410,14 +523,22 @@ async function loadOrganizations() {
 }
 
 function editProject() {
+  // Deep copy the steps arrays to avoid mutating the original
+  const pastSteps = Array.isArray(project.value.past_steps) 
+    ? project.value.past_steps.map(s => ({ what: s.what || '', who: s.who || '' }))
+    : []
+  const nextSteps = Array.isArray(project.value.next_steps)
+    ? project.value.next_steps.map(s => ({ what: s.what || '', who: s.who || '' }))
+    : []
+  
   formData.value = {
     name: project.value.name,
     description: project.value.description || '',
     organization_id: project.value.organization_id || null,
     status: project.value.status,
     tasks: project.value.tasks || '',
-    past_steps: project.value.past_steps || '',
-    next_steps: project.value.next_steps || ''
+    past_steps: pastSteps,
+    next_steps: nextSteps
   }
   resetTabs()
   showEditModal.value = true
@@ -426,12 +547,76 @@ function editProject() {
 function resetTabs() {
   descriptionTab.value = 'write'
   tasksTab.value = 'write'
-  pastStepsTab.value = 'write'
-  nextStepsTab.value = 'write'
+  // Reset drag state
+  isDragging.value = false
+  dragSource.value = { list: null, index: null }
+  dragOverZone.value = null
 }
 
 function closeEditModal() {
   showEditModal.value = false
+}
+
+// Step management functions
+function addStep(listType) {
+  const newStep = { what: '', who: '' }
+  if (listType === 'past') {
+    formData.value.past_steps.push(newStep)
+  } else {
+    formData.value.next_steps.push(newStep)
+  }
+}
+
+function removeStep(listType, index) {
+  if (listType === 'past') {
+    formData.value.past_steps.splice(index, 1)
+  } else {
+    formData.value.next_steps.splice(index, 1)
+  }
+}
+
+// Drag and drop handlers
+function handleDragStart(event, listType, index) {
+  isDragging.value = true
+  dragSource.value = { list: listType, index }
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('text/plain', JSON.stringify({ list: listType, index }))
+}
+
+function handleDragEnd() {
+  isDragging.value = false
+  dragSource.value = { list: null, index: null }
+  dragOverZone.value = null
+}
+
+function handleDragOver(event, targetList) {
+  event.preventDefault()
+  dragOverZone.value = targetList
+}
+
+function handleDragLeave() {
+  dragOverZone.value = null
+}
+
+function handleDrop(event, targetList) {
+  event.preventDefault()
+  dragOverZone.value = null
+  
+  const data = JSON.parse(event.dataTransfer.getData('text/plain'))
+  const sourceList = data.list
+  const sourceIndex = data.index
+  
+  // Get the step from source list
+  const sourceArray = sourceList === 'past' ? formData.value.past_steps : formData.value.next_steps
+  const targetArray = targetList === 'past' ? formData.value.past_steps : formData.value.next_steps
+  
+  // Remove from source
+  const [step] = sourceArray.splice(sourceIndex, 1)
+  
+  // Add to target
+  targetArray.push(step)
+  
+  handleDragEnd()
 }
 
 async function handleSubmit() {
@@ -442,6 +627,19 @@ async function handleSubmit() {
     if (payload.organization_id === null) {
       delete payload.organization_id
     }
+    
+    // Filter out empty steps (where 'what' is empty)
+    payload.past_steps = payload.past_steps
+      .filter(s => s.what && s.what.trim())
+      .map(s => ({ what: s.what.trim(), who: (s.who || '').trim() }))
+    
+    payload.next_steps = payload.next_steps
+      .filter(s => s.what && s.what.trim())
+      .map(s => ({ what: s.what.trim(), who: (s.who || '').trim() }))
+    
+    // Send null if arrays are empty
+    if (payload.past_steps.length === 0) payload.past_steps = null
+    if (payload.next_steps.length === 0) payload.next_steps = null
     
     const response = await projectsApi.update(project.value.id, payload)
     project.value = response.data
@@ -1013,6 +1211,326 @@ function formatDate(dateString) {
   background: #1e293b;
 }
 
+/* Steps View Styles */
+.steps-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.step-view-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+:global(.dark) .step-view-item {
+  background: #0f172a;
+  border-left-color: #60a5fa;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: #3b82f6;
+  color: white;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-what {
+  font-size: 0.9375rem;
+  color: #111827;
+  line-height: 1.5;
+}
+
+:global(.dark) .step-what {
+  color: #f1f5f9;
+}
+
+.step-who {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+:global(.dark) .step-who {
+  color: #94a3b8;
+}
+
+.step-who svg {
+  opacity: 0.7;
+}
+
+/* Steps Editor Styles */
+.steps-editor-section {
+  margin-top: 0.5rem;
+}
+
+.steps-header {
+  margin-bottom: 1rem;
+}
+
+.steps-header h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+:global(.dark) .steps-header h4 {
+  color: #f1f5f9;
+}
+
+.steps-hint {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+.steps-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.steps-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.steps-column-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border-radius: 8px 8px 0 0;
+  color: white;
+}
+
+.steps-column-header.past {
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+}
+
+.steps-column-header.next {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.step-count {
+  margin-left: auto;
+  padding: 0.125rem 0.5rem;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 9999px;
+  font-size: 0.6875rem;
+}
+
+.steps-drop-zone {
+  flex: 1;
+  min-height: 150px;
+  padding: 0.75rem;
+  background: #f9fafb;
+  border: 2px dashed #e5e7eb;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  transition: all 0.2s;
+}
+
+:global(.dark) .steps-drop-zone {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.steps-drop-zone.drag-over {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  border-style: solid;
+}
+
+:global(.dark) .steps-drop-zone.drag-over {
+  background: rgba(59, 130, 246, 0.1);
+  border-color: #3b82f6;
+}
+
+.empty-drop-zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 120px;
+  color: #9ca3af;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.drop-hint {
+  font-size: 0.6875rem;
+  margin-top: 0.25rem;
+  opacity: 0.7;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.625rem;
+  margin-bottom: 0.5rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  transition: all 0.2s;
+  cursor: grab;
+}
+
+:global(.dark) .step-item {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.step-item:hover {
+  border-color: #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+:global(.dark) .step-item:hover {
+  border-color: #475569;
+}
+
+.step-item.dragging {
+  opacity: 0.5;
+  transform: scale(0.98);
+}
+
+.step-drag-handle {
+  padding: 0.25rem;
+  color: #9ca3af;
+  cursor: grab;
+  flex-shrink: 0;
+}
+
+.step-drag-handle:active {
+  cursor: grabbing;
+}
+
+.step-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.step-what-input,
+.step-who-input {
+  width: 100%;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 4px;
+  font-size: 0.8125rem;
+  transition: border-color 0.15s;
+}
+
+:global(.dark) .step-what-input,
+:global(.dark) .step-who-input {
+  background: #1e293b;
+  border-color: #334155;
+  color: #f1f5f9;
+}
+
+.step-what-input {
+  font-weight: 500;
+}
+
+.step-who-input {
+  font-size: 0.75rem;
+  color: #6b7280;
+}
+
+:global(.dark) .step-who-input {
+  color: #94a3b8;
+}
+
+.step-what-input:focus,
+.step-who-input:focus {
+  outline: none;
+  border-color: #3b82f6;
+}
+
+.step-what-input::placeholder,
+.step-who-input::placeholder {
+  color: #9ca3af;
+}
+
+.step-remove-btn {
+  padding: 0.25rem;
+  border: none;
+  background: transparent;
+  color: #9ca3af;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.step-remove-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+:global(.dark) .step-remove-btn:hover {
+  background: rgba(220, 38, 38, 0.2);
+}
+
+.add-step-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.5rem;
+  margin-top: 0.5rem;
+  border: 1px dashed #d1d5db;
+  border-radius: 6px;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+:global(.dark) .add-step-btn {
+  border-color: #475569;
+  color: #94a3b8;
+}
+
+.add-step-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #374151;
+}
+
+:global(.dark) .add-step-btn:hover {
+  background: #334155;
+  border-color: #64748b;
+  color: #f1f5f9;
+}
+
 @media (max-width: 768px) {
   .project-detail-view {
     padding: 1rem;
@@ -1042,6 +1560,10 @@ function formatDate(dateString) {
   }
 
   .form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .steps-columns {
     grid-template-columns: 1fr;
   }
 }
