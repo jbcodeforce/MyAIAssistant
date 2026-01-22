@@ -40,8 +40,6 @@ class RoutedResponse(BaseModel):
     """Final response from the routing workflow."""
     message: str
     context_used: list[dict]
-    model: str
-    provider: str
     intent: QueryIntent
     confidence: float
     agent_type: str
@@ -311,8 +309,6 @@ class AgentRouter:
         return RoutedResponse(
             message=response.message,
             context_used=response.context_used,
-            model=response.model,
-            provider="huggingface",
             intent=classification.intent,
             confidence=classification.confidence,
             agent_type=response.agent_type,
@@ -329,8 +325,6 @@ class AgentRouter:
         return RoutedResponse(
             message=f"I encountered an error processing your request: {state.error}",
             context_used=[],
-            model="",
-            provider="",
             intent=QueryIntent.UNCLEAR,
             confidence=0.0,
             agent_type="error",

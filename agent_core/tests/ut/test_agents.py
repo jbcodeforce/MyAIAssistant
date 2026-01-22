@@ -28,24 +28,20 @@ class TestAgentResponse:
         response = AgentResponse(
             message="Test response",
             context_used=[{"title": "Doc1"}],
-            model="gpt-4",
-            provider="openai",
             agent_type="test",
             metadata={"key": "value"}
         )
         
         assert response.message == "Test response"
         assert len(response.context_used) == 1
-        assert response.model == "gpt-4"
         assert response.agent_type == "test"
     
     def test_create_minimal_response(self):
         """Test creating response with defaults."""
         response = AgentResponse(message="Test")
-        
         assert response.message == "Test"
         assert response.context_used == []
-        assert response.model == ""
+
 
 
 class TestBaseAgent:
@@ -77,8 +73,6 @@ class TestBaseAgent:
         response = await agent.execute(AgentInput(query="What is Python?"))
         assert response is not None
         assert response.message is not None
-        assert response.model is not None
-        assert response.provider is not None
         assert response.agent_type is not None
         assert response.context_used is not None
         assert response.metadata is not None
@@ -91,15 +85,11 @@ class TestBaseAgent:
         """Test executing a base agent with RAG."""
         factory = AgentFactory()
         agent = factory.create_agent()
-        
         # Mock the _call_llm method to return a fake response
         agent._call_llm = AsyncMock(return_value="Python is a high-level programming language known for its simplicity and readability.")
-        
         response = await agent.execute(AgentInput(query="What is Python?", use_rag=True))   
         assert response is not None
         assert response.message is not None
-        assert response.model is not None
-        assert response.provider is not None
         assert response.agent_type is not None
         assert response.context_used is not None
         assert response.metadata is not None
@@ -252,8 +242,6 @@ class TestAgentRouter:
         agent = MagicMock(spec=BaseAgent)
         agent.execute = AsyncMock(return_value=AgentResponse(
             message="Response from agent",
-            model="gpt-4",
-            provider="openai",
             agent_type="general"
         ))
         return agent

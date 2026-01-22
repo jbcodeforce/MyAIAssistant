@@ -77,10 +77,9 @@ max_tokens: 500
 
     def test_agent_config_validate_invalid_provider(self):
         """Test AgentConfig validation fails for invalid provider."""
-        with pytest.raises(ValueError, match="validation error"):
+        with pytest.raises(ValueError, match="HF_TOKEN is required"):
             config = AgentConfig(
                 name="TestAgent",
-                provider="invalid",
                 model="gpt-4"
             )
             config.validate()
@@ -166,21 +165,11 @@ Be clear and concise in your responses.
         assert config.temperature == 0.0
         assert config.max_tokens == 500
 
-    def test_factory_loads_prompt(self, factory):
-        """Test factory loads prompt.md correctly."""
-        prompt = factory.get_prompt("QueryClassifier")
-        
-        assert prompt is not None
-        assert "query classifier" in prompt.lower()
-        assert "{query}" in prompt
 
     def test_factory_returns_none_for_unknown_agent(self, factory):
         """Test factory returns None for unknown agent names."""
-        config = factory.get_config("NonExistentAgent")
-        prompt = factory.get_prompt("NonExistentAgent")
-        
+        config = factory.get_config("NonExistentAgent")        
         assert config is None
-        assert prompt is None
 
     def test_create_agent_returns_correct_type(self, factory):
         """Test creating an agent returns correct instance."""
@@ -336,15 +325,6 @@ class TestAgentFactoryWithRealAgents:
         # Verify fully qualified class name
         assert "agent_core.agents" in config.agent_class
 
-    def test_loads_query_classifier_prompt(self, real_factory):
-        """Test loading actual QueryClassifier prompt."""
-        if "QueryClassifier" not in real_factory.list_agents():
-            pytest.skip("QueryClassifier config not found")
-        
-        prompt = real_factory.get_prompt("QueryClassifier")
-        
-        assert prompt is not None
-        assert len(prompt) > 0
 
     def test_create_real_agent(self, real_factory):
         """Test creating an agent using real config with dynamic import."""

@@ -20,7 +20,6 @@ class TestHuggingFaceProvider:
         """Config for remote HF Hub model."""
         return AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
             api_key="hf_test_token"
         )
@@ -30,7 +29,6 @@ class TestHuggingFaceProvider:
         """Config for local inference server."""
         return AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="llama3",
             base_url="http://localhost:8080"
         )
@@ -41,10 +39,6 @@ class TestHuggingFaceProvider:
             Message(role="system", content="You are helpful."),
             Message(role="user", content="Hello!")
         ]
-    
-    def test_provider_name(self, provider):
-        """Test provider name."""
-        assert provider.provider_name == "huggingface"
     
     def test_get_token_from_config(self, provider, config_remote):
         """Test token retrieval from config."""
