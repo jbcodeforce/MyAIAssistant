@@ -1,15 +1,14 @@
 """HuggingFace provider implementation using huggingface_hub InferenceClient."""
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 
 from huggingface_hub import InferenceClient, AsyncInferenceClient
 from huggingface_hub.inference._generated.types import ChatCompletionOutput
 
-from agent_core.providers.base import LLMProvider
+from agent_core.providers.llm_provider_base import LLMProvider
 from agent_core.types import Message, LLMResponse, LLMError
 
-if TYPE_CHECKING:
-    from agent_core.agents.factory import AgentConfig
+from agent_core.agents.agent_factory import AgentConfig
 
 
 def get_hf_token() -> Optional[str]:
@@ -46,14 +45,14 @@ class HuggingFaceProvider(LLMProvider):
         """Get HuggingFace token from config or environment."""
         return config.api_key or get_hf_token()
     
-    def _is_local_server(self, config: "AgentConfig") -> bool:
+    def _is_local_server(self, config: AgentConfig) -> bool:
         """Check if using a local inference server."""
         return config.base_url is not None
     
     def _parse_response(
         self,
         response: ChatCompletionOutput,
-        config: "AgentConfig"
+        config: AgentConfig
     ) -> LLMResponse:
         """Parse HuggingFace ChatCompletionOutput to LLMResponse."""
         choice = response.choices[0]
@@ -95,7 +94,7 @@ class HuggingFaceProvider(LLMProvider):
     async def chat_async(
         self,
         messages: list[Message],
-        config: "AgentConfig"
+        config: AgentConfig
     ) -> LLMResponse:
         """Send async chat completion request using HuggingFace AsyncInferenceClient."""
         token = self._get_token(config)
@@ -144,7 +143,7 @@ class HuggingFaceProvider(LLMProvider):
     def chat_sync(
         self,
         messages: list[Message],
-        config: "AgentConfig"
+        config: AgentConfig
     ) -> LLMResponse:
         """Send sync chat completion request using HuggingFace InferenceClient."""
         token = self._get_token(config)

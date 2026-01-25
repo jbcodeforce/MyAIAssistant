@@ -5,15 +5,14 @@ in agentic AI applications, along with base input/output Pydantic models.
 """
 
 import logging
-from typing import Optional, TYPE_CHECKING
+from typing import Optional
 from pydantic import BaseModel, Field
 
-from agent_core.client import LLMClient
 from agent_core.types import Message as LLMMessage, LLMResponse
+from agent_core.providers.llm_provider_factory import LLMProviderFactory
 
-if TYPE_CHECKING:
-    from agent_core.agents.factory import AgentConfig
-    from agent_core.services.rag.service import RAGService
+from agent_core.agents.agent_factory import AgentConfig
+from agent_core.services.rag.service import RAGService
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +33,7 @@ class AgentInput(BaseModel):
     query: str
     conversation_history: list[dict] = Field(default_factory=list)
     context: dict = Field(default_factory=dict)
-    use_rag: Optional[bool] = None
+    use_rag: Optional[bool] = False
 
 
 class AgentResponse(BaseModel):
@@ -50,22 +49,14 @@ class BaseAgent:
     Base class for specialized agents.
     
     Each agent handles a specific type of query intent.
-    Uses LLMClient for LLM integration.
     
     Can be used directly for simple pass-through queries, or subclassed
     for specialized behavior.
     
     Example:
         # Direct usage
-        agent = BaseAgent(provider="huggingface", model="llama3")
+        agent = BaseAgent(config=AgentConfig(model="llama3"))
         response = await agent.execute(AgentInput(query="What is Python?"))
-        
-        # Subclass for custom behavior
-        class MyAgent(BaseAgent):
-            agent_type = "my_agent"
-            
-            def build_system_prompt(self, context=None):
-                return "You are an expert in Python programming."
     """
     
     agent_type: str = "general"
@@ -73,69 +64,41 @@ class BaseAgent:
     def __init__(
         self,
         # AgentConfig for unified configuration
-        config: "AgentConfig" = None,
-        # Convenience parameters for creating config
-        # provider is always "huggingface", parameter is ignored for backward compatibility
-        provider: str = None,
-        model: str = None,
-        api_key: str = "",
-        base_url: str = None,
-        max_tokens: int = 2048,
-        temperature: float = 0.7,
-        # System prompt injection from factory
-        system_prompt: str = None,
-        # RAG configuration
-        rag_service: "RAGService" = None,
-        use_rag: bool = False,
-        rag_top_k: int = 5,
-        rag_category: str = None
+        config: AgentConfig = None
     ):
         """
         Initialize the agent with configuration.
         
         Args:
             config: AgentConfig instance (takes precedence over individual params)
-            provider: LLM provider name (huggingface)
-            model: Model name
-            api_key: API key for the provider
-            base_url: Custom base URL for the API
-            max_tokens: Maximum tokens in response
-            temperature: Sampling temperature
-            system_prompt: System prompt loaded from config (overrides build_system_prompt)
-            rag_service: RAGService instance for retrieval-augmented generation
-            use_rag: Whether to use RAG for context retrieval (default False)
-            rag_top_k: Number of results to retrieve from RAG (default 5)
-            rag_category: Optional category filter for RAG searches
         """
-        from agent_core.agents.factory import AgentConfig
-        
+
         if config is not None:
             # Use AgentConfig directly
             self._config = config
-            self._system_prompt = system_prompt
         else:
             # Build config from individual parameters
-            # provider is always "huggingface"
             self._config = AgentConfig(
-                model=model or "mistral:7b-instruct",
-                api_key=api_key,
-                base_url=base_url,
-                max_tokens=max_tokens,
-                temperature=temperature
+                model="mistral:7b-instruct",
+                provider="huggingface",
+                api_key="local_api_key",
+                base_url="http://localhost:11434/v1",
+                max_tokens=2048,
+                temperature=0.7,
+                use_rag=False,
+                rag_top_k=5,
+                rag_category=None
             )
-            self._system_prompt = system_prompt
-        
-        self._llm_client = LLMClient(self._config)
-        
-        # Expose provider for backward compatibility (always "huggingface")
-        self.provider = "huggingface"
-        self.model = self._config.model
-        
-        # RAG configuration
-        self._rag_service = rag_service
-        self._use_rag = use_rag
-        self._rag_top_k = rag_top_k
-        self._rag_category = rag_category
+        self._llm_client = LLMProviderFactory.create_provider(self._config.provider)
+        prompt_path = self._config.agent_dir / "prompt.md"
+        if prompt_path.exists():
+            try:
+                self._system_prompt = prompt_path.read_text()
+                logger.debug(f"Loaded prompt for agent: {self._config.name}")
+            except Exception as e:
+                logger.error(f"Failed to load prompt for {self._config.name}: {e}")
+        else:
+            self._system_prompt = "You are a helpful assistant."
 
     async def execute(
         self,
@@ -154,15 +117,36 @@ class BaseAgent:
         Returns:
             AgentResponse with the result
         """
+        messages, context_used, should_use_rag= await self._build_messages(input_data)
+        # Call LLM
+        response = await self._call_llm(messages)
+        
+        return AgentResponse(
+            message=response,
+            context_used=context_used,
+            agent_type=self.agent_type,
+            metadata={"rag_enabled": should_use_rag and self._rag_service is not None}
+        )
+    
+    async def _build_messages(self, input_data: AgentInput) -> list[dict]:
+        """
+        Process the input data for the agent.
+        
+        Args:
+            input_data: AgentInput containing query, conversation history, context, and use_rag override
+            
+        Returns:
+            List of context dicts with content, title, uri, and score
+        """
         context = input_data.context or {}
         context_used = []
         
         # Determine if RAG should be used
-        should_use_rag = input_data.use_rag if input_data.use_rag is not None else self._use_rag
+        should_use_rag = input_data.use_rag if input_data.use_rag is not None else self._config.use_rag
         
         # Retrieve RAG context if enabled
         rag_context = ""
-        if should_use_rag and self._rag_service:
+        if should_use_rag:
             rag_results = await self._retrieve_rag_context(input_data.query, context)
             if rag_results:
                 context_used = rag_results
@@ -189,18 +173,8 @@ class BaseAgent:
         # Add user query
         messages.append({"role": "user", "content": input_data.query})
         
-        # Call LLM
-        response = await self._call_llm(messages)
-        
-        return AgentResponse(
-            message=response,
-            context_used=context_used,
-            model=self._config.model,
-            provider="huggingface",
-            agent_type=self.agent_type,
-            metadata={"rag_enabled": should_use_rag and self._rag_service is not None}
-        )
-    
+        return messages, context_used, should_use_rag
+
     async def _retrieve_rag_context(
         self,
         query: str,
@@ -216,8 +190,7 @@ class BaseAgent:
         Returns:
             List of context dicts with content, title, uri, and score
         """
-        if not self._rag_service:
-            return []
+        _rag_service = RAGService()
         
         context = context or {}
         
@@ -227,7 +200,7 @@ class BaseAgent:
         top_k = context.get("rag_top_k", self._rag_top_k)
         
         try:
-            results = await self._rag_service.search(
+            results = await _rag_service.search(
                 query=query,
                 n_results=top_k,
                 category=category,
@@ -310,7 +283,7 @@ class BaseAgent:
             for msg in messages
         ]
         
-        response: LLMResponse = await self._llm_client.chat_async(llm_messages)
+        response: LLMResponse = await self._llm_client.chat_async(messages=llm_messages, config=self._config)
         return response.content
 
     def _call_llm_sync(self, messages: list[dict]) -> str:
@@ -328,5 +301,5 @@ class BaseAgent:
             for msg in messages
         ]
         
-        response: LLMResponse = self._llm_client.chat(llm_messages)
+        response: LLMResponse = self._llm_client.chat_sync(messages=llm_messages, config=self._config)
         return response.content

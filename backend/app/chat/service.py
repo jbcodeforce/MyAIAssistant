@@ -9,7 +9,7 @@ from agent_core import LLMClient, AgentConfig, Message as LLMMessage
 from app.core.config import get_settings
 from agent_core.services.rag.service import RAGService, get_rag_service
 from agent_core.agents.query_classifier import QueryIntent
-from agent_core.agents.agent_router import AgentRouter, RoutedResponse, get_agent_router, reset_agent_router
+from agent_core.agents.agent_router import  RoutedResponse, get_agent_router, reset_agent_router
 
 logger = logging.getLogger(__name__)
 

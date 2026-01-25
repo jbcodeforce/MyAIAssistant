@@ -10,14 +10,14 @@ import httpx
 
 
 # Environment configuration for Ollama
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
-OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "mistral:7b-instruct")
+LOCAL_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+LOCAL_MODEL = os.getenv("OLLAMA_MODEL", "mistral:7b-instruct")
+REMOTE_MODEL = os.getenv("HF_REMOTE_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
 
-
-def is_ollama_available() -> bool:
+def is_local_server_available() -> bool:
     """Check if Ollama server is running and accessible."""
     try:
-        base = OLLAMA_BASE_URL.replace("/v1", "")
+        base = LOCAL_BASE_URL.replace("/v1", "")
         response = httpx.get(f"{base}/api/tags", timeout=5.0)
         return response.status_code == 200
     except (httpx.ConnectError, httpx.TimeoutException):
@@ -30,9 +30,9 @@ def is_model_available(model: str = None) -> bool:
     Args:
         model: Model name to check. Defaults to OLLAMA_MODEL env var.
     """
-    model = model or OLLAMA_MODEL
+    model = model or LOCAL_MODEL
     try:
-        base = OLLAMA_BASE_URL.replace("/v1", "")
+        base = LOCAL_BASE_URL.replace("/v1", "")
         response = httpx.get(f"{base}/api/tags", timeout=5.0)
         if response.status_code == 200:
             models = response.json().get("models", [])
@@ -48,7 +48,7 @@ def is_model_available(model: str = None) -> bool:
 def get_available_models() -> list[str]:
     """Get list of available models in Ollama."""
     try:
-        base = OLLAMA_BASE_URL.replace("/v1", "")
+        base = LOCAL_BASE_URL.replace("/v1", "")
         response = httpx.get(f"{base}/api/tags", timeout=5.0)
         if response.status_code == 200:
             models = response.json().get("models", [])
@@ -60,23 +60,23 @@ def get_available_models() -> list[str]:
 
 # Skip markers - evaluated at collection time
 requires_ollama = pytest.mark.skipif(
-    not is_ollama_available(),
-    reason=f"Ollama server not available at {OLLAMA_BASE_URL}"
+    not is_local_server_available(),
+    reason=f"Ollama server not available at {LOCAL_BASE_URL}"
 )
 
 requires_model = pytest.mark.skipif(
     not is_model_available(),
-    reason=f"Model {OLLAMA_MODEL} not available in Ollama"
+    reason=f"Model {LOCAL_MODEL} not available in Ollama"
 )
 
 
 @pytest.fixture
 def ollama_base_url() -> str:
     """Fixture providing Ollama base URL."""
-    return OLLAMA_BASE_URL
+    return LOCAL_BASE_URL
 
 
 @pytest.fixture
 def ollama_model() -> str:
     """Fixture providing Ollama model name."""
-    return OLLAMA_MODEL
+    return LOCAL_MODEL

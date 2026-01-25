@@ -3,7 +3,7 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from agent_core.agents.factory import AgentConfig
+from agent_core.agents.agent_factory import AgentConfig
 from agent_core.types import Message, LLMError
 from agent_core.providers.huggingface import HuggingFaceProvider
 
@@ -21,7 +21,8 @@ class TestHuggingFaceProvider:
         return AgentConfig(
             name="TestAgent",
             model="meta-llama/Meta-Llama-3-8B-Instruct",
-            api_key="hf_test_token"
+            api_key="hf_test_token",
+            base_url=None
         )
     
     @pytest.fixture

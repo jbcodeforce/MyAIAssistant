@@ -7,7 +7,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field
 
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
+from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
 
 logger = logging.getLogger(__name__)
 
@@ -52,9 +52,7 @@ class MeetingAgent(BaseAgent):
 
     async def execute(
         self,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None
+        input_data: AgentInput
     ) -> MeetingAgentResponse:
         """
         Execute meeting note extraction.
@@ -67,27 +65,13 @@ class MeetingAgent(BaseAgent):
         Returns:
             MeetingAgentResponse with structured meeting data
         """
-        context = context or "No additional context provided"  # TODO assess when it will be needed
-        
-        # Build messages with query substitution in prompt
-        system_prompt = self.build_system_prompt({"context": context})
-        messages = [{"role": "system", "content": system_prompt}]
-        
-        if conversation_history:
-            for msg in conversation_history:
-                messages.append({
-                    "role": msg.get("role", "user"),
-                    "content": msg.get("content", "")
-                })
-        
-        messages.append({"role": "user", "content": query})
-        
+        messages, context_used, use_rag = await self._build_messages(input_data)
         # Generate response from LLM
         response_text = await self._call_llm(messages)
         
         # Parse the JSON response
         parsed_data, parse_error = self._parse_meeting_output(response_text)
-        
+        logger.info(f"Parsed data: {parsed_data}")
         # Build response with parsed data or defaults if parsing failed
         if parsed_data:
             return MeetingAgentResponse(
@@ -97,8 +81,6 @@ class MeetingAgent(BaseAgent):
                 key_points=parsed_data["key_points"],
                 cleaned_notes=parsed_data["cleaned_notes"],
                 parse_error=None,
-                model=self.model,
-                provider="huggingface",
                 agent_type=self.agent_type,
                 metadata={
                     "parsed_successfully": True
@@ -110,11 +92,9 @@ class MeetingAgent(BaseAgent):
                 attendees=[],
                 next_steps=[],
                 key_points=[],
+                agent_type=self.agent_type,
                 cleaned_notes=response_text,  # Use raw response as fallback
                 parse_error=parse_error,
-                model=self.model,
-                provider="huggingface",
-                agent_type=self.agent_type,
                 metadata={
                     "parsed_successfully": False
                 }

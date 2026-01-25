@@ -6,7 +6,7 @@
 
 # Database settings
 # SQLite (default for local deployments):
-database_url: "sqlite+aiosqlite:///./data/app.db"
+database_url: "sqlite+aiosqlite:///./data/demo-assistant.db"
 # PostgreSQL (for docker-compose.postgres.yml or production):
 # database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
 
@@ -19,7 +19,8 @@ cors_origins:
 # Provider must be "huggingface" - the InferenceClient connects to Ollama via base_url
 # Ollama's OpenAI-compatible endpoint is at /v1
 llm_provider: "huggingface"
-llm_model: "gpt-oss:20b"
+# llm_model: "gpt-oss:20b"
+llm_model: "mistral:7b-instruct"
 llm_api_key: null
 llm_base_url: "http://localhost:11434/v1"
 llm_max_tokens: 2048

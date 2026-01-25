@@ -1,21 +1,21 @@
 
 
 import pytest
-from agent_core.agents.query_classifier import QueryClassifier
-from agent_core.agents.factory import AgentFactory
+import json
+from agent_core.agents.query_classifier import ClassificationResult, QueryIntent
+from agent_core.agents.agent_factory import AgentFactory
 from agent_core.agents.base_agent import AgentInput
+from pathlib import Path
 
+config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
 class TestQueryClassifier:
     """Tests for the QueryClassifier class."""
 
-    @pytest.fixture
-    def real_factory(self):
-        """Create factory pointing to real config directory."""
-        return AgentFactory()
-
-    def test_1_classify_meeting_notes(self, real_factory):
+    @pytest.mark.asyncio
+    async def test_1_classify_meeting_notes(self):
         """Test classifying a meeting notes query."""
+        real_factory =AgentFactory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         meeting_note = """
         ## Meeting 01/07
@@ -23,9 +23,64 @@ class TestQueryClassifier:
 * Issue with ARRAY_AGG function. In Java the Array_agg ROW seems to work
 * Less degraded statement alert reported since beginning of the year. 
         """
-        result = classifier.execute(AgentInput(query=meeting_note))
-        print(result)
-        assert result.confidence == 0.95
-        assert result.reasoning == "The user is asking to process a meeting notes."
-        assert result.entities == {"topic": "meeting notes", "action": "review"}
-        assert result.suggested_context == "The user is asking to review a meeting notes document for summarize and build next steps."
+        result = await classifier.execute(AgentInput(query=meeting_note))
+        print(json.dumps(result.__dict__, default=str, indent=2))
+        assert isinstance(result, ClassificationResult)
+        assert result.confidence >= 0.8
+        assert result.intent == QueryIntent.MEETING_NOTE
+        assert result.reasoning is not None
+        assert result.entities is not None
+        assert result.entities.get("topic") is not None
+        assert "meeting" in result.entities.get("topic").lower()
+
+
+    @pytest.mark.asyncio
+    async def test_2_classify_research(self):
+        """Test classifying research query."""
+        real_factory =AgentFactory(config_dir=config_dir)
+        classifier = real_factory.create_agent("QueryClassifier")
+        query = """
+       I would like to know how to learn environment engineering using free sources
+        """
+        result = await classifier.execute(AgentInput(query=query))
+        print(json.dumps(result.__dict__, default=str, indent=2))
+        assert isinstance(result, ClassificationResult)
+        assert result.confidence >= 0.8
+        assert result.intent == QueryIntent.KNOWLEDGE_SEARCH
+        assert result.reasoning is not None
+        assert result.entities is not None
+        assert result.entities.get("topic") is not None
+
+    @pytest.mark.asyncio
+    async def test_3_code_help(self):
+        """Test classifying research query."""
+        real_factory =AgentFactory(config_dir=config_dir)
+        classifier = real_factory.create_agent("QueryClassifier")
+        query = """
+       I would like to implement a REST API endpoint in FastAPI using a RAG approach
+        """
+        result = await classifier.execute(AgentInput(query=query))
+        print(json.dumps(result.__dict__, default=str, indent=2))
+        assert isinstance(result, ClassificationResult)
+        assert result.confidence >= 0.8
+        assert result.intent == QueryIntent.CODE_HELP
+        assert result.reasoning is not None
+        assert result.entities is not None
+        assert result.entities.get("topic") is not None
+
+    @pytest.mark.asyncio
+    async def test_4_task_planning(self):
+        """Test classifying research query."""
+        real_factory =AgentFactory(config_dir=config_dir)
+        classifier = real_factory.create_agent("QueryClassifier")
+        query = """
+        what should I do to prepare for the interview next week?
+        """
+        result = await classifier.execute(AgentInput(query=query))
+        print(json.dumps(result.__dict__, default=str, indent=2))
+        assert isinstance(result, ClassificationResult)
+        assert result.confidence >= 0.8
+        assert result.intent == QueryIntent.TASK_PLANNING
+        assert result.reasoning is not None
+        assert result.entities is not None
+        assert result.entities.get("topic") is not None

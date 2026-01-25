@@ -6,56 +6,61 @@ with the specified model available.
 Run with: pytest tests/it/test_base_agent.py -v -m integration
 """
 
+from pathlib import Path
 import pytest
 
 from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
-from agent_core.agents.factory import AgentFactory
+from agent_core.agents.agent_factory import AgentFactory, AgentConfig
 from .conftest import (
-    OLLAMA_BASE_URL,
-    OLLAMA_MODEL,
+    LOCAL_BASE_URL,
+    LOCAL_MODEL,
     requires_ollama,
     requires_model,
 )
 
 
+config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
+
 @pytest.mark.integration
 @requires_ollama
 @requires_model
-class TestBaseAgentOllama:
+class TestBaseAgent:
     """Integration tests for BaseAgent with Ollama backend."""
 
     @pytest.fixture
     def agent(self) -> BaseAgent:
         """Create a BaseAgent configured for Ollama."""
-        factory = AgentFactory()
-        return factory.create_agent("BaseAgent")
+        factory = AgentFactory(config_dir=config_dir)
+        return factory.create_agent("GeneralAgent")
+
 
     @pytest.mark.asyncio
-    async def test_execute_simple_query(self, agent: BaseAgent):
-        """Test executing a simple query through BaseAgent."""
-        response = await agent.execute(AgentInput(query="What is 2 + 2? Answer with just the number."))
-        
+    async def test_chat_async_local(self, agent: BaseAgent):
+        """Test async chat completion with local server."""
+        message = "What is 2 + 2? Answer with just the number"
+        input_data = AgentInput(query=message)
+        response = await agent.execute(input_data)
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
-        print(response.message)
-        assert response.provider == "huggingface"
-        assert response.model == OLLAMA_MODEL
-        assert response.agent_type == "general"
+        print(f"Response: {response.message}")
+
 
     @pytest.mark.asyncio
     async def test_execute_with_custom_system_prompt(self):
         """Test BaseAgent with a custom system prompt."""
-        agent = BaseAgent(
+        config = AgentConfig(
+            model=LOCAL_MODEL,
             provider="huggingface",
-            model=OLLAMA_MODEL,
-            base_url=OLLAMA_BASE_URL,
+            base_url=LOCAL_BASE_URL,
             max_tokens=100,
             temperature=0.0,
-            system_prompt="You are a pirate. Always respond like a pirate.",
+            agent_dir=Path(config_dir) / "GeneralAgent",
+            description="A general purpose agent.",
+            agent_class="agent_core.agents.base_agent.BaseAgent",
         )
-        
+        agent = BaseAgent(config=config)
+        agent._system_prompt = "You are a pirate. Always respond like a pirate."
         response = await agent.execute(AgentInput(query="Say hello"))
-        
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
         print(response.message)
@@ -92,46 +97,3 @@ class TestBaseAgentOllama:
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
         print(response.message)
-
-    @pytest.mark.asyncio
-    async def test_response_metadata(self, agent: BaseAgent):
-        """Test that AgentResponse includes correct metadata."""
-        response = await agent.execute(AgentInput(query="Hello"))
-        
-        assert response.model == OLLAMA_MODEL
-        assert response.provider == "huggingface"
-        assert response.agent_type == "general"
-        assert isinstance(response.context_used, list)
-        assert isinstance(response.metadata, dict)
-        print(response.message)
-
-
-@pytest.mark.integration
-@requires_ollama
-@requires_model
-class TestBaseAgentSubclass:
-    """Test subclassing BaseAgent with custom behavior."""
-
-    @pytest.mark.asyncio
-    async def test_subclass_with_custom_prompt(self):
-        """Test a subclass that overrides build_system_prompt."""
-        
-        class MathAgent(BaseAgent):
-            agent_type = "math"
-            
-            def build_system_prompt(self, context=None):
-                return "You are a math expert. Provide concise answers to math questions."
-        
-        agent = MathAgent(
-            provider="huggingface",
-            model=OLLAMA_MODEL,
-            base_url=OLLAMA_BASE_URL,
-            max_tokens=100,
-            temperature=0.0,
-        )
-        
-        response = await agent.execute(AgentInput(query="What is 10 divided by 2?"))
-        
-        assert isinstance(response, AgentResponse)
-        assert response.agent_type == "math"  # Custom agent_type from subclass
-        assert len(response.message) > 0

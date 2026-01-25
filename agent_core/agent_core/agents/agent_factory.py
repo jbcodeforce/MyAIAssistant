@@ -1,0 +1,359 @@
+"""Agent factory for creating agents from configuration.
+
+This module provides a factory pattern for creating agent instances
+based on YAML configuration files in the config directory.
+
+AgentConfig is the unified configuration class that includes both
+agent-specific settings and LLM configuration.
+"""
+
+import importlib
+import logging
+import os
+from pathlib import Path
+from typing import Optional, Dict, Any, Type, Literal, TYPE_CHECKING
+import yaml
+from pydantic import BaseModel, Field
+
+if TYPE_CHECKING:
+    from agent_core.agents.base_agent import BaseAgent
+
+logger = logging.getLogger(__name__)
+
+class AgentConfig(BaseModel):
+    """
+    Unified configuration for agents, including LLM settings.
+    
+    This Pydantic model combines agent-specific configuration with LLM configuration,
+    providing a single source of truth for agent setup.
+    
+    Agent-specific attributes:
+        name: Agent name (matches directory name in config/)
+        description: Human-readable description of the agent
+        agent_class: Fully qualified Python class name to instantiate
+    
+    LLM attributes:
+        model: Model name (HF Hub model ID or local model name)
+        api_key: HF_TOKEN for remote HF Hub models (not needed for local servers)
+        base_url: Base URL for local inference servers (TGI, vLLM, Ollama, etc.)
+        max_tokens: Maximum tokens in the response
+        temperature: Sampling temperature (0.0 to 2.0)
+        timeout: Request timeout in seconds
+        response_format: Optional response format (e.g., {"type": "json_object"})
+    
+    Extra:
+        extra: Additional configuration fields from YAML
+    """
+    # Agent-specific fields
+    name: str = ""
+    description: str = ""
+    agent_class: Optional[str] = None
+    
+    # LLM configuration fields (provider is always "huggingface")
+    model: str = "gpt-4o-mini"
+    api_key: Optional[str] = None
+    base_url: Optional[str] = "http://localhost:11434/v1"
+    max_tokens: int = 2048
+    temperature: float = 0.7
+    timeout: float = 60.0
+    response_format: Optional[dict] = None
+    agent_dir: Optional[Path] = None
+    # Extra fields from YAML
+    extra: Dict[str, Any] = Field(default_factory=dict)
+    provider: str = "huggingface",
+    # RAG configuration
+    use_rag: bool = False,
+    rag_top_k: int = 5,
+    rag_category: str = None
+    
+    @classmethod
+    def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
+        """
+        Load AgentConfig from a YAML file.
+        
+        Args:
+            yaml_path: Path to the agent.yaml file
+            
+        Returns:
+            AgentConfig instance
+            
+        Raises:
+            FileNotFoundError: If YAML file doesn't exist
+            yaml.YAMLError: If YAML is invalid
+        """
+        with open(yaml_path, 'r') as f:
+            data = yaml.safe_load(f) or {}
+        
+        # Extract known fields (provider is ignored, always "huggingface")
+        known_fields = {
+            'name', 'description', 'class', 'model','provider',
+            'api_key', 'base_url', 'max_tokens', 'temperature',
+            'timeout', 'response_format'
+        }
+        extra = {k: v for k, v in data.items() if k not in known_fields}
+        return cls(
+            name=data.get('name', yaml_path.parent.name),
+            description=data.get('description', 'A general purpose agent.'),
+            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
+            model=data.get('model', 'mistral:7b-instruct'),
+            provider=data.get('provider', 'huggingface'),
+            api_key=data.get('api_key'),
+            base_url=data.get('base_url','http://localhost:11434/v1'),
+            max_tokens=int(data.get('max_tokens', 10000)),
+            temperature=float(data.get('temperature', 0.7)),
+            timeout=float(data.get('timeout', 60.0)),
+            response_format=data.get('response_format'),
+            extra=extra
+        )
+    
+    def get_base_url(self) -> Optional[str]:
+        """Get the base URL, using default if not set."""
+        return self.base_url
+    
+    def validate(self) -> None:
+        """Validate the configuration."""
+        if not self.model:
+            raise ValueError("Model name is required")
+        
+        if self.temperature < 0.0 or self.temperature > 2.0:
+            raise ValueError("Temperature must be between 0.0 and 2.0")
+        
+        if self.max_tokens < 1:
+            raise ValueError("max_tokens must be at least 1")
+    
+
+
+# Import BaseAgent here to avoid circular imports
+def _get_base_agent():
+    from agent_core.agents.base_agent import BaseAgent
+    return BaseAgent
+
+
+class AgentFactory:
+    """
+    Factory for creating agent instances from configuration.
+    
+    Scans a configuration directory for agent definitions and creates
+    agent instances with injected configuration and prompts.
+    
+    Example:
+        factory = AgentFactory(config_dir="path/to/config/directory")
+        
+        # List available agents
+        print(factory.list_agents())  # ['QueryClassifier', 'GeneralAgent', ...]
+        
+        # Create an agent (uses BaseAgent when class is omitted)
+        agent = factory.create_agent("GeneralAgent")
+        
+        # Get config
+        config = factory.get_config("QueryClassifier")
+    """
+    
+    # Registry mapping class names to agent classes
+    _class_registry: Dict[str, Type] = {}
+    
+    def __init__(self, config_dir: str = None):
+        """
+        Initialize the agent factory.
+        
+        Args:
+            config_dir: Directory containing agent configurations.
+                       Defaults to the 'config' folder in the agents module.
+        """
+        if config_dir is None:
+            # Default to config folder relative to this module
+            config_dir = Path(__file__).parent / "config"
+          
+        # Load all agent configurations
+        self._configs = self._discover_agents( Path(config_dir))
+    
+    def _discover_agents(self, config_dir: Path) -> Dict[str, AgentConfig]:
+        """Scan config directory and load all agent configurations."""
+        _configs: Dict[str, AgentConfig] = {}  
+        if not config_dir.exists():
+            logger.warning(f"Config directory not found: {config_dir}")
+            return
+        
+        for agent_dir in config_dir.iterdir():
+            if not agent_dir.is_dir():
+                continue
+            
+            agent_name = agent_dir.name
+            
+            # Skip __pycache__ and hidden directories
+            if agent_name.startswith('_') or agent_name.startswith('.'):
+                continue
+            
+            # Load agent.yaml
+            yaml_path = agent_dir / "agent.yaml"
+            if yaml_path.exists():
+                try:
+                    _configs[agent_name] = AgentConfig.from_yaml(yaml_path)
+                    _configs[agent_name].agent_dir = agent_dir
+                    logger.debug(f"Loaded config for agent: {agent_name}")
+                except Exception as e:
+                    logger.error(f"Failed to load config for {agent_name}: {e}")
+        return _configs
+            
+    
+    def list_agents(self) -> list[str]:
+        """
+        List all available agent names.
+        
+        Returns:
+            List of agent names found in config directory
+        """
+        return list(self._configs.keys())
+    
+    def get_config(self, agent_name: str) -> Optional[AgentConfig]:
+        """
+        Get configuration for a specific agent.
+        
+        Args:
+            agent_name: Name of the agent
+            
+        Returns:
+            AgentConfig if found, None otherwise
+        """
+        return self._configs.get(agent_name)
+    
+    def create_agent(self, agent_name: Optional[str] = None, **kwargs) -> "BaseAgent":
+        """
+        Create an agent instance by name.
+        
+        Args:
+            agent_name: Name of the agent to create
+            **kwargs: Additional arguments to pass to the agent constructor
+            
+        Returns:
+            Agent instance
+            
+        Raises:
+            ValueError: If agent name is unknown
+        """
+        if agent_name is None or agent_name == "":
+            agent_name = "GeneralAgent"
+        config = self.get_config(agent_name)
+        if config is None:
+            raise ValueError(f"Unknown agent: {agent_name}")
+        # Resolve agent class
+        agent_cls = self._resolve_agent_class(config.agent_class)
+        
+        # Build constructor arguments from AgentConfig
+        # provider is always "huggingface"
+        constructor_kwargs = {
+            'config': config,
+            **kwargs
+        }
+        agent = agent_cls(**constructor_kwargs)
+        return agent
+    
+    def _resolve_agent_class(self, class_name: Optional[str]) -> Type:
+        """
+        Resolve a fully qualified class name to an actual agent class.
+        
+        Args:
+            class_name: Fully qualified class name (e.g., 'agent_core.agents.base_agent.BaseAgent'),
+                       or None for default BaseAgent
+            
+        Returns:
+            Agent class type
+            
+        Raises:
+            ValueError: If class cannot be imported or is not a BaseAgent subclass
+        """
+        BaseAgent = _get_base_agent()
+        
+        if class_name is None:
+            # Return BaseAgent as default (generic agent)
+            return BaseAgent
+        
+        # Check class registry first (for manually registered classes)
+        if class_name in self._class_registry:
+            return self._class_registry[class_name]
+        
+        # Dynamic import using fully qualified class name
+        try:
+            agent_cls = self._import_class(class_name)
+            
+            # Validate it's a BaseAgent subclass
+            if not issubclass(agent_cls, BaseAgent):
+                raise ValueError(
+                    f"Class {class_name} is not a subclass of BaseAgent"
+                )
+            
+            return agent_cls
+            
+        except (ImportError, AttributeError) as e:
+            raise ValueError(f"Failed to import agent class '{class_name}': {e}")
+    
+    def _import_class(self, fully_qualified_name: str) -> Type:
+        """
+        Dynamically import a class from its fully qualified name.
+        
+        Args:
+            fully_qualified_name: Full module path and class name
+                                 (e.g., 'agent_core.agents.base_agent.BaseAgent')
+            
+        Returns:
+            The imported class
+            
+        Raises:
+            ImportError: If module cannot be imported
+            AttributeError: If class doesn't exist in module
+        """
+        # Split into module path and class name
+        parts = fully_qualified_name.rsplit('.', 1)
+        if len(parts) != 2:
+            raise ImportError(
+                f"Invalid fully qualified class name: {fully_qualified_name}. "
+                f"Expected format: 'module.path.ClassName'"
+            )
+        
+        module_path, class_name = parts
+        
+        # Import the module
+        module = importlib.import_module(module_path)
+        
+        # Get the class from the module
+        return getattr(module, class_name)
+    
+    @classmethod
+    def register_class(cls, name: str, agent_class: Type) -> None:
+        """
+        Register a custom agent class by name.
+        
+        This allows using a short name instead of fully qualified name.
+        
+        Args:
+            name: Name to register the class under (can be short or fully qualified)
+            agent_class: The agent class to register
+        """
+        cls._class_registry[name] = agent_class
+        logger.info(f"Registered agent class: {name}")
+
+
+# Singleton instance
+_factory: Optional[AgentFactory] = None
+
+
+def get_agent_factory(config_dir: Path = None) -> AgentFactory:
+    """
+    Get or create the global agent factory instance.
+    
+    Args:
+        config_dir: Optional config directory path
+        
+    Returns:
+        AgentFactory instance
+    """
+    global _factory
+    if _factory is None:
+        _factory = AgentFactory(config_dir=config_dir)
+    return _factory
+
+
+def reset_agent_factory() -> None:
+    """Reset the global factory instance. Useful for testing."""
+    global _factory
+    _factory = None

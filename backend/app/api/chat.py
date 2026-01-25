@@ -14,11 +14,6 @@ from app.api.schemas.chat import (
 )
 from agent_core.agents.query_classifier import QueryIntent
 from agent_core.agents.agent_router import AgentRouter, RoutedResponse, WorkflowState, get_agent_router
-from agent_core.agents.base_agent import BaseAgent
-from agent_core.agents.rag_agent import RAGAgent
-from agent_core.agents.task_agent import TaskAgent
-from agent_core.agents.general_agent import GeneralAgent
-from agent_core.agents.code_agent import CodeAgent
 
 
 router = APIRouter(prefix="/chat", tags=["chat"])

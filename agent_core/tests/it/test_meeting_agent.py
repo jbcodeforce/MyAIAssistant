@@ -6,10 +6,12 @@ Run with: pytest tests/it/test_meeting_agent.py -v -m integration
 """
 
 import pytest
-
+from pathlib import Path
 from agent_core.agents.meeting_agent import MeetingAgentResponse
-from agent_core.agents.factory import AgentFactory
+from agent_core.agents.agent_factory import AgentFactory
 from agent_core.agents.base_agent import AgentInput
+
+config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
 from .conftest import requires_ollama, requires_model
 

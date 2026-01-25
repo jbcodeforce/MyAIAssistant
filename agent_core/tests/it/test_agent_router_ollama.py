@@ -1,7 +1,7 @@
-"""Integration tests for agent router with real Ollama calls.
-
-These tests require a running Ollama instance with the specified model.
-Run with: pytest tests/it/ -v -m integration
+"""Integration tests for agent routing: 
+1. Classify query to determine intent
+2. Route query to appropriate agent
+3. Execute agent and return response
 """
 
 import os
@@ -9,7 +9,7 @@ import pytest
 import httpx
 
 
-from agent_core.agents.factory import AgentConfig, AgentFactory
+from agent_core.agents.agent_factory import AgentFactory
 from agent_core.agents.query_classifier import (
     QueryClassifier,
     QueryIntent,

@@ -3,7 +3,7 @@
 import typer
 from rich.console import Console
 
-from ai_assist_cli.commands import init, config, workspace, global_cmd, knowledge
+from ai_assist_cli.commands import init, config, workspace, global_cmd, knowledge, run
 
 app = typer.Typer(
     name="ai_assist",
@@ -21,6 +21,9 @@ app.add_typer(knowledge.app, name="knowledge", help="Knowledge base management")
 
 # Register top-level init command with explicit name
 app.command(name="init")(init.init_command)
+
+# Register top-level run command
+app.command(name="run")(run.run_command)
 
 
 @app.callback()

@@ -1,6 +1,6 @@
 name: RAGAgent
 description: Knowledge base search and retrieval agent using RAG (Retrieval-Augmented Generation).
 # class field omitted - uses BaseAgent (generic agent) with RAG enabled
-model: gpt-4o-mini
+model:  mistral:7b-instruct
 temperature: 0.3
 max_tokens: 2048

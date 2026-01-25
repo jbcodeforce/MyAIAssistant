@@ -10,7 +10,7 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "${fileDirname}",
+            "cwd": "${workspaceFolder}/agent_core",
             "env": {
                 "PYTHONPATH": "${fileWorkspaceFolder}/agent_core/src:${fileWorkspaceFolder}/agent_core/tests"
             },
