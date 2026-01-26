@@ -97,3 +97,23 @@ class TestBaseAgent:
         assert isinstance(response, AgentResponse)
         assert len(response.message) > 0
         print(response.message)
+
+
+class TestBaseAgentWithPersona:
+    """Integration tests for BaseAgent with Persona."""
+
+    @pytest.fixture
+    def agent(self) -> BaseAgent:
+        """Create a BaseAgent configured for Persona."""
+        factory = AgentFactory(config_dir=config_dir)
+        return factory.create_agent("PersonaAgent")
+
+    @pytest.mark.asyncio
+    async def test_chat_async_local(self, agent: BaseAgent):
+        """Test async chat completion with local server."""
+        message = "I need to get an environment engineering learning plan"
+        input_data = AgentInput(query=message)
+        response = await agent.execute(input_data)
+        assert isinstance(response, AgentResponse)
+        assert len(response.message) > 0
+        print(f"Response: {response.message}")

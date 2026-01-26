@@ -7,17 +7,14 @@ This module implements the main routing workflow that:
 """
 
 import logging
-from typing import Optional, Dict, Any, TYPE_CHECKING
+from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, Field
-
-if TYPE_CHECKING:
-    from agent_core.agents.factory import AgentConfig
+from agent_core.agents.agent_factory import AgentConfig, get_agent_factory
 
 from agent_core.agents.base_agent import BaseAgent, AgentResponse, AgentInput
 from agent_core.agents.query_classifier import (
     QueryClassifier,
-    get_query_classifier,
     ClassificationResult,
     QueryIntent,
 )
@@ -58,28 +55,10 @@ class AgentRouter:
     4. Response: Return formatted response with metadata
     
     Example:
-        # Create agents
-        rag_agent = MyRAGAgent(llm_config=config)
-        code_agent = MyCodeAgent(llm_config=config)
-        general_agent = MyGeneralAgent(llm_config=config)
-        
         # Create router
-        router = AgentRouter(
-            classifier=QueryClassifier(llm_config=config),
-            agents={
-                "rag": rag_agent,
-                "code": code_agent,
-                "general": general_agent,
-            },
-            intent_mapping={
-                QueryIntent.KNOWLEDGE_SEARCH: "rag",
-                QueryIntent.CODE_HELP: "code",
-                QueryIntent.GENERAL_CHAT: "general",
-            }
-        )
-        
-        # Route a query
-        response = await router.route("How do I implement OAuth?")
+        router = AgentRouter()
+        query = "How do I implement OAuth?"
+        response = await router.route(query)
     """
     
     # Default intent to agent type mapping
@@ -94,24 +73,29 @@ class AgentRouter:
     
     def __init__(
         self,
-        classifier: QueryClassifier = None,
-        agents: Dict[str, BaseAgent] = None,
-        intent_mapping: Dict[QueryIntent, str] = None,
-        default_agent: str = "general"
+        config_dir: Optional[str] = None
     ):
         """
         Initialize the router.
         
         Args:
-            classifier: Query classifier instance
-            agents: Dictionary mapping agent type names to agent instances
-            intent_mapping: Dictionary mapping intents to agent type names
-            default_agent: Default agent type to use when no mapping found
+            config_dir: Optional path to agent configuration directory.
+                       If None, uses AgentFactory default.
         """
-        self.classifier = classifier or get_query_classifier()
-        self.agents: Dict[str, BaseAgent] = agents or {}
-        self.intent_mapping = intent_mapping or self.DEFAULT_INTENT_MAPPING.copy()
-        self.default_agent = default_agent
+        factory = get_agent_factory(config_dir=config_dir)
+
+        self.classifier = factory.create_agent("QueryClassifier")
+        self.agents: Dict[str, BaseAgent] = {}
+        self.intent_mapping = self.DEFAULT_INTENT_MAPPING.copy()
+        self.default_agent = factory.create_agent("GeneralAgent")
+        self.agents[QueryIntent.KNOWLEDGE_SEARCH] = self.default_agent
+        self.agents[QueryIntent.TASK_PLANNING] = factory.create_agent("TaskAgent")
+        self.agents[QueryIntent.TASK_STATUS] = self.agents[QueryIntent.TASK_PLANNING]
+        self.agents[QueryIntent.CODE_HELP] = factory.create_agent("CodeAgent")
+        self.agents[QueryIntent.GENERAL_CHAT] = self.default_agent
+        self.agents[QueryIntent.UNCLEAR] = self.default_agent
+
+
 
     async def route(
         self,
@@ -153,46 +137,6 @@ class AgentRouter:
         # Step 3: Build and return response
         return self._build_response(state)
 
-    def route_sync(
-        self,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None,
-        force_intent: Optional[QueryIntent] = None
-    ) -> RoutedResponse:
-        """
-        Route a query synchronously.
-        
-        Note: This requires agents to implement synchronous execution.
-        
-        Args:
-            query: User's input query
-            conversation_history: Previous conversation messages
-            context: Additional context
-            force_intent: Override classification with specific intent
-            
-        Returns:
-            RoutedResponse with message and metadata
-        """
-        state = WorkflowState(
-            query=query,
-            conversation_history=conversation_history or [],
-            context=context or {}
-        )
-        
-        # Step 1: Classify
-        state = self._classify_step_sync(state, force_intent)
-        
-        if state.error:
-            return self._error_response(state)
-        
-        # Note: Sync routing requires agents to implement sync execution
-        # This is a simplified version - full sync support would need
-        # BaseAgent to have execute_sync method
-        return self._error_response(WorkflowState(
-            query=query,
-            error="Synchronous routing requires agent execute_sync implementation"
-        ))
 
     async def _classify_step(
         self,
@@ -210,15 +154,9 @@ class AgentRouter:
             logger.debug(f"Using forced intent: {force_intent}")
             return state
         
-        if not self.classifier:
-            state.error = "No classifier configured"
-            return state
-        
         try:
-            state.classification = await self.classifier.classify(
-                state.query,
-                state.conversation_history
-            )
+            state.classification = await self.classifier.execute(AgentInput(query=state.query, conversation_history=state.conversation_history))
+    
             logger.info(
                 f"Classified query as {state.classification.intent} "
                 f"(confidence: {state.classification.confidence:.2f})"
@@ -234,49 +172,14 @@ class AgentRouter:
         
         return state
 
-    def _classify_step_sync(
-        self,
-        state: WorkflowState,
-        force_intent: Optional[QueryIntent] = None
-    ) -> WorkflowState:
-        """Synchronous classification step."""
-        if force_intent:
-            state.classification = ClassificationResult(
-                intent=force_intent,
-                confidence=1.0,
-                reasoning="Intent forced by caller",
-                entities={}
-            )
-            return state
-        
-        if not self.classifier:
-            state.error = "No classifier configured"
-            return state
-        
-        try:
-            state.classification = self.classifier.classify_sync(
-                state.query,
-                state.conversation_history
-            )
-        except Exception as e:
-            logger.error(f"Classification failed: {e}")
-            state.classification = ClassificationResult(
-                intent=QueryIntent.GENERAL_CHAT,
-                confidence=0.5,
-                reasoning=f"Classification failed: {str(e)}",
-                entities={}
-            )
-        
-        return state
-
     async def _route_step(self, state: WorkflowState) -> WorkflowState:
         """Routing step - select and execute appropriate agent."""
         intent = state.classification.intent
-        agent_key = self.intent_mapping.get(intent, self.default_agent)
+        agent_key = self.intent_mapping.get(intent.value, self.default_agent)
         agent = self.agents.get(agent_key)
         
         if not agent:
-            state.error = f"No agent available for intent: {intent} (agent type: {agent_key})"
+            state.error = f"No agent available for intent: {intent.value} (agent type: {agent_key})"
             return state
         
         logger.info(f"Routing to {agent_key} agent")
@@ -345,71 +248,3 @@ class AgentRouter:
         """Add or update intent to agent mapping."""
         self.intent_mapping[intent] = agent_type
 
-# Singleton instance
-_agent_router: Optional[AgentRouter] = None
-
-
-def get_agent_router(config: "AgentConfig" = None) -> AgentRouter:
-    """
-    Get or create the global agent router instance.
-    
-    On first call, creates agents using the provided config.
-    Subsequent calls return the cached instance.
-    
-    Args:
-        config: Optional AgentConfig for agents.
-                If not provided, agents use default config.
-    """
-    global _agent_router
-    if _agent_router is None:
-        _agent_router = _create_default_router(config)
-    return _agent_router
-
-
-def _create_default_router(config: "AgentConfig" = None) -> AgentRouter:
-    """Create router with default agent configuration."""
-    from agent_core.agents.base_agent import BaseAgent
-    from agent_core.agents.code_agent import CodeAgent
-    from agent_core.agents.task_agent import TaskAgent
-    from agent_core.agents.factory import AgentConfig
-    from agent_core.services.rag.service import get_rag_service
-    
-    # Create agents - they share the same config if provided
-    kwargs = {"config": config} if config else {}
-    
-    general_agent = BaseAgent(**kwargs)
-    # RAGAgent is now BaseAgent with RAG enabled
-    rag_agent = BaseAgent(use_rag=True, rag_service=get_rag_service(), **kwargs)
-    code_agent = CodeAgent(**kwargs)
-    task_agent = TaskAgent(**kwargs)
-    
-    # Create router with all agents registered
-    router = AgentRouter(
-        agents={
-            # Map agent type names to agent instances
-            "general_chat": general_agent,
-            "knowledge_search": rag_agent,
-            "code_help": code_agent,
-            "task_planning": task_agent,
-            "task_status": task_agent,  # Task agent handles both planning and status
-            "unclear": general_agent,  # Fallback to general for unclear intent
-        },
-        intent_mapping={
-            QueryIntent.GENERAL_CHAT: "general_chat",
-            QueryIntent.KNOWLEDGE_SEARCH: "knowledge_search",
-            QueryIntent.CODE_HELP: "code_help",
-            QueryIntent.TASK_PLANNING: "task_planning",
-            QueryIntent.TASK_STATUS: "task_status",
-            QueryIntent.UNCLEAR: "unclear",
-        },
-        default_agent="general_chat"
-    )
-    
-    logger.info("Created default agent router with all agents registered")
-    return router
-
-
-def reset_agent_router() -> None:
-    """Reset the global router instance. Useful for testing or reconfiguration."""
-    global _agent_router
-    _agent_router = None

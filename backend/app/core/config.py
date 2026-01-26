@@ -142,6 +142,9 @@ class Settings(BaseSettings):
     # Meeting notes storage
     notes_root: str = "docs/meetings"  # Root folder for meeting notes
 
+    # Agent configuration directory
+    agent_config_dir: Optional[str] = None  # Path to agent config directory (defaults to agent_core/agent_core/agents/config)
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
@@ -211,6 +214,7 @@ def setup_logging() -> None:
     Configure logging based on settings.
     
     Creates file handler if log_file is specified, otherwise logs to console.
+    Automatically creates ./logs/app.log if log_file is None.
     Call this early in application startup.
     """
     settings = get_settings()
@@ -229,14 +233,46 @@ def setup_logging() -> None:
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
     
-    # Add file handler if log_file is specified
-    if settings.log_file:
-        log_path = Path(settings.log_file)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        file_handler = logging.FileHandler(log_path)
-        file_handler.setFormatter(formatter)
-        root_logger.addHandler(file_handler)
-        logger.info(f"Logging to file: {log_path.resolve()}")
+    # Determine log file path: use explicit setting or default to ./logs/app.log
+    log_file_path = settings.log_file
+    if log_file_path is None:
+        # Default to ./logs/app.log relative to current working directory
+        log_path = Path.cwd() / "logs" / "app.log"
+    else:
+        log_path = Path(log_file_path)
+        # If path is relative, resolve it relative to current working directory
+        if not log_path.is_absolute():
+            log_path = Path.cwd() / log_path
+    
+    # Add file handler (always create log file for persistence)
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    file_handler = logging.FileHandler(log_path)
+    file_handler.setFormatter(formatter)
+    root_logger.addHandler(file_handler)
+    logger.info(f"Logging to file: {log_path.resolve()}")
+
+
+def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> str:
+    """
+    Resolve the agent configuration directory path.
+    
+    Args:
+        agent_config_dir: Optional path from settings. If None, uses default.
+        
+    Returns:
+        Resolved absolute path as string.
+    """
+    if agent_config_dir is None:
+        # Default to current hardcoded path relative to workspace root
+        # This assumes the workspace root is the current working directory
+        return str(Path.cwd() / "agent_core" / "agent_core" / "agents" / "config")
+    
+    path = Path(agent_config_dir)
+    if path.is_absolute():
+        return str(path)
+    else:
+        # Resolve relative to workspace root (current working directory)
+        return str(Path.cwd() / path)
 
 
 def get_config_info() -> dict[str, Any]:

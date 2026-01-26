@@ -22,7 +22,7 @@ from agent_core.services.rag.document_loader import (
 )
 from agent_core.services.rag.text_splitter import RecursiveTextSplitter, TextChunk
 from agent_core.services.rag.service import RAGService, SearchResult
-from agent_core.agents.factory import AgentConfig
+from agent_core.agents.agent_factory import AgentConfig, get_agent_factory
 from agent_core.agents.base_agent import BaseAgent, AgentInput
 
 

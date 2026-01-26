@@ -11,7 +11,7 @@ import importlib
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any, Type, Literal, TYPE_CHECKING
+from typing import Optional, Dict, Any, Type, TYPE_CHECKING
 import yaml
 from pydantic import BaseModel, Field
 
@@ -204,8 +204,9 @@ class AgentFactory:
             List of agent names found in config directory
         """
         return list(self._configs.keys())
+
     
-    def get_config(self, agent_name: str) -> Optional[AgentConfig]:
+    def get_agent_map(self, agent_name: str) -> Optional[AgentConfig]:
         """
         Get configuration for a specific agent.
         
@@ -233,7 +234,7 @@ class AgentFactory:
         """
         if agent_name is None or agent_name == "":
             agent_name = "GeneralAgent"
-        config = self.get_config(agent_name)
+        config = self.get_agent_map(agent_name)
         if config is None:
             raise ValueError(f"Unknown agent: {agent_name}")
         # Resolve agent class
@@ -246,6 +247,7 @@ class AgentFactory:
             **kwargs
         }
         agent = agent_cls(**constructor_kwargs)
+        agent.agent_type = agent_name
         return agent
     
     def _resolve_agent_class(self, class_name: Optional[str]) -> Type:

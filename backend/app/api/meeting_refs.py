@@ -1,6 +1,5 @@
 import logging
 from typing import Optional
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -18,7 +17,9 @@ from app.api.schemas.meeting_ref import (
 )
 from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_service
 from app.api.schemas.project import ProjectEntity, Step
-from agent_core.agents.factory import AgentFactory
+from app.core.config import get_settings, resolve_agent_config_dir
+from agent_core.agents.agent_factory import AgentFactory
+from agent_core.agents.base_agent import AgentInput
 from agent_core.agents.meeting_agent import MeetingAgentResponse
 
 logger = logging.getLogger(__name__)
@@ -256,8 +257,12 @@ async def extract_meeting_info(
         if project:
             project_description = project.description
 
+    # Get agent config directory from settings
+    settings = get_settings()
+    config_dir = resolve_agent_config_dir(settings.agent_config_dir)
+    
     # Create MeetingAgent using AgentFactory with settings overrides
-    factory = AgentFactory()
+    factory = AgentFactory(config_dir=config_dir)
     agent = factory.create_agent(
         "MeetingAgent"
     )
@@ -271,7 +276,8 @@ async def extract_meeting_info(
     
     # Execute the agent
     try:
-        agent_response: MeetingAgentResponse = await agent.execute(query=content, context=context)
+        input = AgentInput(query=content, context=context)
+        agent_response: MeetingAgentResponse = await agent.execute(input_data=input)
     except Exception as e:
         logger.error(f"MeetingAgent execution failed: {e}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")

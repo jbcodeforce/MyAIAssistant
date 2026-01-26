@@ -1,5 +1,7 @@
 name: CodeAgent
 description: Code assistance agent for programming questions, code review, debugging, and technical implementation guidanc
-model: gpt-4o-mini
+model: mistral:7b-instruct
 temperature: 0.3
 max_tokens: 4096
+class: agent_core.agents.base_agent.BaseAgent
+model: mistral:7b-instruct

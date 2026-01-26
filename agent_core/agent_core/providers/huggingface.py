@@ -101,6 +101,13 @@ class HuggingFaceProvider(LLMProvider):
         is_local = self._is_local_server(config)
         
         try:
+                       # Build chat completion kwargs
+            chat_kwargs = {
+                "messages":  messages,
+                "max_tokens": config.max_tokens,
+                "temperature": config.temperature,
+                "stream": False,
+            }
             # For local servers, use base_url parameter; for remote, use model
             if is_local:
                 client = AsyncInferenceClient(
@@ -108,24 +115,13 @@ class HuggingFaceProvider(LLMProvider):
                     token=token,
                     timeout=config.timeout,
                 )
+                chat_kwargs["model"] = config.model
             else:
                 client = AsyncInferenceClient(
                     model=config.model,
                     token=token,
                     timeout=config.timeout,
                 )
-            
-            # Build chat completion kwargs
-            chat_kwargs = {
-                "messages": [msg.to_dict() for msg in messages],
-                "max_tokens": config.max_tokens,
-                "temperature": config.temperature,
-                "stream": False,
-            }
-            
-            # For local servers, pass model name in the request
-            if is_local:
-                chat_kwargs["model"] = config.model
             
             response = await client.chat_completion(**chat_kwargs)
             

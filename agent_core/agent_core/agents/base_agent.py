@@ -5,7 +5,8 @@ in agentic AI applications, along with base input/output Pydantic models.
 """
 
 import logging
-from typing import Optional
+import re
+from typing import Optional, Tuple 
 from pydantic import BaseModel, Field
 
 from agent_core.types import Message as LLMMessage, LLMResponse
@@ -59,7 +60,7 @@ class BaseAgent:
         response = await agent.execute(AgentInput(query="What is Python?"))
     """
     
-    agent_type: str = "general"
+    rag_service: RAGService = None
     
     def __init__(
         self,
@@ -99,6 +100,7 @@ class BaseAgent:
                 logger.error(f"Failed to load prompt for {self._config.name}: {e}")
         else:
             self._system_prompt = "You are a helpful assistant."
+        self.agent_type = self._config.name or "BaseAgent"
 
     async def execute(
         self,
@@ -119,16 +121,16 @@ class BaseAgent:
         """
         messages, context_used, should_use_rag= await self._build_messages(input_data)
         # Call LLM
-        response = await self._call_llm(messages)
-        
+        response = await self._llm_client.chat_async(messages=messages, config=self._config)
+        response_content = response.content
         return AgentResponse(
-            message=response,
+            message=response_content,
             context_used=context_used,
             agent_type=self.agent_type,
             metadata={"rag_enabled": should_use_rag and self._rag_service is not None}
         )
     
-    async def _build_messages(self, input_data: AgentInput) -> list[dict]:
+    async def _build_messages(self, input_data: AgentInput) -> Tuple[list[dict], list[dict], bool]:
         """
         Process the input data for the agent.
         
@@ -250,7 +252,10 @@ class BaseAgent:
         it will be used. Otherwise, subclasses should override this method.
         
         Args:
-            context: Optional context dict for template substitution
+            context: Optional context dict for template substitution.
+                     Keys in this dict will be used to replace placeholders
+                     in the format {key} in the prompt string. Only placeholders
+                     that exist in context will be substituted; others remain as-is.
             
         Returns:
             The system prompt string
@@ -259,47 +264,20 @@ class BaseAgent:
             # Use injected prompt, with optional context substitution
             prompt = self._system_prompt
             if context:
-                try:
-                    prompt = prompt.format(**context)
-                except KeyError:
-                    # If format fails, return as-is
-                    pass
+                # Substitute placeholders in format {key} with values from context
+                # Only substitute keys that exist in context, leave others as-is
+                def replace_placeholder(match):
+                    key = match.group(1)
+                    if key in context:
+                        value = context[key]
+                        # Handle None values by converting to empty string
+                        return str(value) if value is not None else ""
+                    # Return original placeholder if key not in context
+                    return match.group(0)
+                
+                # Match placeholders in format {key} where key is a valid identifier
+                prompt = re.sub(r'\{(\w+)\}', replace_placeholder, prompt)
             return prompt
         return "You are a helpful assistant."
 
-    async def _call_llm(self, messages: list[dict]) -> str:
-        """
-        Call the LLM using the configured client.
-        
-        Args:
-            messages: List of message dicts with 'role' and 'content'
-            
-        Returns:
-            The LLM response content as a string
-        """
-        # Convert dict messages to LLMMessage objects
-        llm_messages = [
-            LLMMessage(role=msg["role"], content=msg["content"])
-            for msg in messages
-        ]
-        
-        response: LLMResponse = await self._llm_client.chat_async(messages=llm_messages, config=self._config)
-        return response.content
 
-    def _call_llm_sync(self, messages: list[dict]) -> str:
-        """
-        Call the LLM synchronously.
-        
-        Args:
-            messages: List of message dicts with 'role' and 'content'
-            
-        Returns:
-            The LLM response content as a string
-        """
-        llm_messages = [
-            LLMMessage(role=msg["role"], content=msg["content"])
-            for msg in messages
-        ]
-        
-        response: LLMResponse = self._llm_client.chat_sync(messages=llm_messages, config=self._config)
-        return response.content

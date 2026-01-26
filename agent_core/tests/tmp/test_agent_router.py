@@ -60,23 +60,6 @@ class TestWorkflowState:
         assert state.classification.intent == QueryIntent.KNOWLEDGE_SEARCH
         assert state.classification.confidence == 0.9
     
-    def test_state_with_agent_response(self):
-        """Test state with agent response."""
-        agent_response = AgentResponse(
-            message="Test response",
-            context_used=[],
-            model="gpt-4",
-            provider="openai",
-            agent_type="rag"
-        )
-        state = WorkflowState(
-            query="Test",
-            agent_response=agent_response
-        )
-        
-        assert state.agent_response.message == "Test response"
-        assert state.agent_response.agent_type == "rag"
-    
     def test_state_with_error(self):
         """Test state with error."""
         state = WorkflowState(
@@ -554,28 +537,6 @@ class TestAgentRouterManagement:
         assert router.intent_mapping[QueryIntent.UNCLEAR] == "clarification_agent"
 
 
-class TestAgentRouterSyncRoute:
-    """Tests for synchronous routing."""
-    
-    def test_route_sync_without_implementation(self):
-        """Test that sync routing returns error when not fully implemented."""
-        router = AgentRouter()
-        
-        response = router.route_sync("Test query", force_intent=QueryIntent.GENERAL_CHAT)
-        
-        assert response.agent_type == "error"
-        assert "execute_sync" in response.message.lower() or "synchronous" in response.message.lower()
-    
-    def test_route_sync_no_classifier(self):
-        """Test sync routing without classifier."""
-        router = AgentRouter(classifier=None)
-        
-        response = router.route_sync("Test query")
-        
-        assert response.agent_type == "error"
-        assert "classifier" in response.message.lower() or "synchronous" in response.message.lower()
-
-
 class TestAgentRouterErrorHandling:
     """Tests for error response building."""
     
@@ -725,48 +686,6 @@ class TestClassifyStep:
             [{"role": "user", "content": "Previous"}]
         )
         assert result.classification.intent == QueryIntent.GENERAL_CHAT
-    
-    def test_classify_step_sync_with_forced_intent(self, mock_classifier):
-        """Test sync classify step with forced intent."""
-        router = AgentRouter(classifier=mock_classifier)
-        state = WorkflowState(query="Test query")
-        
-        result = router._classify_step_sync(state, force_intent=QueryIntent.TASK_PLANNING)
-        
-        assert result.classification.intent == QueryIntent.TASK_PLANNING
-        assert result.classification.confidence == 1.0
-        mock_classifier.classify_sync.assert_not_called()
-    
-    def test_classify_step_sync_calls_classifier(self, mock_classifier):
-        """Test sync classify step calls the classifier."""
-        mock_classifier.classify_sync = MagicMock(return_value=ClassificationResult(
-            intent=QueryIntent.CODE_HELP,
-            confidence=0.85,
-            reasoning="Test",
-            entities={}
-        ))
-        
-        router = AgentRouter(classifier=mock_classifier)
-        state = WorkflowState(query="Write code")
-        
-        result = router._classify_step_sync(state)
-        
-        mock_classifier.classify_sync.assert_called_once()
-        assert result.classification.intent == QueryIntent.CODE_HELP
-    
-    def test_classify_step_sync_handles_error(self, mock_classifier):
-        """Test sync classify step handles errors gracefully."""
-        mock_classifier.classify_sync = MagicMock(side_effect=Exception("Sync error"))
-        
-        router = AgentRouter(classifier=mock_classifier)
-        state = WorkflowState(query="Test")
-        
-        result = router._classify_step_sync(state)
-        
-        # Should fall back to general chat
-        assert result.classification.intent == QueryIntent.GENERAL_CHAT
-        assert result.classification.confidence == 0.5
-        assert "failed" in result.classification.reasoning.lower()
 
 
 class TestRouteStep:

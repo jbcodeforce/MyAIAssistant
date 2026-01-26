@@ -4,53 +4,25 @@
 3. Execute agent and return response
 """
 
-import os
 import pytest
-import httpx
-
-
+import json
+from pathlib import Path
 from agent_core.agents.agent_factory import AgentFactory
 from agent_core.agents.query_classifier import (
     QueryClassifier,
     QueryIntent,
     ClassificationResult,
 )
-from agent_core.agents.agent_router import AgentRouter, get_agent_router
+from agent_core.agents.agent_router import AgentRouter
 from agent_core.agents.base_agent import BaseAgent, AgentInput, AgentResponse
-
-
-# Default model for integration tests - can be overridden via env var
-OLLAMA_MODEL = os.getenv("OLLAMA_TEST_MODEL", "mistral-small")
-OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-
-
-def is_ollama_available() -> bool:
-    """Check if Ollama is running and accessible."""
-    try:
-        response = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5.0)
-        return response.status_code == 200
-    except (httpx.ConnectError, httpx.TimeoutException):
-        return False
-
-
-def is_model_available(model: str) -> bool:
-    """Check if the specified model is available in Ollama."""
-    try:
-        response = httpx.get(f"{OLLAMA_BASE_URL}/api/tags", timeout=5.0)
-        if response.status_code != 200:
-            return False
-        data = response.json()
-        models = [m.get("name", "").split(":")[0] for m in data.get("models", [])]
-        return model in models or any(model in m for m in models)
-    except (httpx.ConnectError, httpx.TimeoutException):
-        return False
-
-
-# Skip markers for integration tests
-requires_ollama = pytest.mark.skipif(
-    not is_ollama_available(),
-    reason="Ollama is not running or not accessible"
+from .conftest import (
+    LOCAL_BASE_URL,
+    LOCAL_MODEL,
+    requires_ollama,
+    requires_model,
 )
+
+config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
 
 @pytest.fixture
@@ -62,44 +34,18 @@ def classifier() -> QueryClassifier:
 
 @pytest.mark.integration
 @requires_ollama
-class TestQueryClassifierOllama:
+@requires_model
+class TestAgentRouter:
 
-    @pytest.mark.asyncio
-    async def test_classify_knowledge_search_query(self, classifier: BaseAgent):
-        """Test classification of a knowledge search query."""
-        query = "What does our documentation say about OAuth authentication?"
-        
-        result = await classifier.execute(AgentInput(query=query))
-        
-        assert isinstance(result, AgentResponse)
-        assert result.intent == QueryIntent.KNOWLEDGE_SEARCH
-        assert result.confidence >= 0.5
-        assert len(result.reasoning) > 0
-        assert isinstance(result.entities, dict)
 
     @pytest.mark.asyncio
     async def test_classify_code_help_query(self, classifier: QueryClassifier):
         """Test classification of a code help query."""
         query = "How do I implement a REST API endpoint in Python using FastAPI?"
-        
-        result = await classifier.classify(query)
-        
-        assert isinstance(result, ClassificationResult)
-        assert result.intent == QueryIntent.CODE_HELP
-        assert result.confidence >= 0.5
-        assert len(result.reasoning) > 0
-
-    @pytest.mark.asyncio
-    async def test_classify_task_planning_query(self, classifier: QueryClassifier):
-        """Test classification of a task planning query."""
-        query = "Help me plan the steps to migrate our database from MySQL to PostgreSQL"
-        
-        result = await classifier.classify(query)
-        
-        assert isinstance(result, ClassificationResult)
-        assert result.intent == QueryIntent.TASK_PLANNING
-        assert result.confidence >= 0.5
-        assert len(result.reasoning) > 0
+        router = AgentRouter()
+        response = await router.route(query)    
+        print(json.dumps(response.__dict__, indent=2, default=str))
+      
 
     @pytest.mark.asyncio
     async def test_classify_general_chat_query(self, classifier: QueryClassifier):

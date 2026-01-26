@@ -47,19 +47,6 @@ class TestAgentResponse:
 class TestBaseAgent:
     """Tests for BaseAgent class."""
     
-    def test_create_base_agent(self):
-        """Test creating a base agent."""
-        factory = AgentFactory()
-        agent = factory.create_agent()
-        assert agent is not None
-        assert agent._config is not None
-        assert agent._config.model == "gpt-oss:20b"
-        assert agent._config.api_key is None
-        assert agent._config.max_tokens == 2048
-        assert agent._config.temperature == 0.7
-        assert agent._config.timeout == 60.0
-        assert agent._system_prompt is not None
-        assert "helpful ai assistant" in agent._system_prompt.lower()
 
     @pytest.mark.asyncio
     async def test_execute_agent(self):

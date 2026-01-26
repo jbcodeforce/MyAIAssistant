@@ -25,3 +25,8 @@ llm_api_key: null
 llm_base_url: "http://localhost:11434/v1"
 llm_max_tokens: 2048
 llm_temperature: 0.1
+
+# Agent configuration directory
+# Path to agent config directory (relative to workspace root or absolute path)
+# Defaults to agent_core/agent_core/agents/config if not specified
+agent_config_dir: "agent_core/agent_core/agents/config"

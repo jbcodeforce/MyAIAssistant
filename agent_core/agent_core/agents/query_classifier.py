@@ -81,7 +81,8 @@ class QueryClassifier(BaseAgent):
         messages, context_used, use_rag = await self._build_messages(input_data)
         
         try:
-            response_text = await self._call_llm(messages)
+            response = await self._llm_client.chat_async(messages=messages, config=self._config)
+            response_text = response.content
             return self._parse_response(response_text)
         except Exception as e:
             logger.error(f"Classification failed: {e}")

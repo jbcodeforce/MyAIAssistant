@@ -125,7 +125,7 @@ class TestAgentFactory:
 
     def test_factory_loads_agent_yaml(self, factory):
         """Test factory loads agent.yaml correctly."""
-        config = factory.get_config("QueryClassifier")
+        config = factory.get_agent_map("QueryClassifier")
         
         assert config is not None
         assert config.name == "QueryClassifier"
@@ -138,14 +138,14 @@ class TestAgentFactory:
 
     def test_factory_returns_none_for_unknown_agent(self, factory):
         """Test factory returns None for unknown agent names."""
-        config = factory.get_config("NonExistentAgent")        
+        config = factory.get_agent_map("NonExistentAgent")        
         assert config is None
 
     def test_create_agent_returns_correct_type(self, factory):
         agent = factory.create_agent("GeneralAgent")
         assert agent is not None
         assert isinstance(agent, BaseAgent)
-        assert agent._config.model == "gpt-oss:20b"
+        assert agent._config.model == "mistral:7b-instruct"
         assert agent._config.temperature == 0.7
         assert agent._config.max_tokens >= 2000
         assert agent._system_prompt is not None

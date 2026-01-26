@@ -1,5 +1,6 @@
 name: GeneralAgent
 description: General purpose assistant for conversation and queries that don't fit specialized categories.
-model: gpt-oss:20b
-temperature: 0.7
-max_tokens: 2048
+temperature: 0.5
+max_tokens: 4096
+class: agent_core.agents.base_agent.BaseAgent
+model: mistral:7b-instruct

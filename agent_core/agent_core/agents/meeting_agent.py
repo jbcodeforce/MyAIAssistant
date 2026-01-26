@@ -67,7 +67,8 @@ class MeetingAgent(BaseAgent):
         """
         messages, context_used, use_rag = await self._build_messages(input_data)
         # Generate response from LLM
-        response_text = await self._call_llm(messages)
+        response = await self._llm_client.chat_async(messages=messages, config=self._config)
+        response_text = response.content
         
         # Parse the JSON response
         parsed_data, parse_error = self._parse_meeting_output(response_text)
