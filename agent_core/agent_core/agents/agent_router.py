@@ -7,6 +7,7 @@ This module implements the main routing workflow that:
 """
 
 import logging
+from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 
 from pydantic import BaseModel, Field
@@ -22,14 +23,14 @@ from agent_core.agents.query_classifier import (
 logger = logging.getLogger(__name__)
 
 
-class WorkflowState(BaseModel):
+@dataclass
+class WorkflowState:
     """State passed through the routing workflow."""
-    model_config = {"arbitrary_types_allowed": True}
     query: str
-    conversation_history: list[dict] = Field(default_factory=list)
+    conversation_history: list[dict] = field(default_factory=list)
     classification: Optional[ClassificationResult] = None
     agent_response: Optional[AgentResponse] = None
-    context: dict = Field(default_factory=dict)
+    context: dict = field(default_factory=dict)
     error: Optional[str] = None
 
 

@@ -5,28 +5,66 @@ MyAIAssistant is built with a modular architecture separating concerns across di
 
 ## Architecture Overview
 
-```
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    Vue.js Frontend                                       │
-│  ┌──────────┐ ┌───────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌────────────┐  │
-│  │Dashboard │ │   Orgs    │ │Projects│ │Knowledge│ │Meetings│ │ Assets │ │Unclassified│  │
-│  │ (Matrix) │ │   View    │ │  View  │ │  View   │ │  View  │ │  View  │ │   View     │  │
-│  └──────────┘ └───────────┘ └────────┘ └─────────┘ └────────┘ └────────┘ └────────────┘  │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-                                              │
-                                              ▼
-┌──────────────────────────────────────────────────────────────────────────────────────────┐
-│                                    FastAPI Backend                                       │
-│  ┌────────┐ ┌──────────┐ ┌────────┐ ┌─────────┐ ┌────────┐ ┌────────┐ ┌────────────────┐ │
-│  │Todo API│ │ Orgs API │ │Projects│ │Knowledge│ │Meetings│ │ Assets │ │    RAG API     │ │
-│  └────────┘ └──────────┘ └────────┘ └─────────┘ └────────┘ └────────┘ └────────────────┘ │
-└──────────────────────────────────────────────────────────────────────────────────────────┘
-                          │                                    │
-                          ▼                                    ▼
-               ┌──────────────────┐                 ┌──────────────────────┐
-               │    PostgreSQL    │                 │       ChromaDB       │
-               │  (Relational DB) │                 │    (Vector Store)    │
-               └──────────────────┘                 └──────────────────────┘
+```mermaid
+graph TB
+    subgraph "Vue.js Frontend"
+        Dashboard[Dashboard<br/>Matrix View]
+        OrgsView[Orgs View]
+        ProjectsView[Projects View]
+        KnowledgeView[Knowledge View]
+        MeetingsView[Meetings View]
+        AssetsView[Assets View]
+        UnclassifiedView[Unclassified View]
+    end
+    
+    subgraph "FastAPI Backend"
+        TodoAPI[Todo API]
+        OrgsAPI[Orgs API]
+        ProjectsAPI[Projects API]
+        KnowledgeAPI[Knowledge API]
+        MeetingsAPI[Meetings API]
+        AssetsAPI[Assets API]
+        RAGAPI[RAG API]
+    end
+    
+    subgraph "Data Storage"
+        PostgreSQL[(PostgreSQL<br/>Relational DB)]
+        ChromaDB[(ChromaDB<br/>Vector Store)]
+    end
+    
+    Dashboard --> TodoAPI
+    OrgsView --> OrgsAPI
+    ProjectsView --> ProjectsAPI
+    KnowledgeView --> KnowledgeAPI
+    MeetingsView --> MeetingsAPI
+    AssetsView --> AssetsAPI
+    UnclassifiedView --> RAGAPI
+    
+    TodoAPI --> PostgreSQL
+    OrgsAPI --> PostgreSQL
+    ProjectsAPI --> PostgreSQL
+    KnowledgeAPI --> PostgreSQL
+    MeetingsAPI --> PostgreSQL
+    AssetsAPI --> PostgreSQL
+    RAGAPI --> ChromaDB
+    KnowledgeAPI --> RAGAPI
+    
+    style Dashboard fill:#42b883
+    style OrgsView fill:#42b883
+    style ProjectsView fill:#42b883
+    style KnowledgeView fill:#42b883
+    style MeetingsView fill:#42b883
+    style AssetsView fill:#42b883
+    style UnclassifiedView fill:#42b883
+    style TodoAPI fill:#009485
+    style OrgsAPI fill:#009485
+    style ProjectsAPI fill:#009485
+    style KnowledgeAPI fill:#009485
+    style MeetingsAPI fill:#009485
+    style AssetsAPI fill:#009485
+    style RAGAPI fill:#009485
+    style PostgreSQL fill:#336791
+    style ChromaDB fill:#336791
 ```
 
 
@@ -97,29 +135,52 @@ LLM-powered chat interface for intelligent interactions.
 
 [Learn more about Chat](chat.md)
 
+### Agent Core
+
+Config-driven framework for building agentic AI applications with unified LLM integration.
+
+- YAML-based agent configuration
+- Intelligent query routing and classification
+- RAG integration for knowledge retrieval
+- Extensible agent architecture
+
+[Learn more about Agent Core](agent_core.md)
+
 ## Project Structure
 
-```
-MyAIAssistant/
-├── backend/
-│   ├── app/
-│   │   ├── api/           # API endpoints (todos, knowledge, rag)
-│   │       └── schemas/   # Pydantic request/response schemas
-│   │   ├── core/          # Configuration management
-│   │   ├── db/            # Database models and CRUD operations
-│   │   ├── rag/           # RAG service components
-
-│   ├── tests/             # Test suite
-├── data/                  # chroma VB persistence
-├── frontend/
-│   ├── src/
-│   │   ├── components/    # Vue components
-│   │   ├── views/         # Page views
-│   │   ├── stores/        # Pinia state management
-│   │   ├── services/      # API client
-│   │   └── router/        # Vue Router configuration
-│   └── public/            # Static assets
-└── docs/                  # This documentation
+```mermaid
+graph TD
+    Root[MyAIAssistant]
+    
+    Root --> Backend[backend/]
+    Root --> Data[data/<br/>ChromaDB persistence]
+    Root --> Frontend[frontend/]
+    Root --> Docs[docs/]
+    
+    Backend --> App[app/]
+    Backend --> Tests[tests/<br/>Test suite]
+    
+    App --> API[api/<br/>API endpoints]
+    App --> Core[core/<br/>Configuration]
+    App --> DB[db/<br/>Database models & CRUD]
+    App --> RAGDir[rag/<br/>RAG service components]
+    
+    API --> Schemas[schemas/<br/>Pydantic schemas]
+    
+    Frontend --> Src[src/]
+    Frontend --> Public[public/<br/>Static assets]
+    
+    Src --> Components[components/<br/>Vue components]
+    Src --> Views[views/<br/>Page views]
+    Src --> Stores[stores/<br/>Pinia state management]
+    Src --> Services[services/<br/>API client]
+    Src --> Router[router/<br/>Vue Router config]
+    
+    style Root fill:#e1f5ff
+    style Backend fill:#fff4e1
+    style Frontend fill:#e8f5e9
+    style Docs fill:#fce4ec
+    style Data fill:#f3e5f5
 ```
 
 ## API Structure
@@ -140,11 +201,50 @@ All backend APIs follow RESTful conventions with versioned endpoints:
 
 ## Data Flow
 
-1. **Todo Creation**: Frontend submits todo data via API, stored in SQLite
-2. **Knowledge Registration**: User adds knowledge items with URIs pointing to documents
-3. **Document Indexing**: RAG service loads documents, chunks text, generates embeddings
-4. **Semantic Search**: Query embeddings compared against stored vectors for retrieval
-5. **Task Linking**: (Planned) AI matches todos to relevant knowledge items
+```mermaid
+sequenceDiagram
+    participant User
+    participant Frontend as Vue.js Frontend
+    participant Backend as FastAPI Backend
+    participant PostgreSQL as PostgreSQL
+    participant RAG as RAG Service
+    participant ChromaDB as ChromaDB
+    
+    Note over User,ChromaDB: Todo Creation Flow
+    User->>Frontend: Create todo
+    Frontend->>Backend: POST /api/todos
+    Backend->>PostgreSQL: Store todo data
+    PostgreSQL-->>Backend: Todo created
+    Backend-->>Frontend: Response
+    Frontend-->>User: Todo displayed
+    
+    Note over User,ChromaDB: Knowledge Registration Flow
+    User->>Frontend: Add knowledge item
+    Frontend->>Backend: POST /api/knowledge
+    Backend->>PostgreSQL: Store metadata
+    PostgreSQL-->>Backend: Knowledge item created
+    Backend-->>Frontend: Response
+    
+    Note over User,ChromaDB: Document Indexing Flow
+    Backend->>RAG: Index knowledge item
+    RAG->>RAG: Load document from URI
+    RAG->>RAG: Chunk text content
+    RAG->>RAG: Generate embeddings
+    RAG->>ChromaDB: Store vectors
+    ChromaDB-->>RAG: Indexed
+    RAG-->>Backend: Indexing complete
+    
+    Note over User,ChromaDB: Semantic Search Flow
+    User->>Frontend: Search query
+    Frontend->>Backend: POST /api/rag/search
+    Backend->>RAG: Search query
+    RAG->>RAG: Generate query embedding
+    RAG->>ChromaDB: Vector similarity search
+    ChromaDB-->>RAG: Search results
+    RAG-->>Backend: Results
+    Backend-->>Frontend: Results
+    Frontend-->>User: Display results
+```
 
 ## Settings
 

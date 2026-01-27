@@ -150,22 +150,78 @@ class TestAgentRouter:
 
     @pytest.mark.asyncio
     async def test_route_to_task_agent(self, mock_classifier, mock_task_agent):
-        """Test routing task planning to task agent."""
-        mock_classifier.classify = AsyncMock(return_value=ClassificationResult(
-            intent=QueryIntent.TASK_PLANNING,
-            confidence=0.88,
-            reasoning="User wants to plan a task",
-            entities={"topic": "migration"}
-        ))
-        router = AgentRouter()
-        router.classifier = mock_classifier
-        agent = router.agents[QueryIntent.TASK_PLANNING] 
-        agent._call_llm = AsyncMock(return_value="do this and that")
-        response = await router.route("Help me plan the database migration")
+        """Test routing task planning to task agent.
         
+        This test verifies:
+        1. Classifier is called first to determine intent (via execute method)
+        2. Task agent is called second to handle the task planning query
+        Both are properly mocked to avoid real LLM calls.
+        """
+        query = "Help me plan the database migration"
+        
+        # Setup router
+        router = AgentRouter()
+        
+        # Mock 1: Classifier's LLM client (called first via classifier.execute)
+        classifier_llm_called = {}
+        async def mock_classifier_chat_async(messages, config):
+            classifier_llm_called["called"] = True
+            # Verify the query is in the messages
+            message_contents = " ".join([msg.get("content", "") for msg in messages])
+            assert "database" in message_contents.lower() or "migration" in message_contents.lower()
+            
+            # Return a JSON response that will be parsed into ClassificationResult
+            from agent_core.types import LLMResponse
+            return LLMResponse(
+                content='{"intent": "task_planning", "confidence": 0.88, "reasoning": "User wants to plan a task", "entities": {"topic": "migration"}}',
+                model=config.model,
+                provider=config.provider,
+                usage={"prompt_tokens": 15, "completion_tokens": 20, "total_tokens": 35}
+            )
+        
+        # Get the actual classifier and mock its LLM client
+        classifier = router.classifier
+        classifier._llm_client.chat_async = mock_classifier_chat_async
+        
+        # Get the actual task agent from router
+        agent = router.agents[QueryIntent.TASK_PLANNING]
+        
+        # Mock 2: Task agent's LLM client (called second via agent.execute)
+        task_agent_llm_called = {}
+        async def mock_task_agent_chat_async(messages, config):
+            # Verify message construction occurred
+            assert messages is not None
+            assert isinstance(messages, list)
+            # Verify the query about database migration is in the messages
+            message_contents = " ".join([msg.get("content", "") for msg in messages])
+            assert "database" in message_contents.lower() or "migration" in message_contents.lower()
+            task_agent_llm_called["called"] = True
+            
+            # Return a task planning response
+            from agent_core.types import LLMResponse
+            return LLMResponse(
+                content="Here's a plan for the database migration:\n1. Backup existing database\n2. Create migration scripts\n3. Test in staging environment\n4. Execute migration\n5. Verify data integrity",
+                model=config.model,
+                provider=config.provider,
+                usage={"prompt_tokens": 20, "completion_tokens": 30, "total_tokens": 50}
+            )
+        agent._llm_client.chat_async = mock_task_agent_chat_async
+        
+        # Execute the routing
+        response = await router.route(query)
+        
+        # Verify classifier's LLM was called first
+        assert classifier_llm_called.get("called", False), "Classifier's LLM should have been called first"
+        
+        # Verify task agent's LLM was called second
+        assert task_agent_llm_called.get("called", False), "Task agent's LLM should have been called second"
+        
+        # Verify response structure
+        assert response is not None
         assert response.intent == QueryIntent.TASK_PLANNING
         assert response.agent_type == "TaskAgent"
-        print(json.dumps(response.__dict__, indent=2, default=str))
+        assert "migration" in response.message.lower() or "database" in response.message.lower()
+        assert response.confidence == 0.88
 
   
 
@@ -198,11 +254,23 @@ class TestRouteStep:
             classification=classification,
             context={"user_id": 123}
         )
-        agent = router.agents[QueryIntent.KNOWLEDGE_SEARCH] 
-        agent._call_llm = AsyncMock(return_value="do this and that")
+        agent = router.agents[QueryIntent.KNOWLEDGE_SEARCH]
+        
+        # Mock the agent's LLM client
+        from agent_core.types import LLMResponse
+        async def mock_chat_async(messages, config):
+            return LLMResponse(
+                content="Here are the search results: ...",
+                model=config.model,
+                provider=config.provider,
+                usage={"prompt_tokens": 10, "completion_tokens": 15, "total_tokens": 25}
+            )
+        agent._llm_client.chat_async = mock_chat_async
+        
         result = await router._route_step(state)
         
         assert result is not None
+        assert result.agent_response is not None
         print(json.dumps(result.__dict__, indent=2, default=str))
     
     @pytest.mark.asyncio

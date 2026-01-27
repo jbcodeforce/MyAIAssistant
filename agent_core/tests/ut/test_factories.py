@@ -146,8 +146,8 @@ class TestAgentFactory:
         assert agent is not None
         assert isinstance(agent, BaseAgent)
         assert agent._config.model == "mistral:7b-instruct"
-        assert agent._config.temperature == 0.7
-        assert agent._config.max_tokens >= 2000
+        assert agent._config.temperature == 0.4
+        assert agent._config.max_tokens >= 4096
         assert agent._system_prompt is not None
 
    
@@ -159,6 +159,115 @@ class TestAgentFactory:
         assert agent._config.temperature == 0.0
         assert agent._config.max_tokens >= 500
         assert agent._system_prompt is not None
+
+    def test_factory_loads_from_custom_config_dir(self, tmp_path):
+        """Test that factory loads agents from a custom config_dir."""
+        # Create a custom agent configuration directory
+        custom_agent_dir = tmp_path / "CustomAgent"
+        custom_agent_dir.mkdir()
+        
+        # Create agent.yaml
+        yaml_content = """
+name: CustomAgent
+description: A custom agent for testing
+class: agent_core.agents.base_agent.BaseAgent
+model: gpt-4o-mini
+temperature: 0.8
+max_tokens: 3000
+"""
+        (custom_agent_dir / "agent.yaml").write_text(yaml_content)
+        
+        # Create prompt.md
+        prompt_content = "You are a custom test agent. Provide helpful responses."
+        (custom_agent_dir / "prompt.md").write_text(prompt_content)
+        
+        # Create factory with custom config_dir and defaults enabled
+        factory = AgentFactory(load_defaults=True, config_dir=str(tmp_path))
+        
+        # Verify custom agent is loaded
+        agent_names = factory.list_agents()
+        assert "CustomAgent" in agent_names
+        
+        # Verify custom agent config
+        config = factory.get_agent_map("CustomAgent")
+        assert config is not None
+        assert config.name == "CustomAgent"
+        assert config.description == "A custom agent for testing"
+        assert config.model == "gpt-4o-mini"
+        assert config.temperature == 0.8
+        assert config.max_tokens == 3000
+        assert config.agent_dir is not None
+        assert str(config.agent_dir) == str(custom_agent_dir)
+        
+        # Verify default agents are also loaded
+        assert "GeneralAgent" in agent_names or "QueryClassifier" in agent_names
+        
+        # Verify we can create the custom agent
+        agent = factory.create_agent("CustomAgent")
+        assert agent is not None
+        assert isinstance(agent, BaseAgent)
+        assert agent._config.name == "CustomAgent"
+        assert agent._config.model == "gpt-4o-mini"
+        assert agent._config.temperature == 0.8
+        # Verify prompt was loaded from filesystem
+        assert "custom test agent" in agent._system_prompt.lower()
+
+    def test_factory_custom_config_dir_overrides_defaults(self, tmp_path):
+        """Test that custom config_dir agents override default agents with same name."""
+        # Create a custom GeneralAgent that overrides the default
+        custom_agent_dir = tmp_path / "GeneralAgent"
+        custom_agent_dir.mkdir()
+        
+        yaml_content = """
+name: GeneralAgent
+description: Custom GeneralAgent that overrides default
+model: custom-model
+temperature: 0.9
+max_tokens: 5000
+"""
+        (custom_agent_dir / "agent.yaml").write_text(yaml_content)
+        
+        # Create factory with defaults and custom config_dir
+        factory = AgentFactory(load_defaults=True, config_dir=str(tmp_path))
+        
+        # Verify custom GeneralAgent overrides default
+        config = factory.get_agent_map("GeneralAgent")
+        assert config is not None
+        assert config.name == "GeneralAgent"
+        assert config.description == "Custom GeneralAgent that overrides default"
+        assert config.model == "custom-model"
+        assert config.temperature == 0.9
+        assert config.max_tokens == 5000
+        # Verify it's from filesystem, not resources
+        assert config.agent_dir is not None
+        assert str(config.agent_dir) == str(custom_agent_dir)
+        assert str(config.agent_dir) != "__resource__"
+
+    def test_factory_custom_config_dir_only(self, tmp_path):
+        """Test factory with custom config_dir and defaults disabled."""
+        # Create a custom agent
+        custom_agent_dir = tmp_path / "CustomOnlyAgent"
+        custom_agent_dir.mkdir()
+        
+        yaml_content = """
+name: CustomOnlyAgent
+description: Agent only in custom config
+model: test-model
+temperature: 0.5
+"""
+        (custom_agent_dir / "agent.yaml").write_text(yaml_content)
+        
+        # Create factory with defaults disabled
+        factory = AgentFactory(load_defaults=False, config_dir=str(tmp_path))
+        
+        # Verify only custom agent is loaded
+        agent_names = factory.list_agents()
+        assert "CustomOnlyAgent" in agent_names
+        assert len(agent_names) == 1
+        
+        # Verify default agents are not loaded
+        assert "GeneralAgent" not in agent_names
+        assert "QueryClassifier" not in agent_names
 
 
 class TestAgentInput:

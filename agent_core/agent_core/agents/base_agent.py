@@ -4,6 +4,7 @@ This module provides the base class for specialized agents
 in agentic AI applications, along with base input/output Pydantic models.
 """
 
+import importlib.resources
 import logging
 import re
 from typing import Optional, Tuple 
@@ -91,16 +92,70 @@ class BaseAgent:
                 rag_category=None
             )
         self._llm_client = LLMProviderFactory.create_provider(self._config.provider)
+        
+        # Load system prompt from agent_dir (filesystem or resources)
+        self._system_prompt = self._load_system_prompt()
+        
+        self.agent_type = self._config.name or "BaseAgent"
+    
+    def _load_system_prompt(self) -> str:
+        """
+        Load system prompt from agent_dir (filesystem or package resources).
+        
+        Returns:
+            System prompt text, or default prompt if not found
+        """
+        # Check if this is a resource-based agent
+        # Resource-based agents have agent_dir set to Path("__resource__")
+        is_resource = (
+            self._config.agent_dir is not None and
+            str(self._config.agent_dir) == "__resource__"
+        ) or (
+            self._config.agent_dir is None and
+            '_resource_package' in self._config.extra
+        )
+        
+        if is_resource:
+            # Load from package resources
+            return self._load_prompt_from_resources()
+        else:
+            # Load from filesystem
+            return self._load_prompt_from_filesystem()
+    
+    def _load_prompt_from_resources(self) -> str:
+        """Load prompt from package resources."""
+        try:
+            # Get resource path from config extra
+            package = self._config.extra.get('_resource_package', 'agent_core.agents.config')
+            resource_path = self._config.extra.get('_resource_path', self._config.name)
+            prompt_path = f"{resource_path}/prompt.md"
+            
+            config_files = importlib.resources.files(package)
+            prompt_file = config_files / prompt_path
+            
+            prompt_text = prompt_file.read_text(encoding="utf-8")
+            logger.debug(f"Loaded prompt from resources for agent: {self._config.name}")
+            return prompt_text
+        except (FileNotFoundError, ModuleNotFoundError, AttributeError, KeyError) as e:
+            logger.debug(f"Prompt not found in resources for {self._config.name}: {e}")
+            return "You are a helpful assistant."
+    
+    def _load_prompt_from_filesystem(self) -> str:
+        """Load prompt from filesystem."""
+        if self._config.agent_dir is None:
+            return "You are a helpful assistant."
+        
         prompt_path = self._config.agent_dir / "prompt.md"
         if prompt_path.exists():
             try:
-                self._system_prompt = prompt_path.read_text()
-                logger.debug(f"Loaded prompt for agent: {self._config.name}")
+                prompt_text = prompt_path.read_text()
+                logger.debug(f"Loaded prompt from filesystem for agent: {self._config.name}")
+                return prompt_text
             except Exception as e:
                 logger.error(f"Failed to load prompt for {self._config.name}: {e}")
+                return "You are a helpful assistant."
         else:
-            self._system_prompt = "You are a helpful assistant."
-        self.agent_type = self._config.name or "BaseAgent"
+            return "You are a helpful assistant."
 
     async def execute(
         self,
@@ -197,9 +252,9 @@ class BaseAgent:
         context = context or {}
         
         # Get filter parameters from context or defaults
-        category = context.get("rag_category", self._rag_category)
+        category = context.get("rag_category", getattr(self._config, "rag_category", None))
         knowledge_ids = context.get("knowledge_ids")
-        top_k = context.get("rag_top_k", self._rag_top_k)
+        top_k = context.get("rag_top_k", getattr(self._config, "rag_top_k", 5))
         
         try:
             results = await _rag_service.search(

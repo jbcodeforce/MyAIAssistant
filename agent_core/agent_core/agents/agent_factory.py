@@ -8,6 +8,7 @@ agent-specific settings and LLM configuration.
 """
 
 import importlib
+import importlib.resources
 import logging
 import os
 from pathlib import Path
@@ -152,20 +153,157 @@ class AgentFactory:
     # Registry mapping class names to agent classes
     _class_registry: Dict[str, Type] = {}
     
-    def __init__(self, config_dir: str = None):
+    # Special marker for resource-based agents
+    RESOURCE_MARKER = Path("__resource__")
+    
+    def __init__(self, config_dir: str = None, load_defaults: bool = True):
         """
         Initialize the agent factory.
         
         Args:
             config_dir: Directory containing agent configurations.
-                       Defaults to the 'config' folder in the agents module.
+                       If None, only default agents from package resources are loaded.
+            load_defaults: Whether to load default agents from package resources.
+                          Defaults to True.
         """
-        if config_dir is None:
-            # Default to config folder relative to this module
-            config_dir = Path(__file__).parent / "config"
-          
-        # Load all agent configurations
-        self._configs = self._discover_agents( Path(config_dir))
+        self._configs: Dict[str, AgentConfig] = {}
+        
+        # Step 1: Load default agents from package resources
+        if load_defaults:
+            default_agents = self._load_default_agents_from_resources()
+            self._configs.update(default_agents)
+            logger.debug(f"Loaded {len(default_agents)} default agents from package resources")
+        
+        # Step 2: Load user-defined agents from config_dir (override defaults if same name)
+        if config_dir is not None:
+            user_agents = self._discover_agents(Path(config_dir))
+            # User agents override defaults
+            self._configs.update(user_agents)
+            logger.debug(f"Loaded {len(user_agents)} user agents from {config_dir}")
+    
+    def _load_resource_text(self, package: str, resource_path: str) -> str:
+        """
+        Load text content from a package resource.
+        
+        Args:
+            package: Package name (e.g., "agent_core.agents.config")
+            resource_path: Path to resource within package (e.g., "GeneralAgent/agent.yaml")
+            
+        Returns:
+            Text content of the resource
+            
+        Raises:
+            FileNotFoundError: If resource doesn't exist
+        """
+        try:
+            config_files = importlib.resources.files(package)
+            resource_file = config_files / resource_path
+            return resource_file.read_text(encoding="utf-8")
+        except (FileNotFoundError, ModuleNotFoundError, AttributeError) as e:
+            raise FileNotFoundError(f"Resource not found: {package}/{resource_path}") from e
+    
+    def _list_resource_directory(self, package: str, directory: str = "") -> list[str]:
+        """
+        List entries in a package resource directory.
+        
+        Args:
+            package: Package name (e.g., "agent_core.agents.config")
+            directory: Subdirectory path (empty string for root)
+            
+        Returns:
+            List of entry names (files and directories)
+        """
+        try:
+            config_files = importlib.resources.files(package)
+            if directory:
+                target_dir = config_files / directory
+            else:
+                target_dir = config_files
+            
+            entries = []
+            for entry in target_dir.iterdir():
+                entries.append(entry.name)
+            return entries
+        except (FileNotFoundError, ModuleNotFoundError, AttributeError) as e:
+            logger.warning(f"Could not list resource directory {package}/{directory}: {e}")
+            return []
+    
+    def _load_default_agents_from_resources(self) -> Dict[str, AgentConfig]:
+        """
+        Load default agent configurations from package resources.
+        
+        Returns:
+            Dictionary mapping agent names to AgentConfig instances
+        """
+        default_agents: Dict[str, AgentConfig] = {}
+        package = "agent_core.agents.config"
+        
+        try:
+            # List all entries in the config package
+            entries = self._list_resource_directory(package)
+            
+            for entry_name in entries:
+                # Skip hidden files and __pycache__
+                if entry_name.startswith('_') or entry_name.startswith('.'):
+                    continue
+                
+                # Check if it's a directory (agent folder)
+                try:
+                    config_files = importlib.resources.files(package)
+                    entry_path = config_files / entry_name
+                    
+                    # Try to access agent.yaml to verify it's an agent directory
+                    yaml_path = f"{entry_name}/agent.yaml"
+                    try:
+                        yaml_content = self._load_resource_text(package, yaml_path)
+                        
+                        # Parse YAML content
+                        data = yaml.safe_load(yaml_content) or {}
+                        
+                        # Create AgentConfig from YAML data
+                        known_fields = {
+                            'name', 'description', 'class', 'model', 'provider',
+                            'api_key', 'base_url', 'max_tokens', 'temperature',
+                            'timeout', 'response_format'
+                        }
+                        extra = {k: v for k, v in data.items() if k not in known_fields}
+                        
+                        agent_name = data.get('name', entry_name)
+                        config = AgentConfig(
+                            name=agent_name,
+                            description=data.get('description', 'A general purpose agent.'),
+                            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),
+                            model=data.get('model', 'mistral:7b-instruct'),
+                            provider=data.get('provider', 'huggingface'),
+                            api_key=data.get('api_key'),
+                            base_url=data.get('base_url', 'http://localhost:11434/v1'),
+                            max_tokens=int(data.get('max_tokens', 10000)),
+                            temperature=float(data.get('temperature', 0.7)),
+                            timeout=float(data.get('timeout', 60.0)),
+                            response_format=data.get('response_format'),
+                            extra=extra,
+                            agent_dir=self.RESOURCE_MARKER  # Mark as resource-based
+                        )
+                        
+                        # Store resource path in extra for prompt loading
+                        config.extra['_resource_package'] = package
+                        config.extra['_resource_path'] = entry_name
+                        
+                        default_agents[agent_name] = config
+                        logger.debug(f"Loaded default agent from resources: {agent_name}")
+                        
+                    except FileNotFoundError:
+                        # Not an agent directory, skip
+                        continue
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to process resource entry {entry_name}: {e}")
+                    continue
+                    
+        except Exception as e:
+            logger.error(f"Failed to load default agents from resources: {e}")
+        
+        return default_agents
     
     def _discover_agents(self, config_dir: Path) -> Dict[str, AgentConfig]:
         """Scan config directory and load all agent configurations."""

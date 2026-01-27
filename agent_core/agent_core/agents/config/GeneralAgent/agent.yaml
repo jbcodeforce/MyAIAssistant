@@ -1,6 +1,6 @@
 name: GeneralAgent
 description: General purpose assistant for conversation and queries that don't fit specialized categories.
-temperature: 0.5
+temperature: 0.4
 max_tokens: 4096
 class: agent_core.agents.base_agent.BaseAgent
 model: mistral:7b-instruct
