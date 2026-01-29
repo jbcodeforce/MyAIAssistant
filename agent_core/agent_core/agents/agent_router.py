@@ -6,6 +6,7 @@ This module implements the main routing workflow that:
 3. Orchestrates the response generation
 """
 
+import json
 import logging
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
@@ -125,18 +126,20 @@ class AgentRouter:
         
         # Step 1: Classify the query
         state = await self._classify_step(state, force_intent)
-        
+        logger.info(f"Classification: {json.dumps(state.__dict__, indent=2, default=str)}")
         if state.error:
             return self._error_response(state)
         
         # Step 2: Route to appropriate agent
         state = await self._route_step(state)
-        
+        logger.info(f"Routing: {json.dumps(state.__dict__, indent=2, default=str)}")
         if state.error:
             return self._error_response(state)
         
         # Step 3: Build and return response
-        return self._build_response(state)
+        resp=self._build_response(state)
+        logger.info(f"Response: {json.dumps(resp.__dict__, indent=2, default=str)}")
+        return resp
 
 
     async def _classify_step(
@@ -198,6 +201,8 @@ class AgentRouter:
                 conversation_history=state.conversation_history,
                 context=agent_context
             )
+            if intent in [QueryIntent.KNOWLEDGE_SEARCH, QueryIntent.TASK_STATUS, QueryIntent.TASK_PLANNING, QueryIntent.CODE_HELP]:
+                input_data.use_rag = True
             state.agent_response = await agent.execute(input_data)
         except Exception as e:
             logger.error(f"Agent execution failed: {e}")

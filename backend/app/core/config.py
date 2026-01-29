@@ -265,7 +265,7 @@ def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> str:
     if agent_config_dir is None:
         # Default to current hardcoded path relative to workspace root
         # This assumes the workspace root is the current working directory
-        return str(Path.cwd() / "agent_core" / "agent_core" / "agents" / "config")
+        return str(Path.cwd() / "config")
     
     path = Path(agent_config_dir)
     if path.is_absolute():

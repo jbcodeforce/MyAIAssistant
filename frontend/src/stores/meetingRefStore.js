@@ -83,7 +83,8 @@ export const useMeetingRefStore = defineStore('meetingRef', () => {
     error.value = null
     try {
       const response = await meetingRefsApi.create(meetingRef)
-      items.value.unshift(response.data)
+      // Do not mutate items here: Meetings.vue shares the same array ref after
+      // fetchItems and adds the created item itself; mutating here would duplicate.
       return response.data
     } catch (err) {
       error.value = err.response?.data?.detail || 'Failed to create meeting reference'

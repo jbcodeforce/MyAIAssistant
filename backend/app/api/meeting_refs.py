@@ -1,8 +1,9 @@
 import logging
+import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from datetime import datetime
 from app.db.database import get_db
 from app.db import crud
 from app.api.schemas.meeting_ref import (
@@ -281,7 +282,7 @@ async def extract_meeting_info(
     except Exception as e:
         logger.error(f"MeetingAgent execution failed: {e}")
         raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
-    print(f"Agent response: {agent_response}")
+    logger.info(f"Agent response: {json.dumps(agent_response.__dict__, indent=2, default=str)}")
     if agent_response.key_points is not None:
         agent_response.cleaned_notes += "\n## Key Points\n"
         agent_response.cleaned_notes += "\n".join([f"- {kp.point}" for kp in agent_response.key_points])
@@ -301,11 +302,20 @@ async def extract_meeting_info(
 
     await notes_service.update_note(
             file_ref=meeting_ref.file_ref,
-            content=agent_response.cleaned_notes,
+            content="# Notes updated by AI: " + agent_response.cleaned_notes + "\n---\n" + "# Original: " + content
         )
     
     # Convert list of Person objects to comma-separated string for database storage
-    attendees_str = ", ".join([p.name for p in agent_response.attendees]) if agent_response.attendees else None
+    attendees_str = ""
+    if agent_response.attendees is not None:
+        for person in agent_response.attendees:
+            logger.info(f"Creating person: {person.name}")
+            await crud.create_person(
+                db=db,
+                name=person.name,
+                last_met_date=person.last_met_date if person.last_met_date else datetime.now().isoformat()
+            )
+            attendees_str += f"{person.name}, "
     await crud.update_meeting_ref(
         db=db,
         meeting_ref_id=meeting_ref_id,

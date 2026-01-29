@@ -1,6 +1,6 @@
-name: MeetingAgent
-description: Process Meeting note to extract attendees, key points and next steps.
-class: agent_core.agents.meeting_agent.MeetingAgent
+name: PersonaAgent
+description: Build a persona based on the user's problem.
+class: agent_core.agents.base_agent.BaseAgent
 base_url: http://localhost:11434/v1
 model: mistral:7b-instruct
 temperature: 0.5

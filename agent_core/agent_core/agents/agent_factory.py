@@ -59,6 +59,7 @@ class AgentConfig(BaseModel):
     timeout: float = 60.0
     response_format: Optional[dict] = None
     agent_dir: Optional[Path] = None
+    sys_prompt: str = "You are a helpful assistant."
     # Extra fields from YAML
     extra: Dict[str, Any] = Field(default_factory=dict)
     provider: str = "huggingface",
@@ -175,7 +176,7 @@ class AgentFactory:
             logger.debug(f"Loaded {len(default_agents)} default agents from package resources")
         
         # Step 2: Load user-defined agents from config_dir (override defaults if same name)
-        if config_dir is not None:
+        if config_dir is not None and Path(config_dir).exists():
             user_agents = self._discover_agents(Path(config_dir))
             # User agents override defaults
             self._configs.update(user_agents)
@@ -254,9 +255,10 @@ class AgentFactory:
                     
                     # Try to access agent.yaml to verify it's an agent directory
                     yaml_path = f"{entry_name}/agent.yaml"
+                    prompt_path = f"{entry_name}/prompt.md"
                     try:
                         yaml_content = self._load_resource_text(package, yaml_path)
-                        
+                        prompt_content = self._load_resource_text(package, prompt_path)
                         # Parse YAML content
                         data = yaml.safe_load(yaml_content) or {}
                         
@@ -282,6 +284,7 @@ class AgentFactory:
                             timeout=float(data.get('timeout', 60.0)),
                             response_format=data.get('response_format'),
                             extra=extra,
+                            sys_prompt=prompt_content,
                             agent_dir=self.RESOURCE_MARKER  # Mark as resource-based
                         )
                         
@@ -328,6 +331,12 @@ class AgentFactory:
                 try:
                     _configs[agent_name] = AgentConfig.from_yaml(yaml_path)
                     _configs[agent_name].agent_dir = agent_dir
+                    prompt_path = agent_dir / "prompt.md"
+                    if prompt_path.exists():
+                        _configs[agent_name].sys_prompt = prompt_path.read_text(encoding="utf-8")
+                        logger.debug(f"Loaded prompt for agent: {agent_name}")
+                    else:
+                        logger.debug(f"No prompt found for agent: {agent_name}")
                     logger.debug(f"Loaded config for agent: {agent_name}")
                 except Exception as e:
                     logger.error(f"Failed to load config for {agent_name}: {e}")

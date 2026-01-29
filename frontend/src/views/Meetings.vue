@@ -353,11 +353,11 @@
     </Modal>
 
     <!-- AI Extraction Modal -->
-    <Modal :show="showExtractModal" title="AI Meeting Extraction" size="large" @close="closeExtractModal">
+    <Modal :show="showExtractModal" title="AI Meeting Extraction" size="fullscreen" @close="closeExtractModal">
       <div v-if="extracting" class="loading-content">
         <div class="extract-loading">
           <div class="spinner"></div>
-          <p>Analyzing meeting content with AI...</p>
+          <p>Analyzing meeting content with AI, will report cleaned notes while keeping yours too...</p>
           <p class="extract-hint">Extracting attendees, key points, and action items</p>
         </div>
       </div>

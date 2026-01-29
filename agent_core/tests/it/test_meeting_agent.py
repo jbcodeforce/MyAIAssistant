@@ -8,7 +8,7 @@ Run with: pytest tests/it/test_meeting_agent.py -v -m integration
 import pytest
 from pathlib import Path
 from agent_core.agents.meeting_agent import MeetingAgentResponse
-from agent_core.agents.agent_factory import AgentFactory
+from agent_core.agents.agent_factory import get_agent_factory
 from agent_core.agents.base_agent import AgentInput
 
 config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
@@ -25,7 +25,8 @@ class TestMeetingAgent:
     @pytest.fixture
     def factory(self):
         """Create factory pointing to real config directory."""
-        return AgentFactory()
+        return get_agent_factory()
+        #return AgentFactory(config_dir=config_dir)
 
     @pytest.mark.asyncio
     async def test_simple_meeting_note(self, factory):

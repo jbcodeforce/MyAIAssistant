@@ -94,7 +94,8 @@ class BaseAgent:
         self._llm_client = LLMProviderFactory.create_provider(self._config.provider)
         
         # Load system prompt from agent_dir (filesystem or resources)
-        self._system_prompt = self._load_system_prompt()
+        if self._config.sys_prompt is None:
+            self._config.sys_prompt = self._load_system_prompt()
         
         self.agent_type = self._config.name or "BaseAgent"
     
@@ -176,6 +177,7 @@ class BaseAgent:
         """
         messages, context_used, should_use_rag= await self._build_messages(input_data)
         # Call LLM
+        print("Send request to LLM....")
         response = await self._llm_client.chat_async(messages=messages, config=self._config)
         response_content = response.content
         return AgentResponse(
@@ -315,9 +317,9 @@ class BaseAgent:
         Returns:
             The system prompt string
         """
-        if self._system_prompt:
+        if self._config.sys_prompt:
             # Use injected prompt, with optional context substitution
-            prompt = self._system_prompt
+            prompt = self._config.sys_prompt
             if context:
                 # Substitute placeholders in format {key} with values from context
                 # Only substitute keys that exist in context, leave others as-is
