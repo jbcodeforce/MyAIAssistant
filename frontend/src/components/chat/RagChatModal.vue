@@ -237,7 +237,7 @@ async function sendMessage() {
       content: m.content
     }))
 
-    const response = await chatApi.ragChat(message, history, 5)
+    const response = await chatApi.kbChat(message, history, 5)
 
     // Add assistant response
     messages.value.push({

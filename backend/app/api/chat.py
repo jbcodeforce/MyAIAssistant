@@ -1,6 +1,8 @@
 """Chat API endpoints for LLM-powered task planning."""
 
+import json
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
@@ -55,8 +57,7 @@ async def chat_about_todo(
             todo_description=todo.description,
             user_message=request.message,
             conversation_history=history,
-            use_rag=request.use_rag,
-            rag_query=request.rag_query
+            use_rag=request.use_rag
         )
         
         return ChatResponse(
@@ -89,11 +90,8 @@ async def generic_chat(
     chat_service: ChatService = Depends(get_chat)
 ):
     """
-    Chat using the knowledge base for context.
-    
-    This endpoint allows querying the general knowledge base without 
-    being tied to a specific todo task. Useful for general 
-    questions about indexed documents and using a query routing system.
+    This endpoint allows querying the general knowledge base, meeting notes, assets descriptions, etc. without 
+    being tied to a specific todo task. Useful for general questions about indexed documents and using a query routing system.
     This endpoint classifies the user's query to determine intent,
     then routes to the appropriate specialized agent:
     
@@ -147,6 +145,81 @@ async def generic_chat(
     except Exception as e:
         import logging
         logging.exception("RAG chat error")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get response from LLM: {str(e)}"
+        )
+
+
+@router.post("/generic/stream")
+async def generic_chat_stream(
+    request: ChatRequest,
+    chat_service: ChatService = Depends(get_chat),
+):
+    """
+    Stream generic chat response as NDJSON (one JSON object per line).
+    Each line: {"content": "chunk text"}. Optional final line: {"done": true, "intent": "...", "agent_type": "..."}.
+    """
+    history = [
+        ChatMessage(role=msg.role, content=msg.content)
+        for msg in request.conversation_history
+    ]
+    force_intent = None
+    if request.force_intent:
+        try:
+            force_intent = QueryIntent(request.force_intent)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid intent: {request.force_intent}"
+            )
+
+    async def stream_generator():
+        try:
+            async for chunk in chat_service.chat_with_routing_stream(
+                user_message=request.message,
+                conversation_history=history,
+                context=request.context,
+                force_intent=force_intent,
+            ):
+                yield (json.dumps({"content": chunk}) + "\n").encode("utf-8")
+            yield (json.dumps({"done": True}) + "\n").encode("utf-8")
+        except Exception as e:
+            import logging
+            logging.exception("Generic chat stream error")
+            yield (json.dumps({"content": f"Error: {e}", "done": True}) + "\n").encode("utf-8")
+
+    return StreamingResponse(
+        stream_generator(),
+        media_type="application/x-ndjson",
+    )
+
+
+@router.post("/kb", response_model=ChatResponse)
+async def kb_chat(
+    request: ChatRequest,
+    chat_service: ChatService = Depends(get_chat)
+):
+    """
+    Chat using the knowledge base for context.
+    """ 
+    # Convert conversation history
+    history = [
+        ChatMessage(role=msg.role, content=msg.content)
+        for msg in request.conversation_history
+    ]
+    try:
+        response= await chat_service.chat_with_kb( user_message=request.message,
+            conversation_history=history)
+        return ChatResponse(
+            message=response.message,
+            context_used=[]
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import logging
+        logging.exception("KB chat error")
         raise HTTPException(
             status_code=500,
             detail=f"Failed to get response from LLM: {str(e)}"

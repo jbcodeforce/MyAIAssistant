@@ -5,24 +5,31 @@ A library for building agentic AI applications with unified LLM integration via 
 ## Features
 
 - Unified LLM client using HuggingFace InferenceClient
-- Supports both local inference servers (TGI, vLLM, Ollama) and HuggingFace Hub remote models
+- Supports both local inference servers (TGI, vLLM, Ollama, lmStudio) and HuggingFace Hub remote models
 - Both synchronous and asynchronous APIs
 - Config-driven agent framework with YAML-based agent definitions
 - Generic agent implementation - create agents from YAML without writing Python code
 - Agent factory for creating agents from configuration
 - Query classification for intent detection
-- Agent router for intelligent query routing
+- Agent router for intelligent query routing to declared agents
 
 ## Installation
 
+To use from wheel
+
 ```bash
+cd agent_core
+uv build .
+cd ..
 # From the MyAIAssistant root directory
 uv pip install -e agent_core/
 ```
 
+For Mac users, we recommend running [LMStudio](https://lmstudio.ai/) as it supports MLX models, specially optimized for Apple's metal hardware.
+
 ## Architecture
 
-The agent framework uses a config-driven design where agents are defined by YAML configuration files and markdown prompt templates.
+The agent framework uses a config-driven design where agents are defined by YAML configuration files and markdown prompt templates, in a specific folder referenced in the confog.yaml file. In fact there are a set of predefined agents, defined as resources in the python library.
 
 ```
 agent_core/
@@ -32,6 +39,8 @@ agent_core/
 │   │   │   ├── agent.yaml         # Agent configuration
 │   │   │   └── prompt.md          # System prompt template
 │   │   ├── CodeAgent/
+│   │   │   ├── agent.yaml         # Agent configuration
+│   │   │   └── prompt.md          # System prompt template
 │   │   └── TaskAgent/
 │   ├── base_agent.py              # BaseAgent, AgentInput, AgentResponse
 │   ├── factory.py                 # AgentFactory, AgentConfig
@@ -78,12 +87,11 @@ classDiagram
     class BaseAgent {
         +str agent_type
         -AgentConfig _config
-        -LLMClient _llm_client
+        -LLMCallable _llm_client
         -str _system_prompt
         -RAGService _rag_service
-        +execute(query, history, context) AgentResponse
+        +execute(input_data) AgentResponse
         +build_system_prompt(context) str
-        -_call_llm(messages) str
         -_retrieve_rag_context(query, context) list[dict]
     }
 
@@ -114,22 +122,15 @@ classDiagram
         -_build_response(state) RoutedResponse
     }
 
-    class LLMClient {
-        -AgentConfig config
-        -LLMProvider _provider
-        +chat_async(messages) LLMResponse
-        +chat(messages) LLMResponse
+    class LLMCallable {
+        <<Protocol>>
+        +chat_async(messages, config) LLMResponse
+        +chat_sync(messages, config) LLMResponse
     }
 
-    class LLMProvider {
-        <<interface>>
+    class DefaultHFAdapter {
         +chat_async(messages, config) LLMResponse
-        +chat(messages, config) LLMResponse
-    }
-
-    class HuggingFaceProvider {
-        +chat_async(messages, config) LLMResponse
-        +chat(messages, config) LLMResponse
+        +chat_sync(messages, config) LLMResponse
     }
 
     class AgentInput {
@@ -195,21 +196,18 @@ classDiagram
     AgentFactory --> BaseAgent : creates
     
     BaseAgent --> AgentConfig : uses
-    BaseAgent --> LLMClient : uses
+    BaseAgent --> LLMCallable : uses
     BaseAgent --> AgentResponse : returns
-    
+
     AgentRouter --> QueryClassifier : uses
     AgentRouter --> BaseAgent : routes to
     AgentRouter --> WorkflowState : uses
     AgentRouter --> RoutedResponse : returns
-    
+
     QueryClassifier --> ClassificationResult : returns
     ClassificationResult --> QueryIntent : uses
-    
-    LLMClient --> AgentConfig : uses
-    LLMClient --> LLMProvider : uses
-    LLMProvider <|.. HuggingFaceProvider : implements
-    
+
+    LLMCallable <|.. DefaultHFAdapter : default
     BaseAgent ..> AgentInput : accepts
 ```
 
@@ -224,20 +222,17 @@ sequenceDiagram
     participant Classifier as QueryClassifier
     participant Factory as AgentFactory
     participant Agent as BaseAgent
-    participant LLMClient
-    participant Provider as LLMProvider
+    participant LLM as LLMCallable
     participant RAG as RAGService
 
     User->>Router: route(query, history, context)
-    
+
     Note over Router: Step 1: Classification
-    Router->>Classifier: classify(query)
+    Router->>Classifier: execute(AgentInput)
     Classifier->>Factory: get_config("QueryClassifier")
     Factory-->>Classifier: AgentConfig
-    Classifier->>LLMClient: chat_async(messages)
-    LLMClient->>Provider: chat_async(messages, config)
-    Provider-->>LLMClient: LLMResponse
-    LLMClient-->>Classifier: response content
+    Classifier->>LLM: chat_async(messages, config)
+    LLM-->>Classifier: LLMResponse
     Classifier->>Classifier: parse JSON classification
     Classifier-->>Router: ClassificationResult(intent, confidence, reasoning)
     
@@ -247,7 +242,7 @@ sequenceDiagram
     Factory->>Factory: load agent.yaml & prompt.md
     Factory->>Factory: resolve agent class
     Factory->>Agent: __init__(config, system_prompt)
-    Agent->>LLMClient: __init__(config)
+    Agent uses _llm_client (default HF or injected)
     Factory-->>Router: Agent instance
     
     Note over Router: Step 3: Agent Execution
@@ -262,10 +257,8 @@ sequenceDiagram
     
     Agent->>Agent: build_system_prompt(context)
     Agent->>Agent: build messages (system, history, query)
-    Agent->>LLMClient: chat_async(messages)
-    LLMClient->>Provider: chat_async(messages, config)
-    Provider-->>LLMClient: LLMResponse
-    LLMClient-->>Agent: response content
+    Agent->>LLM: chat_async(messages, config)
+    LLM-->>Agent: LLMResponse
     Agent->>Agent: create AgentResponse
     Agent-->>Router: AgentResponse(message, context_used, metadata)
     
@@ -342,8 +335,6 @@ Configuration fields:
 | `description` | string | Human-readable description |
 | `class` | string | Fully qualified Python class name (optional - if omitted, uses generic agent) |
 | `model` | string | Model identifier |
-| `api_key` | string | API key for remote models (optional) |
-| `base_url` | string | Base URL for local inference servers (optional) |
 | `temperature` | float | Sampling temperature (default: 0.7) |
 | `max_tokens` | int | Maximum response tokens (default: 2048) |
 | `timeout` | float | Request timeout in seconds (default: 60.0) |
@@ -353,21 +344,23 @@ The `class` field is optional. If omitted, the factory uses a generic agent impl
 ### Using AgentConfig Programmatically
 
 ```python
-from agent_core import AgentConfig, LLMClient
+from agent_core.agents import BaseAgent, AgentInput
+from agent_core.agents.agent_config import AgentConfig
 
 # Create configuration
 config = AgentConfig(
     name="MyAgent",
     model="gpt-4o-mini",
     base_url="http://localhost:8080",
-    temperature=0.5
+    temperature=0.5,
 )
 
 # Validate configuration
 config.validate()
 
-# Use directly with LLMClient
-client = LLMClient(config)
+# BaseAgent uses HuggingFace InferenceClient by default; pass optional llm_client to use a different backend
+agent = BaseAgent(config=config)
+response = await agent.execute(AgentInput(query="Hello"))
 ```
 
 ### System Prompts
@@ -539,72 +532,10 @@ Response fields:
 | `agent_type` | string | Type identifier of the agent |
 | `metadata` | dict | Additional metadata (intent, confidence, etc.) |
 
-## LLM Client Usage
-
-### Local Inference Server (TGI, vLLM, Ollama)
-
-```python
-from agent_core import LLMClient, AgentConfig, Message
-
-config = AgentConfig(
-    name="LocalLLM",
-    model="llama3",
-    base_url="http://localhost:8080"
-)
-
-client = LLMClient(config)
-
-messages = [
-    Message(role="system", content="You are a helpful assistant."),
-    Message(role="user", content="Hello!")
-]
-
-# Async usage
-response = await client.chat_async(messages)
-print(response.content)
-
-# Sync usage
-response = client.chat(messages)
-print(response.content)
-```
-
-### HuggingFace Hub (Remote Models)
-
-```python
-import os
-from agent_core import LLMClient, AgentConfig, Message
-
-config = AgentConfig(
-    name="HFHub",
-    model="meta-llama/Meta-Llama-3-8B-Instruct",
-    api_key=os.getenv("HF_TOKEN")
-)
-
-client = LLMClient(config)
-response = await client.chat_async([
-    Message(role="user", content="Hello!")
-])
-print(response.content)
-```
 
 ## Query Classification
 
 The `QueryClassifier` analyzes user queries to determine intent for routing:
-
-```python
-from agent_core.agents import QueryClassifier
-
-classifier = QueryClassifier(
-    model="gpt-4o-mini"
-)
-
-result = await classifier.classify("How do I implement OAuth?")
-print(result.intent)      # QueryIntent.CODE_HELP
-print(result.confidence)  # 0.95
-print(result.entities)    # {"topic": "OAuth", "keywords": ["auth"]}
-```
-
-Or create via factory:
 
 ```python
 from agent_core.agents import AgentFactory
@@ -682,68 +613,6 @@ router = AgentRouter(
     default_agent="general"
 )
 ```
-
-## Configuration
-
-### AgentConfig
-
-`AgentConfig` is the unified configuration class that includes both agent-specific settings and LLM configuration. Use it for agents and LLMClient:
-
-```python
-from agent_core import AgentConfig, LLMClient
-
-config = AgentConfig(
-    name="MyAgent",
-    description="My custom agent",
-    agent_class="my_module.MyAgent",  # Fully qualified class name
-    # provider is always "huggingface", not configurable
-    model="gpt-4o-mini",
-    base_url="http://localhost:8080",
-    temperature=0.7,
-    max_tokens=2048,
-    timeout=60.0,
-)
-
-# Use with LLMClient
-client = LLMClient(config)
-
-# Validate configuration
-config.validate()
-```
-
-Configuration fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Agent name (matches directory name) |
-| `description` | string | Human-readable description |
-| `agent_class` | string | Fully qualified Python class name |
-| `model` | string | Model name (HF model ID or local model name) |
-| `api_key` | string | HF_TOKEN for remote models (not needed for local) |
-| `base_url` | string | Base URL for local inference servers |
-| `max_tokens` | int | Max response tokens (default: 2048) |
-| `temperature` | float | Sampling temperature (default: 0.7) |
-| `timeout` | float | Request timeout in seconds (default: 60.0) |
-
-### Environment Variables
-
-Create a `.env` file in your project root:
-
-```bash
-HF_TOKEN=hf_your_token_here
-```
-
-The library automatically loads environment variables using `python-dotenv`.
-
-## Built-in Agents
-
-| Agent | Description | Use Case |
-|-------|-------------|----------|
-| `QueryClassifier` | Classifies user queries for routing | Intent detection |
-| `BaseAgent` (as GeneralAgent) | General-purpose assistant | Conversation, Q&A |
-| `BaseAgent` (as RAGAgent) | Knowledge base search with RAG | Document retrieval |
-| `CodeAgent` | Programming assistance | Code help, debugging |
-| `TaskAgent` | Task planning and management | Task breakdown |
 
 ## Testing
 

@@ -125,7 +125,7 @@
     <Modal
       :show="showCreateModal"
       title="Create New Todo"
-      :wide="true"
+      size="large"
       @close="closeCreateModal"
     >
       <TodoForm

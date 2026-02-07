@@ -15,6 +15,7 @@ class TodoBase(BaseModel):
     due_date: Optional[datetime] = Field(None, description="Due date for the todo")
     source_type: Optional[str] = Field(None, max_length=50, description="Source type (e.g., meeting, knowledge)")
     source_id: Optional[int] = Field(None, description="Source reference ID")
+    asset_id: Optional[int] = Field(None, description="Related asset ID")
 
 
 class TodoCreate(TodoBase):
@@ -46,6 +47,7 @@ class TodoUpdate(BaseModel):
     due_date: Optional[datetime] = None
     source_type: Optional[str] = Field(None, max_length=50)
     source_id: Optional[int] = None
+    asset_id: Optional[int] = None
 
     model_config = ConfigDict(
         json_schema_extra={

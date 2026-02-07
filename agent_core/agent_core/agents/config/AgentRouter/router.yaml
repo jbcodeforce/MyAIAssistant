@@ -1,0 +1,12 @@
+# Router config: intent -> agent name.
+# Intent keys must match QueryIntent values; agent names must exist in factory.
+default_agent: GeneralAgent
+mapping:
+  knowledge_search: GeneralAgent
+  task_planning: TaskAgent
+  task_status: TaskAgent
+  code_help: CodeAgent
+  general_chat: GeneralAgent
+  unclear: GeneralAgent
+  persona: PersonaAgent
+  

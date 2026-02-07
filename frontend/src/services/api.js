@@ -170,13 +170,95 @@ export const chatApi = {
   },
 
   /**
-   * Send a message to chat using RAG knowledge base
+   * Send a message to the generic chat agent (POST /chat/generic)
+   * @param {string} message - The user's message
+   * @param {Array} conversationHistory - Previous messages [{role, content}]
+   * @param {number} nResults - Number of results to use (1-10)
+   */
+  genericChat(message, conversationHistory = [], nResults = 5) {
+    return api.post('/chat/generic', {
+      message,
+      conversation_history: conversationHistory,
+      n_results: nResults
+    })
+  },
+
+  /**
+   * Stream generic chat response (POST /chat/generic/stream). NDJSON: {"content": "..."} or {"done": true}.
+   * @param {string} message - The user's message
+   * @param {Array} conversationHistory - Previous messages [{role, content}]
+   * @param {function} onChunk - Called with (text) for each content chunk
+   * @param {function} onDone - Called when stream ends
+   * @param {function} onError - Called with (error) on fetch or parse error
+   */
+  async genericChatStream(message, conversationHistory = [], onChunk, onDone, onError) {
+    const baseURL = api.defaults.baseURL || ''
+    const url = `${baseURL}/chat/generic/stream`
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          conversation_history: conversationHistory,
+          n_results: 5
+        })
+      })
+      if (!response.ok) {
+        const errBody = await response.text()
+        let detail = response.statusText
+        try {
+          const j = JSON.parse(errBody)
+          if (j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+        } catch (_) {}
+        onError(new Error(detail))
+        return
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          try {
+            const obj = JSON.parse(trimmed)
+            if (obj.content != null) onChunk(obj.content)
+            if (obj.done) {
+              onDone()
+              return
+            }
+          } catch (e) {
+            // skip malformed line
+          }
+        }
+      }
+      if (buffer.trim()) {
+        try {
+          const obj = JSON.parse(buffer.trim())
+          if (obj.content != null) onChunk(obj.content)
+        } catch (_) {}
+      }
+      onDone()
+    } catch (err) {
+      onError(err)
+    }
+  },
+
+  /**
+   * Send a message to the knowledge-base / RAG chat (POST /chat/kb)
+   * Used by the RAG chat component for queries over indexed documents.
    * @param {string} message - The user's message
    * @param {Array} conversationHistory - Previous messages [{role, content}]
    * @param {number} nResults - Number of RAG results to use (1-10)
    */
-  ragChat(message, conversationHistory = [], nResults = 5) {
-    return api.post('/chat/generic', {
+  kbChat(message, conversationHistory = [], nResults = 5) {
+    return api.post('/chat/kb', {
       message,
       conversation_history: conversationHistory,
       n_results: nResults
@@ -285,6 +367,15 @@ export const personsApi = {
 
   delete(id) {
     return api.delete(`/persons/${id}`)
+  }
+}
+
+export const agentsApi = {
+  /**
+   * List configured agents (read-only). Data from agent config directory.
+   */
+  list() {
+    return api.get('/agents/')
   }
 }
 

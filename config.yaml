@@ -21,10 +21,11 @@ cors_origins:
 llm_provider: "huggingface"
 # llm_model: "gpt-oss:20b"
 llm_model: "mistral:7b-instruct"
-llm_api_key: null
-llm_base_url: "http://localhost:11434/v1"
-llm_max_tokens: 2048
-llm_temperature: 0.1
+llm_api_key: "lm-studio"
+#llm_base_url: "http://localhost:11434/v1"
+llm_base_url: "http://localhost:1234/v1"
+llm_max_tokens: 4096
+llm_temperature: 0.2
 
 # Agent configuration directory
 # Path to agent config directory (relative to workspace root or absolute path)

@@ -6,18 +6,18 @@ Command-line tool for managing AI Assistant's workspaces and global cross worksp
 
 The AI Assist CLI provides a comprehensive set of tools for managing AI Assistant workspaces and resources:
 
+### Configuration Management
+- **View configuration**: Display current workspace or global configuration
+- **Get/Set values**: Read and modify specific configuration values
+- **Edit config files**: Open configuration files in your default editor
+- **Environment variable support**: Respect `CONFIG_FILE` environment variable for custom configurations
+
 ### Workspace Management
 - **Initialize workspaces**: Create new workspaces with proper directory structure and configuration
 - **Workspace status**: View workspace configuration, directory status, and resource counts
 - **List workspaces**: Discover and manage all registered workspaces
 - **Clean workspace data**: Remove history, summaries, and cache data
 - **Auto-detection**: Automatically detect workspace from current directory or parent directories
-
-### Configuration Management
-- **View configuration**: Display current workspace or global configuration
-- **Get/Set values**: Read and modify specific configuration values
-- **Edit config files**: Open configuration files in your default editor
-- **Environment variable support**: Respect `CONFIG_FILE` environment variable for custom configurations
 
 ### Service Management
 - **Run services**: Start backend and frontend services with a single command

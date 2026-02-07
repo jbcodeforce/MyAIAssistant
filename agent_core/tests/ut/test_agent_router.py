@@ -16,7 +16,7 @@ from agent_core.agents.query_classifier import (
     ClassificationResult,
 )
 from agent_core.agents.base_agent import BaseAgent, AgentResponse
-
+from agent_core.agents.base_agent import AgentInput
 
 class TestWorkflowState:
     """Tests for WorkflowState dataclass."""
@@ -78,8 +78,6 @@ class TestRoutedResponse:
         response = RoutedResponse(
             message="Test response",
             context_used=[{"title": "Doc1", "uri": "/doc1"}],
-            model="gpt-4",
-            provider="openai",
             intent=QueryIntent.KNOWLEDGE_SEARCH,
             confidence=0.92,
             agent_type="rag",
@@ -97,8 +95,6 @@ class TestRoutedResponse:
         response = RoutedResponse(
             message="Test",
             context_used=[],
-            model="gpt-4",
-            provider="openai",
             intent=QueryIntent.CODE_HELP,
             confidence=0.95,
             agent_type="code",
@@ -113,8 +109,6 @@ class TestRoutedResponse:
         response = RoutedResponse(
             message="Test",
             context_used=[],
-            model="gpt-4",
-            provider="openai",
             intent=QueryIntent.GENERAL_CHAT,
             confidence=0.8,
             agent_type="general",
@@ -184,7 +178,7 @@ class TestAgentRouter:
         classifier._llm_client.chat_async = mock_classifier_chat_async
         
         # Get the actual task agent from router
-        agent = router.agents[QueryIntent.TASK_PLANNING]
+        agent = router.get_agent_for_intent(QueryIntent.TASK_PLANNING)
         
         # Mock 2: Task agent's LLM client (called second via agent.execute)
         task_agent_llm_called = {}
@@ -208,7 +202,8 @@ class TestAgentRouter:
         agent._llm_client.chat_async = mock_task_agent_chat_async
         
         # Execute the routing
-        response = await router.route(query)
+        input_data = AgentInput(query=query)
+        response = await router.execute(input_data)
         
         # Verify classifier's LLM was called first
         assert classifier_llm_called.get("called", False), "Classifier's LLM should have been called first"
@@ -254,7 +249,7 @@ class TestRouteStep:
             classification=classification,
             context={"user_id": 123}
         )
-        agent = router.agents[QueryIntent.KNOWLEDGE_SEARCH]
+        agent = router.get_agent_for_intent(QueryIntent.KNOWLEDGE_SEARCH)
         
         # Mock the agent's LLM client
         from agent_core.types import LLMResponse

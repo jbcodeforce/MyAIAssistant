@@ -1,6 +1,7 @@
 """Document processor for knowledge base documents."""
 
 import logging
+import re
 from typing import Dict, List, Optional
 
 from agent_core.services.rag.document_loader import DocumentLoader, LoadedDocument
@@ -39,6 +40,7 @@ class DocumentProcessor:
         """
         if not text:
             return []
+        text = re.sub(r"\s+", " ", text.strip())  # Normalize whitespace
 
         # Use existing text splitter
         text_chunks = self.text_splitter.split_text(text, metadata)

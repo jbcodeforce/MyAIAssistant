@@ -13,6 +13,7 @@ import Assets from '@/views/Assets.vue'
 import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
 import Persons from '@/views/Persons.vue'
+import Agents from '@/views/Agents.vue'
 
 const routes = [
   {
@@ -85,6 +86,14 @@ const routes = [
     component: Knowledge,
     meta: {
       title: 'Knowledge Base - MyAIAssistant'
+    }
+  },
+  {
+    path: '/agents',
+    name: 'Agents',
+    component: Agents,
+    meta: {
+      title: 'Agents - MyAIAssistant'
     }
   },
   {

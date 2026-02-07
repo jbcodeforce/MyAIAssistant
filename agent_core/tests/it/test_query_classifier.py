@@ -3,7 +3,7 @@
 import pytest
 import json
 from agent_core.agents.query_classifier import ClassificationResult, QueryIntent
-from agent_core.agents.agent_factory import AgentFactory
+from agent_core.agents.agent_factory import get_agent_factory
 from agent_core.agents.base_agent import AgentInput
 from pathlib import Path
 
@@ -15,7 +15,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_1_classify_meeting_notes(self):
         """Test classifying a meeting notes query."""
-        real_factory =AgentFactory(config_dir=config_dir)
+        real_factory =get_agent_factory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         meeting_note = """
         ## Meeting 01/07
@@ -37,7 +37,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_2_classify_research(self):
         """Test classifying research query."""
-        real_factory =AgentFactory(config_dir=config_dir)
+        real_factory =get_agent_factory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         query = """
        I would like to know how to learn environment engineering using free sources
@@ -54,7 +54,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_3_code_help(self):
         """Test classifying research query."""
-        real_factory =AgentFactory(config_dir=config_dir)
+        real_factory =get_agent_factory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         query = """
        I would like to implement a REST API endpoint in FastAPI using a RAG approach
@@ -71,7 +71,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_4_task_planning(self):
         """Test classifying research query."""
-        real_factory =AgentFactory(config_dir=config_dir)
+        real_factory =get_agent_factory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         query = """
         what should I do to prepare for the interview next week?

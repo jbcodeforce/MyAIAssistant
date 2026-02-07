@@ -7,13 +7,11 @@ in agentic AI applications, along with base input/output Pydantic models.
 import importlib.resources
 import logging
 import re
-from typing import Optional, Tuple 
+from typing import AsyncIterator, Optional, Tuple
 from pydantic import BaseModel, Field
 
-from agent_core.types import Message as LLMMessage, LLMResponse
-from agent_core.providers.llm_provider_factory import LLMProviderFactory
-
-from agent_core.agents.agent_factory import AgentConfig
+from agent_core.agents._llm_default import DefaultHFAdapter, LLMCallable
+from agent_core.agents.agent_config import AgentConfig, LOCAL_BASE_URL, LOCAL_MODEL
 from agent_core.services.rag.service import RAGService
 
 logger = logging.getLogger(__name__)
@@ -60,44 +58,42 @@ class BaseAgent:
         agent = BaseAgent(config=AgentConfig(model="llama3"))
         response = await agent.execute(AgentInput(query="What is Python?"))
     """
-    
-    rag_service: RAGService = None
-    
+     
     def __init__(
         self,
-        # AgentConfig for unified configuration
-        config: AgentConfig = None
+        config: Optional[AgentConfig] = None,
+        llm_client: Optional[LLMCallable] = None,
     ):
         """
         Initialize the agent with configuration.
-        
+
         Args:
             config: AgentConfig instance (takes precedence over individual params)
+            llm_client: Optional LLM client with chat_async(messages, config) -> LLMResponse.
+                If None, uses HuggingFace InferenceClient directly (default).
         """
-
         if config is not None:
-            # Use AgentConfig directly
             self._config = config
         else:
-            # Build config from individual parameters
             self._config = AgentConfig(
-                model="mistral:7b-instruct",
+                model=LOCAL_MODEL,
                 provider="huggingface",
                 api_key="local_api_key",
-                base_url="http://localhost:11434/v1",
-                max_tokens=2048,
+                base_url=LOCAL_BASE_URL,
+                max_tokens=4096,
                 temperature=0.7,
                 use_rag=False,
-                rag_top_k=5,
-                rag_category=None
+                rag_top_k=3,
+                rag_category="default",
             )
-        self._llm_client = LLMProviderFactory.create_provider(self._config.provider)
+        self._llm_client = llm_client if llm_client is not None else DefaultHFAdapter()
         
         # Load system prompt from agent_dir (filesystem or resources)
         if self._config.sys_prompt is None:
             self._config.sys_prompt = self._load_system_prompt()
         
         self.agent_type = self._config.name or "BaseAgent"
+        self.rag_service = RAGService()
     
     def _load_system_prompt(self) -> str:
         """
@@ -184,9 +180,26 @@ class BaseAgent:
             message=response_content,
             context_used=context_used,
             agent_type=self.agent_type,
-            metadata={"rag_enabled": should_use_rag and self._rag_service is not None}
+            metadata={"rag_enabled": should_use_rag and self.rag_service is not None}
         )
-    
+
+    async def execute_stream(self, input_data: AgentInput) -> AsyncIterator[str]:
+        """
+        Execute the agent and stream response content chunk by chunk.
+
+        Uses chat_async_stream on the LLM client when available; otherwise
+        falls back to chat_async and yields the full message as one chunk.
+        """
+        messages, _context_used, _should_use_rag = await self._build_messages(input_data)
+        stream_method = getattr(self._llm_client, "chat_async_stream", None)
+        if callable(stream_method):
+            async for chunk in stream_method(messages, self._config):
+                yield chunk
+        else:
+            response = await self._llm_client.chat_async(messages=messages, config=self._config)
+            if response.content:
+                yield response.content
+
     async def _build_messages(self, input_data: AgentInput) -> Tuple[list[dict], list[dict], bool]:
         """
         Process the input data for the agent.
@@ -249,17 +262,17 @@ class BaseAgent:
         Returns:
             List of context dicts with content, title, uri, and score
         """
-        _rag_service = RAGService()
+
         
         context = context or {}
         
         # Get filter parameters from context or defaults
         category = context.get("rag_category", getattr(self._config, "rag_category", None))
         knowledge_ids = context.get("knowledge_ids")
-        top_k = context.get("rag_top_k", getattr(self._config, "rag_top_k", 5))
+        top_k = context.get("rag_top_k", getattr(self._config, "rag_top_k", 3))
         
         try:
-            results = await _rag_service.search(
+            results = await self.rag_service.search(
                 query=query,
                 n_results=top_k,
                 category=category,

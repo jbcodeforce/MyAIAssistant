@@ -9,12 +9,11 @@ import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-from agent_core.agents.agent_factory import AgentFactory, AgentConfig
-from agent_core.agents.base_agent import BaseAgent, AgentInput, AgentResponse
-from agent_core.providers.llm_provider_factory import LLMProviderFactory
-from agent_core.providers.llm_provider_base import LLMProvider
+from agent_core.agents.agent_factory import AgentFactory, get_agent_factory
+from agent_core.agents.base_agent import BaseAgent, AgentInput
+from agent_core.agents.agent_config import AgentConfig, LOCAL_MODEL, LOCAL_BASE_URL
 from agent_core.agents.query_classifier import QueryClassifier
-
+from agent_core.agents.agent_router import AgentRouter
 
 config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
@@ -29,7 +28,6 @@ class TestAgentConfig:
         yaml_content = """
             name: TestAgent
             description: A test agent
-            provider: huggingface
             model: gpt-4o-mini
             temperature: 0.5
             max_tokens: 1000
@@ -41,7 +39,6 @@ class TestAgentConfig:
         assert config.name == "TestAgent"
         assert config.description == "A test agent"
         assert config.agent_class == "agent_core.agents.base_agent.BaseAgent"
-        # provider is always "huggingface", not stored in config
         assert config.model == "gpt-4o-mini"
         assert config.temperature == 0.5
         assert config.max_tokens == 1000
@@ -54,7 +51,6 @@ class TestAgentConfig:
 name: QueryClassifier
 description: Classifies queries
 class: agent_core.agents.query_classifier.QueryClassifier
-provider: huggingface
 model: gpt-4o-mini
 temperature: 0.0
 max_tokens: 500
@@ -71,9 +67,8 @@ max_tokens: 500
         """Test AgentConfig validation succeeds for valid config."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="gpt-4o-mini",
-            base_url="http://localhost:8080",  # Local server, no api_key needed
+            base_url=LOCAL_BASE_URL,  # Local server, no api_key needed
             temperature=0.7
         )
         
@@ -84,28 +79,23 @@ max_tokens: 500
         """Test AgentConfig validation fails for invalid temperature."""
         config = AgentConfig(
             name="TestAgent",
-            provider="huggingface",
             model="gpt-4o-mini",
-            base_url="http://localhost:8080",
+            base_url=LOCAL_BASE_URL,
             temperature=3.0  # Invalid: > 2.0
         )
         
         with pytest.raises(ValueError, match="Temperature must be between"):
             config.validate()
 
+    def test_load_base_agents(self):
+        """Test loading base agents from the config folder."""
+        _config_dir = Path(__file__).parent.parent.parent / "agent_core" / "agents" / "config"
+        config = AgentConfig.from_yaml(_config_dir /  "GeneralAgent" / "agent.yaml")
+        assert config is not None
+        assert config.name == "GeneralAgent"
+        assert config.temperature == 0.4
+        assert config.max_tokens == 4096
 
-class TestProviderFactory:
-    """Tests for the ProviderFactory class."""
-
-    def test_create_provider(self):
-        """Test creating a provider."""
-        provider = LLMProviderFactory.create_provider("huggingface")
-        assert provider is not None
-
-    def test_create_provider_invalid(self):
-        """Test creating an invalid provider."""
-        with pytest.raises(ValueError, match="Unsupported provider: invalid"):
-            LLMProviderFactory.create_provider("invalid")
 
 class TestAgentFactory:
     """Tests for the AgentFactory class."""
@@ -113,7 +103,24 @@ class TestAgentFactory:
     @pytest.fixture
     def factory(self):
         """Create an agent factory for testing."""
-        return AgentFactory(config_dir=config_dir)
+        return get_agent_factory(config_dir=config_dir)
+
+    def test_factory_singleton(self):
+        """Test loading default agents from the config folder."""
+        factory = get_agent_factory(config_dir=config_dir)
+        assert factory is not None
+        assert factory._configs is not None
+        assert len(factory._configs) >= 2
+        factory = get_agent_factory()
+        assert factory is not None
+
+    def test_factory_singleton_no_config_dir(self):
+        """Test loading default agents from the config folder."""
+        factory = get_agent_factory()
+        assert factory is not None
+        assert factory._configs is not None
+        assert len(factory._configs) >= 2
+        print(factory._configs)
 
     def test_factory_discovers_agents(self, factory):
         """Test that factory discovers agent configs from directory."""
@@ -125,40 +132,40 @@ class TestAgentFactory:
 
     def test_factory_loads_agent_yaml(self, factory):
         """Test factory loads agent.yaml correctly."""
-        config = factory.get_agent_map("QueryClassifier")
+        config = factory._configs.get("QueryClassifier")
         
         assert config is not None
         assert config.name == "QueryClassifier"
         assert config.description is not None
         # provider is always "huggingface", not stored in config
-        assert config.model == "mistral:7b-instruct"
+        assert config.model == LOCAL_MODEL
         assert config.temperature == 0.0
         assert config.max_tokens == 500
 
 
     def test_factory_returns_none_for_unknown_agent(self, factory):
         """Test factory returns None for unknown agent names."""
-        config = factory.get_agent_map("NonExistentAgent")        
+        config = factory._configs.get("NonExistentAgent")        
         assert config is None
 
     def test_create_agent_returns_correct_type(self, factory):
         agent = factory.create_agent("GeneralAgent")
         assert agent is not None
         assert isinstance(agent, BaseAgent)
-        assert agent._config.model == "mistral:7b-instruct"
+        assert agent._config.model == LOCAL_MODEL
         assert agent._config.temperature == 0.4
         assert agent._config.max_tokens >= 4096
-        assert agent._system_prompt is not None
+        assert agent._config.sys_prompt is not None
 
    
     def test_create_query_classifier_agent_returns_correct_type(self, factory):
         agent = factory.create_agent("QueryClassifier")
         assert agent is not None
         assert isinstance(agent, QueryClassifier)
-        assert agent._config.model == "mistral:7b-instruct"
+        assert agent._config.model == LOCAL_MODEL
         assert agent._config.temperature == 0.0
         assert agent._config.max_tokens >= 500
-        assert agent._system_prompt is not None
+        assert agent._config.sys_prompt is not None
 
     def test_factory_loads_from_custom_config_dir(self, tmp_path):
         """Test that factory loads agents from a custom config_dir."""
@@ -189,7 +196,7 @@ max_tokens: 3000
         assert "CustomAgent" in agent_names
         
         # Verify custom agent config
-        config = factory.get_agent_map("CustomAgent")
+        config = factory._configs.get("CustomAgent")
         assert config is not None
         assert config.name == "CustomAgent"
         assert config.description == "A custom agent for testing"
@@ -210,7 +217,7 @@ max_tokens: 3000
         assert agent._config.model == "gpt-4o-mini"
         assert agent._config.temperature == 0.8
         # Verify prompt was loaded from filesystem
-        assert "custom test agent" in agent._system_prompt.lower()
+        assert "custom test agent" in agent._config.sys_prompt.lower()
 
     def test_factory_custom_config_dir_overrides_defaults(self, tmp_path):
         """Test that custom config_dir agents override default agents with same name."""
@@ -231,7 +238,7 @@ max_tokens: 5000
         factory = AgentFactory(load_defaults=True, config_dir=str(tmp_path))
         
         # Verify custom GeneralAgent overrides default
-        config = factory.get_agent_map("GeneralAgent")
+        config = factory._configs.get("GeneralAgent")
         assert config is not None
         assert config.name == "GeneralAgent"
         assert config.description == "Custom GeneralAgent that overrides default"
@@ -270,6 +277,27 @@ temperature: 0.5
         assert "QueryClassifier" not in agent_names
 
 
+    def test_factory_create_persona_agent(self):
+        """Test creating a PersonaAgent."""
+        factory = get_agent_factory()
+        agent = factory.create_agent("PersonaAgent")
+        assert agent is not None
+        assert isinstance(agent, BaseAgent)
+        assert agent._config.model == LOCAL_MODEL
+        assert agent._config.temperature == 0.5
+        assert agent._config.max_tokens == 2048
+        assert agent._config.sys_prompt is not None
+        assert len(agent._config.sys_prompt) > 10
+       
+    def test_factory_create_router_agent(self):
+        """Test creating a RouterAgent."""
+        factory = get_agent_factory()
+        agent = factory.create_agent("AgentRouter")
+        assert agent is not None
+        assert isinstance(agent, AgentRouter)
+        assert agent._config.model == LOCAL_MODEL
+        assert agent._config.temperature == 0.2
+        assert agent._config.max_tokens == 4096
 class TestAgentInput:
     """Tests for AgentInput base class."""
 

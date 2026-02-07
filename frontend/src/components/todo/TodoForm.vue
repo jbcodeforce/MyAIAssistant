@@ -63,14 +63,26 @@
       </div>
     </div>
 
-    <div class="form-group">
-      <label for="project">Project</label>
-      <select id="project" v-model="form.project_id" class="form-input" :disabled="loadingProjects">
-        <option :value="null">No project</option>
-        <option v-for="project in projects" :key="project.id" :value="project.id">
-          {{ project.name }}
-        </option>
-      </select>
+    <div class="form-row">
+      <div class="form-group">
+        <label for="project">Project</label>
+        <select id="project" v-model="form.project_id" class="form-input" :disabled="loadingProjects">
+          <option :value="null">No project</option>
+          <option v-for="project in projects" :key="project.id" :value="project.id">
+            {{ project.name }}
+          </option>
+        </select>
+      </div>
+
+      <div class="form-group form-group-asset">
+        <label for="asset_id">Asset</label>
+        <select id="asset_id" v-model="form.asset_id" class="form-input" :disabled="loadingAssets">
+          <option :value="null">No asset</option>
+          <option v-for="asset in assets" :key="asset.id" :value="asset.id">
+            {{ asset.name }}
+          </option>
+        </select>
+      </div>
     </div>
 
     <div class="form-group">
@@ -97,7 +109,7 @@
 <script setup>
 import { ref, watch, onMounted } from 'vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
-import { projectsApi } from '@/services/api'
+import { projectsApi, assetsApi } from '@/services/api'
 
 const props = defineProps({
   initialData: {
@@ -114,6 +126,8 @@ const emit = defineEmits(['submit', 'cancel'])
 
 const projects = ref([])
 const loadingProjects = ref(false)
+const assets = ref([])
+const loadingAssets = ref(false)
 
 const form = ref({
   title: '',
@@ -123,11 +137,12 @@ const form = ref({
   importance: null,
   category: '',
   project_id: null,
+  asset_id: null,
   due_date: ''
 })
 
 onMounted(async () => {
-  await loadProjects()
+  await Promise.all([loadProjects(), loadAssets()])
 })
 
 async function loadProjects() {
@@ -139,6 +154,18 @@ async function loadProjects() {
     console.error('Failed to load projects:', err)
   } finally {
     loadingProjects.value = false
+  }
+}
+
+async function loadAssets() {
+  loadingAssets.value = true
+  try {
+    const response = await assetsApi.list({ limit: 500 })
+    assets.value = response.data.assets
+  } catch (err) {
+    console.error('Failed to load assets:', err)
+  } finally {
+    loadingAssets.value = false
   }
 }
 
@@ -154,6 +181,7 @@ watch(
         importance: newData.importance || null,
         category: newData.category || '',
         project_id: newData.project_id || null,
+        asset_id: newData.asset_id || null,
         due_date: newData.due_date ? formatDateTimeLocal(newData.due_date) : ''
       }
     }
@@ -177,7 +205,8 @@ function handleSubmit() {
     ...form.value,
     due_date: form.value.due_date || null,
     category: form.value.category || null,
-    project_id: form.value.project_id || null
+    project_id: form.value.project_id || null,
+    asset_id: form.value.asset_id || null
   }
   
   if (submitData.urgency === '') submitData.urgency = null
@@ -204,6 +233,17 @@ function handleSubmit() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 1rem;
+}
+
+/* Asset select: prevent clipping; ensure full width within grid cell */
+.form-group-asset {
+  min-width: 0;
+}
+
+.form-group-asset .form-input {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 label {
@@ -270,6 +310,13 @@ textarea.form-input {
 
 @media (max-width: 640px) {
   .form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* When modal is ~800px (wide), give Project/Asset row more room so Asset select is not clipped */
+@media (max-width: 860px) {
+  .form-row:has(.form-group-asset) {
     grid-template-columns: 1fr;
   }
 }

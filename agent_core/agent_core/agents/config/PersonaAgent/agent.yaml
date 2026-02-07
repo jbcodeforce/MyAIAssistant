@@ -1,7 +1,6 @@
 name: PersonaAgent
 description: Build a persona based on the user's problem.
 class: agent_core.agents.base_agent.BaseAgent
-base_url: http://localhost:11434/v1
-model: mistral:7b-instruct
+model: mistralai/ministral-3-14b-reasoning
 temperature: 0.5
 max_tokens: 2048

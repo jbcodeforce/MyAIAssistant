@@ -1,8 +1,9 @@
 """Chat service for LLM-powered task planning with RAG integration."""
 
 import logging
+import json
 from dataclasses import dataclass
-from typing import Optional
+from typing import AsyncIterator, Optional
 
 from app.core.config import get_settings, resolve_agent_config_dir
 from agent_core.agents.agent_factory import  AgentFactory, get_agent_factory
@@ -67,7 +68,6 @@ class ChatService:
             user_message: The user's message/question
             conversation_history: Previous messages in the conversation
             use_rag: Whether to use RAG to retrieve relevant context
-            rag_query: Custom query for RAG (defaults to combining todo + message)
             
         Returns:
             ChatResponse with the assistant's reply and context used
@@ -133,7 +133,39 @@ class ChatService:
             classification_confidence=routed_response.confidence
         )
 
+    async def chat_with_routing_stream(
+        self,
+        user_message: str,
+        conversation_history: list[ChatMessage] = None,
+        context: dict = None,
+        force_intent: QueryIntent = None,
+    ) -> AsyncIterator[str]:
+        """
+        Chat with routing, streaming response content chunk by chunk.
+        """
+        history_dicts = []
+        if conversation_history:
+            for msg in conversation_history:
+                history_dicts.append({"role": msg.role, "content": msg.content})
+        async for chunk in self._agent_router.route_stream(
+            query=user_message,
+            conversation_history=history_dicts,
+            context=context or {},
+            force_intent=force_intent,
+        ):
+            yield chunk
 
+    async def chat_with_kb(
+        self,
+        user_message: str,
+        conversation_history: list[ChatMessage] = None
+    ) -> ChatResponse:
+        """
+        Chat using the knowledge base for context.
+        """
+        return ChatResponse(
+            message=user_message
+        )   
 # Global chat service instance
 _chat_service: Optional[ChatService] = None
 

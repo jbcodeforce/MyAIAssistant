@@ -1,8 +1,7 @@
 name: MeetingAgent
 description: Process Meeting note to extract attendees, key points and next steps.
 class: agent_core.agents.meeting_agent.MeetingAgent
-base_url: http://localhost:11434/v1
-model: mistral:7b-instruct
+model: mistralai/ministral-3-14b-reasoning
 temperature: 0.5
 max_tokens: 2048
 

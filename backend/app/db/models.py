@@ -134,6 +134,11 @@ class Todo(Base):
     source_type: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     source_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
 
+    # Related asset (optional)
+    asset_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("assets.id"), nullable=True
+    )
+
     # Relationships
     project: Mapped[Optional["Project"]] = relationship("Project", back_populates="todos")
 
@@ -305,7 +310,9 @@ class Asset(Base):
 
     # Relationships
     project: Mapped[Optional["Project"]] = relationship("Project", backref="assets")
-    todo: Mapped[Optional["Todo"]] = relationship("Todo", backref="assets")
+    todo: Mapped[Optional["Todo"]] = relationship(
+        "Todo", backref="assets", foreign_keys=[todo_id]
+    )
 
     def __repr__(self) -> str:
         return f"Asset(id={self.id!r}, name={self.name!r}, reference_url={self.reference_url!r})"

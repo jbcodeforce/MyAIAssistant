@@ -135,6 +135,16 @@ LLM-powered chat interface for intelligent interactions.
 
 [Learn more about Chat](chat.md)
 
+### Agent Management
+
+Read-only UI to view configured agents (name, description, model, temperature, max_tokens). Data is loaded from the agent config directory; no database persistence.
+
+- List agents via GET /api/agents/
+- Tile grid with detail modal on click
+- Same config source as chat routing (AgentFactory)
+
+[Learn more about Agent Management](agents.md)
+
 ### Agent Core
 
 Config-driven framework for building agentic AI applications with unified LLM integration.
@@ -196,6 +206,7 @@ All backend APIs follow RESTful conventions with versioned endpoints:
 | Meetings | `/api/meeting-refs` | Meeting notes management |
 | Assets | `/api/assets` | Reusable asset management |
 | RAG | `/api/rag` | Indexing and semantic search |
+| Agents | `/api/agents` | List configured agents (read-only) |
 | Metrics | `/api/metrics` | Dashboard metrics |
 | Health | `/health` | Application health check |
 

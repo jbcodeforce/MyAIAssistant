@@ -15,13 +15,21 @@
           <h2>Tasks Dashboard</h2>
           <p class="view-description">Organize tasks by urgency and importance</p>
         </div>
-        <button class="btn-new-todo" @click="uiStore.openCreateModal()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M12 5v14"/>
-            <path d="M5 12h14"/>
-          </svg>
-          New Todo
-        </button>
+        <div class="dashboard-header-actions">
+          <button class="btn-agent-chat" @click="showGenericChatModal = true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            Chat with agent
+          </button>
+          <button class="btn-new-todo" @click="uiStore.openCreateModal()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 5v14"/>
+              <path d="M5 12h14"/>
+            </svg>
+            New Todo
+          </button>
+        </div>
       </div>
 
       <TodoCanvas
@@ -63,7 +71,7 @@
     <Modal
       :show="showCreateModal"
       title="Create New Todo"
-      :wide="true"
+      size="large"
       @close="closeCreateModal"
     >
       <TodoForm
@@ -75,7 +83,7 @@
     <Modal
       :show="showEditModal"
       title="Edit Todo"
-      :wide="true"
+      size="large"
       @close="closeEditModal"
     >
       <TodoForm
@@ -108,6 +116,11 @@
       @chat="handleDetailChat"
       @plan="handleDetailPlan"
     />
+
+    <GenericChatModal
+      :show="showGenericChatModal"
+      @close="showGenericChatModal = false"
+    />
   </div>
 </template>
 
@@ -121,6 +134,7 @@ import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 import Modal from '@/components/common/Modal.vue'
 import ChatModal from '@/components/chat/ChatModal.vue'
+import GenericChatModal from '@/components/chat/GenericChatModal.vue'
 import TaskPlanModal from '@/components/todo/TaskPlanModal.vue'
 import TaskDetailModal from '@/components/todo/TaskDetailModal.vue'
 
@@ -134,6 +148,7 @@ const error = computed(() => todoStore.error)
 const showCreateModal = computed(() => uiStore.showCreateModal)
 const showEditModal = computed(() => uiStore.showEditModal)
 const showChatModal = ref(false)
+const showGenericChatModal = ref(false)
 const showPlanModal = ref(false)
 const showDetailModal = ref(false)
 
@@ -295,6 +310,48 @@ defineExpose({
   justify-content: space-between;
   align-items: flex-start;
   padding: 2rem 2rem 1rem;
+}
+
+.dashboard-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.btn-agent-chat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-agent-chat:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+:global(.dark) .btn-agent-chat {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+:global(.dark) .btn-agent-chat:hover {
+  background: #475569;
+  border-color: #64748b;
+}
+
+.btn-agent-chat svg {
+  width: 18px;
+  height: 18px;
 }
 
 .dashboard-header h2 {

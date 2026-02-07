@@ -14,6 +14,7 @@ An intelligent personal productivity and knowledge management tool that integrat
 | Knowledge Base | Completed | Metadata storage referencing documents, notes, and website links |
 | Semantic Search (RAG) | Completed | AI-powered search across the knowledge base using embeddings |
 | LLM Chat Support | Completed | AI chat for task planning and knowledge base queries |
+| Asset management | To list assets that you are developing and need recurring activities | 
 | Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
 
 ## Quick Start

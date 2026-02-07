@@ -1,7 +1,10 @@
 """Unit tests for chat functionality."""
 
+import json
 import pytest
 from httpx import AsyncClient
+
+from app.api.chat import get_chat
 
 
 @pytest.mark.asyncio
@@ -122,3 +125,42 @@ async def test_generic_chat_api(client: AsyncClient):
     # Optionally, ensure schema of response (error or not) has "detail" or "result/message" fields
     data = response.json()
     assert isinstance(data, dict)
+
+
+@pytest.mark.asyncio
+async def test_generic_chat_stream_api(client: AsyncClient):
+    """Test /api/chat/generic/stream returns NDJSON stream with content and done lines."""
+    from app.main import app
+
+    # Mock ChatService that yields known chunks
+    class MockChatService:
+        async def chat_with_routing_stream(self, user_message, conversation_history=None, context=None, force_intent=None):
+            yield "Hello"
+            yield " "
+            yield "world"
+
+    def override_get_chat():
+        return MockChatService()
+
+    app.dependency_overrides[get_chat] = override_get_chat
+    try:
+        chunks = []
+        async with client.stream(
+            "POST",
+            "/api/chat/generic/stream",
+            json={"message": "Hi"},
+        ) as response:
+            assert response.status_code == 200
+            assert "application/x-ndjson" in response.headers.get("content-type", "")
+            async for line in response.aiter_lines():
+                line = line.strip()
+                if not line:
+                    continue
+                obj = json.loads(line)
+                if "content" in obj:
+                    chunks.append(obj["content"])
+                if obj.get("done"):
+                    break
+        assert chunks == ["Hello", " ", "world"]
+    finally:
+        app.dependency_overrides.pop(get_chat, None)

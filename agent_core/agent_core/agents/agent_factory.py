@@ -11,125 +11,16 @@ import importlib
 import importlib.resources
 import logging
 import os
+import httpx
 from pathlib import Path
-from typing import Optional, Dict, Any, Type, TYPE_CHECKING
+from typing import Optional, Dict, Any, Type
 import yaml
-from pydantic import BaseModel, Field
+from agent_core.agents.agent_config import LOCAL_BASE_URL, LOCAL_MODEL, get_available_models, AgentConfig
+from agent_core.agents.base_agent import BaseAgent
 
-if TYPE_CHECKING:
-    from agent_core.agents.base_agent import BaseAgent
+
 
 logger = logging.getLogger(__name__)
-
-class AgentConfig(BaseModel):
-    """
-    Unified configuration for agents, including LLM settings.
-    
-    This Pydantic model combines agent-specific configuration with LLM configuration,
-    providing a single source of truth for agent setup.
-    
-    Agent-specific attributes:
-        name: Agent name (matches directory name in config/)
-        description: Human-readable description of the agent
-        agent_class: Fully qualified Python class name to instantiate
-    
-    LLM attributes:
-        model: Model name (HF Hub model ID or local model name)
-        api_key: HF_TOKEN for remote HF Hub models (not needed for local servers)
-        base_url: Base URL for local inference servers (TGI, vLLM, Ollama, etc.)
-        max_tokens: Maximum tokens in the response
-        temperature: Sampling temperature (0.0 to 2.0)
-        timeout: Request timeout in seconds
-        response_format: Optional response format (e.g., {"type": "json_object"})
-    
-    Extra:
-        extra: Additional configuration fields from YAML
-    """
-    # Agent-specific fields
-    name: str = ""
-    description: str = ""
-    agent_class: Optional[str] = None
-    
-    # LLM configuration fields (provider is always "huggingface")
-    model: str = "gpt-4o-mini"
-    api_key: Optional[str] = None
-    base_url: Optional[str] = "http://localhost:11434/v1"
-    max_tokens: int = 2048
-    temperature: float = 0.7
-    timeout: float = 60.0
-    response_format: Optional[dict] = None
-    agent_dir: Optional[Path] = None
-    sys_prompt: str = "You are a helpful assistant."
-    # Extra fields from YAML
-    extra: Dict[str, Any] = Field(default_factory=dict)
-    provider: str = "huggingface",
-    # RAG configuration
-    use_rag: bool = False,
-    rag_top_k: int = 5,
-    rag_category: str = None
-    
-    @classmethod
-    def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
-        """
-        Load AgentConfig from a YAML file.
-        
-        Args:
-            yaml_path: Path to the agent.yaml file
-            
-        Returns:
-            AgentConfig instance
-            
-        Raises:
-            FileNotFoundError: If YAML file doesn't exist
-            yaml.YAMLError: If YAML is invalid
-        """
-        with open(yaml_path, 'r') as f:
-            data = yaml.safe_load(f) or {}
-        
-        # Extract known fields (provider is ignored, always "huggingface")
-        known_fields = {
-            'name', 'description', 'class', 'model','provider',
-            'api_key', 'base_url', 'max_tokens', 'temperature',
-            'timeout', 'response_format'
-        }
-        extra = {k: v for k, v in data.items() if k not in known_fields}
-        return cls(
-            name=data.get('name', yaml_path.parent.name),
-            description=data.get('description', 'A general purpose agent.'),
-            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
-            model=data.get('model', 'mistral:7b-instruct'),
-            provider=data.get('provider', 'huggingface'),
-            api_key=data.get('api_key'),
-            base_url=data.get('base_url','http://localhost:11434/v1'),
-            max_tokens=int(data.get('max_tokens', 10000)),
-            temperature=float(data.get('temperature', 0.7)),
-            timeout=float(data.get('timeout', 60.0)),
-            response_format=data.get('response_format'),
-            extra=extra
-        )
-    
-    def get_base_url(self) -> Optional[str]:
-        """Get the base URL, using default if not set."""
-        return self.base_url
-    
-    def validate(self) -> None:
-        """Validate the configuration."""
-        if not self.model:
-            raise ValueError("Model name is required")
-        
-        if self.temperature < 0.0 or self.temperature > 2.0:
-            raise ValueError("Temperature must be between 0.0 and 2.0")
-        
-        if self.max_tokens < 1:
-            raise ValueError("max_tokens must be at least 1")
-    
-
-
-# Import BaseAgent here to avoid circular imports
-def _get_base_agent():
-    from agent_core.agents.base_agent import BaseAgent
-    return BaseAgent
-
 
 class AgentFactory:
     """
@@ -275,10 +166,10 @@ class AgentFactory:
                             name=agent_name,
                             description=data.get('description', 'A general purpose agent.'),
                             agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),
-                            model=data.get('model', 'mistral:7b-instruct'),
+                            model=data.get('model', LOCAL_MODEL),
                             provider=data.get('provider', 'huggingface'),
                             api_key=data.get('api_key'),
-                            base_url=data.get('base_url', 'http://localhost:11434/v1'),
+                            base_url=data.get('base_url', LOCAL_BASE_URL),
                             max_tokens=int(data.get('max_tokens', 10000)),
                             temperature=float(data.get('temperature', 0.7)),
                             timeout=float(data.get('timeout', 60.0)),
@@ -352,20 +243,20 @@ class AgentFactory:
         """
         return list(self._configs.keys())
 
-    
-    def get_agent_map(self, agent_name: str) -> Optional[AgentConfig]:
+    def get_config(self, agent_name: str) -> Optional[AgentConfig]:
         """
-        Get configuration for a specific agent.
-        
+        Get the AgentConfig for an agent by name.
+
         Args:
-            agent_name: Name of the agent
-            
+            agent_name: Name of the agent.
+
         Returns:
-            AgentConfig if found, None otherwise
+            AgentConfig if found, None otherwise.
         """
         return self._configs.get(agent_name)
+
     
-    def create_agent(self, agent_name: Optional[str] = None, **kwargs) -> "BaseAgent":
+    def create_agent(self, agent_name: Optional[str] = None, **kwargs) -> BaseAgent:
         """
         Create an agent instance by name.
         
@@ -381,7 +272,7 @@ class AgentFactory:
         """
         if agent_name is None or agent_name == "":
             agent_name = "GeneralAgent"
-        config = self.get_agent_map(agent_name)
+        config =  self._configs.get(agent_name)
         if config is None:
             raise ValueError(f"Unknown agent: {agent_name}")
         # Resolve agent class
@@ -411,7 +302,6 @@ class AgentFactory:
         Raises:
             ValueError: If class cannot be imported or is not a BaseAgent subclass
         """
-        BaseAgent = _get_base_agent()
         
         if class_name is None:
             # Return BaseAgent as default (generic agent)
@@ -467,19 +357,6 @@ class AgentFactory:
         # Get the class from the module
         return getattr(module, class_name)
     
-    @classmethod
-    def register_class(cls, name: str, agent_class: Type) -> None:
-        """
-        Register a custom agent class by name.
-        
-        This allows using a short name instead of fully qualified name.
-        
-        Args:
-            name: Name to register the class under (can be short or fully qualified)
-            agent_class: The agent class to register
-        """
-        cls._class_registry[name] = agent_class
-        logger.info(f"Registered agent class: {name}")
 
 
 # Singleton instance
@@ -506,3 +383,5 @@ def reset_agent_factory() -> None:
     """Reset the global factory instance. Useful for testing."""
     global _factory
     _factory = None
+
+

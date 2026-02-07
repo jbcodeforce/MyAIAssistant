@@ -39,7 +39,8 @@ agent_core/
 │   ├── types.py             # Message, LLMResponse, LLMError
 │   ├── agents/
 │   │   ├── __init__.py      # Agent framework exports
-│   │   ├── base_agent.py    # BaseAgent ABC, AgentResponse
+│   │   ├── _llm_default.py  # DefaultHFAdapter, LLMCallable protocol
+│   │   ├── base_agent.py    # BaseAgent, AgentResponse
 │   │   ├── query_classifier.py  # QueryClassifier, QueryIntent
 │   │   ├── agent_router.py  # AgentRouter, RoutedResponse
 │   │   ├── rag_agent.py     # RAG-based agent
@@ -47,8 +48,7 @@ agent_core/
 │   │   ├── task_agent.py    # Task planning agent
 │   │   └── general_agent.py # General chat agent
 │   ├── providers/
-│   │   ├── base.py          # LLMProvider ABC
-│   │   └── huggingface.py   # HuggingFace Hub and local inference provider
+│   │   └── __init__.py
 │   └── services/
 │       └── rag/
 │           ├── service.py       # RAGService, SearchResult
@@ -178,16 +178,16 @@ class MyAgent(BaseAgent):
     def build_system_prompt(self, context=None):
         return "You are a specialized assistant."
 
-# Initialize with config
-config = LLMConfig(
+# Initialize with config (default: HuggingFace InferenceClient)
+config = AgentConfig(
     provider="huggingface",
     model="llama3",
     base_url="http://localhost:8080"
 )
-agent = MyAgent(llm_config=config)
+agent = MyAgent(config=config)
 
-# Or with pre-built client (shared across agents)
-agent = MyAgent(llm_client=client)
+# Or with custom LLM client (implements chat_async(messages, config) -> LLMResponse)
+agent = MyAgent(config=config, llm_client=my_client)
 ```
 
 ### AgentResponse
@@ -363,34 +363,24 @@ class SearchResult:
     chunk_index: int
 ```
 
-## Provider Implementation
+## LLM client injection
 
-Custom providers implement the `LLMProvider` protocol:
+BaseAgent uses HuggingFace InferenceClient by default (via DefaultHFAdapter in `agents/_llm_default.py`). To use a different backend, pass an object that implements the LLMCallable protocol (chat_async(messages, config) -> LLMResponse and chat_sync(messages, config) -> LLMResponse):
 
 ```python
-from agent_core.providers.base import LLMProvider
-from agent_core import Message, LLMConfig, LLMResponse
+from agent_core.agents import BaseAgent, AgentInput
+from agent_core.agents.agent_config import AgentConfig
+from agent_core.agents._llm_default import LLMCallable
+from agent_core.types import LLMResponse
 
-class CustomProvider(LLMProvider):
-    async def chat_async(
-        self,
-        messages: list[Message],
-        config: LLMConfig
-    ) -> LLMResponse:
-        # Implement async chat
+class MyLLMClient:
+    async def chat_async(self, messages: list[dict], config: AgentConfig) -> LLMResponse:
         ...
-    
-    def chat_sync(
-        self,
-        messages: list[Message],
-        config: LLMConfig
-    ) -> LLMResponse:
-        # Implement sync chat
+    def chat_sync(self, messages: list[dict], config: AgentConfig) -> LLMResponse:
         ...
 
-# Register the provider
-from agent_core import LLMClient
-LLMClient.register_provider("custom", CustomProvider)
+config = AgentConfig(model="gpt-4", base_url="http://localhost:8080")
+agent = BaseAgent(config=config, llm_client=MyLLMClient())
 ```
 
 ## Environment Variables

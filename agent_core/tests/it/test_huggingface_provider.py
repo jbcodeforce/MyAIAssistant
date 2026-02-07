@@ -1,4 +1,4 @@
-"""Integration tests for HuggingFace provider.
+"""Integration tests for default HuggingFace InferenceClient path.
 
 These tests require either:
 - A running local inference server (TGI, vLLM, or similar with OpenAI-compatible API)
@@ -12,15 +12,21 @@ import os
 import pytest
 import httpx
 from pathlib import Path
-from agent_core.agents.agent_factory import AgentConfig
-from agent_core.types import Message, LLMResponse
-from .conftest import LOCAL_BASE_URL, LOCAL_MODEL, REMOTE_MODEL, is_local_server_available
-from agent_core.providers.huggingface import HuggingFaceProvider
-from agent_core.agents.agent_factory import AgentFactory
-from agent_core.agents.base_agent import AgentInput, AgentResponse
-config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
-# Environment configuration
+
+from agent_core.agents.agent_config import (
+    AgentConfig,
+    LOCAL_MODEL,
+    LOCAL_BASE_URL,
+    REMOTE_MODEL,
+)
+from agent_core.types import LLMResponse
+from agent_core.agents._llm_default import DefaultHFAdapter
+
+from .conftest import requires_local_server
+
+config_dir = str(Path(__file__).parent.parent.parent / "agent_core" / "agents" / "config")
 HF_TOKEN = os.getenv("HF_TOKEN")
+
 
 def is_hf_token_valid() -> bool:
     """Check if HF_TOKEN is set and valid."""
@@ -31,29 +37,22 @@ def is_hf_token_valid() -> bool:
         response = httpx.get(
             "https://huggingface.co/api/whoami",
             headers={"Authorization": f"Bearer {token}"},
-            timeout=10.0
+            timeout=10.0,
         )
-        print(response.json())
         return response.status_code == 200
     except (httpx.ConnectError, httpx.TimeoutException):
         return False
 
 
-# Skip markers
-requires_local_server = pytest.mark.skipif(
-    not is_local_server_available(),
-    reason=f"Local inference server not available at {LOCAL_BASE_URL}"
-)
-
 requires_hf_token = pytest.mark.skipif(
     not is_hf_token_valid(),
-    reason="Valid HF_TOKEN not available"
+    reason="Valid HF_TOKEN not available",
 )
 
 
 @pytest.fixture
 def local_config() -> AgentConfig:
-    """Create AgentConfig for local HuggingFace server."""
+    """Create AgentConfig for local inference server."""
     return AgentConfig(
         name="LocalHFTest",
         provider="huggingface",
@@ -87,39 +86,39 @@ def remote_config() -> AgentConfig:
 
 
 @pytest.fixture
-def messages() -> list[Message]:
-    """Create test messages."""
+def messages() -> list[dict]:
+    """Create test messages (list[dict] for DefaultHFAdapter)."""
     return [
-        Message(role="system", content="You are a helpful assistant. Keep responses brief."),
-        Message(role="user", content="What is 2 + 2?"),
+        {"role": "system", "content": "You are a helpful assistant. Keep responses brief."},
+        {"role": "user", "content": "What is 2 + 2?"},
     ]
 
 
 @pytest.mark.integration
 @requires_local_server
-class TestHuggingFaceProviderLocal:
-    """Integration tests for HuggingFace provider with local inference server."""
+class TestDefaultHFAdapterLocal:
+    """Integration tests for default HF adapter with local inference server."""
 
-    def test_chat_sync_local(self, local_config: AgentConfig, messages: list[Message]):
+    def test_chat_sync_local(self, local_config: AgentConfig, messages: list[dict]):
         """Test sync chat completion with local server."""
-        client =  HuggingFaceProvider()        
-        response = client.chat_sync(messages,config= local_config)
+        adapter = DefaultHFAdapter()
+        response = adapter.chat_sync(messages, config=local_config)
         assert isinstance(response, LLMResponse)
         assert len(response.content) > 0
-        print(f"Response: {response.content}")
+
 
 @pytest.mark.integration
 @requires_hf_token
-class TestHuggingFaceProviderRemote:
-    """Integration tests for HuggingFace provider with HF Hub (remote)."""
+class TestDefaultHFAdapterRemote:
+    """Integration tests for default HF adapter with HF Hub (remote)."""
 
     @pytest.mark.asyncio
-    async def test_chat_async_remote(self, remote_config: AgentConfig, messages: list[Message]):
+    async def test_chat_async_remote(
+        self, remote_config: AgentConfig, messages: list[dict]
+    ):
         """Test async chat completion with HF Hub."""
-        client = HuggingFaceProvider()
-        
-        response = await client.chat_async(messages,config= remote_config)
-        
+        adapter = DefaultHFAdapter()
+        response = await adapter.chat_async(messages, config=remote_config)
         assert isinstance(response, LLMResponse)
         assert len(response.content) > 0
         assert response.provider == "huggingface"
@@ -127,12 +126,12 @@ class TestHuggingFaceProviderRemote:
             assert response.prompt_tokens >= 0
             assert response.completion_tokens >= 0
 
-    def test_chat_sync_remote(self, remote_config: AgentConfig, messages: list[Message]):
+    def test_chat_sync_remote(
+        self, remote_config: AgentConfig, messages: list[dict]
+    ):
         """Test sync chat completion with HF Hub."""
-        client = HuggingFaceProvider()
-        
-        response = client.chat_sync(messages,config= remote_config)
-        
+        adapter = DefaultHFAdapter()
+        response = adapter.chat_sync(messages, config=remote_config)
         assert isinstance(response, LLMResponse)
         assert len(response.content) > 0
         assert response.provider == "huggingface"

@@ -1,0 +1,6 @@
+name: NoteParserAgent
+description: Parse customer note markdown to extract organization, persons, project, and meeting sections.
+class: agent_core.agents.note_parser_agent.NoteParserAgent
+model: openai/gpt-oss-20b
+temperature: 0.3
+max_tokens: 30000
