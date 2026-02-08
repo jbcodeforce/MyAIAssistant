@@ -8,25 +8,25 @@ Run with: pytest tests/it/test_meeting_agent.py -v -m integration
 import pytest
 from pathlib import Path
 from agent_core.agents.meeting_agent import MeetingAgentResponse
-from agent_core.agents.agent_factory import get_agent_factory
+from agent_core.agents.agent_factory import get_agent_factory, AgentFactory
 from agent_core.agents.base_agent import AgentInput
 
 config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
-from .conftest import requires_ollama, requires_model
+from .conftest import requires_local_server, requires_local_model
 
+@pytest.fixture
+def factory() -> AgentFactory:
+    """Create a QueryClassifier with Ollama config."""
+    factory = get_agent_factory()
+    return factory
 
 @pytest.mark.integration
-@requires_ollama
-@requires_model
+@requires_local_server
+@requires_local_model
+@pytest.mark.asyncio
 class TestMeetingAgent:
-    """Given a meeting note the agent extracts the key points, persons present, and builds next steps."""
-
-    @pytest.fixture
-    def factory(self):
-        """Create factory pointing to real config directory."""
-        return get_agent_factory()
-        #return AgentFactory(config_dir=config_dir)
+    """Tests for the MeetingAgent class."""
 
     @pytest.mark.asyncio
     async def test_simple_meeting_note(self, factory):

@@ -92,7 +92,6 @@ class QueryClassifier(BaseAgent):
                 reasoning=f"Classification failed, defaulting to general chat: {str(e)}",
                 entities={}
             )
-        return result
 
 
     def _summarize_context(self, context: list[dict]) -> str:

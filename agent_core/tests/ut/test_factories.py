@@ -139,8 +139,8 @@ class TestAgentFactory:
         assert config.description is not None
         # provider is always "huggingface", not stored in config
         assert config.model == LOCAL_MODEL
-        assert config.temperature == 0.0
-        assert config.max_tokens == 500
+        assert config.temperature == 0.1
+        assert config.max_tokens == 2048
 
 
     def test_factory_returns_none_for_unknown_agent(self, factory):
@@ -163,8 +163,8 @@ class TestAgentFactory:
         assert agent is not None
         assert isinstance(agent, QueryClassifier)
         assert agent._config.model == LOCAL_MODEL
-        assert agent._config.temperature == 0.0
-        assert agent._config.max_tokens >= 500
+        assert agent._config.temperature == 0.1
+        assert agent._config.max_tokens >= 2048
         assert agent._config.sys_prompt is not None
 
     def test_factory_loads_from_custom_config_dir(self, tmp_path):

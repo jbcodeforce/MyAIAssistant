@@ -14,37 +14,33 @@ from agent_core.agents.query_classifier import (
     ClassificationResult,
 )
 from agent_core.agents.agent_router import AgentRouter
-from agent_core.agents.base_agent import BaseAgent, AgentInput, AgentResponse
+from agent_core.agents.base_agent import AgentInput, AgentResponse
+from agent_core.agents.agent_factory import get_agent_factory
 from .conftest import (
-    LOCAL_BASE_URL,
-    LOCAL_MODEL,
-    requires_ollama,
-    requires_model,
+    requires_local_server,
+    requires_local_model
 )
 
 config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
 
-@pytest.fixture
-def classifier() -> QueryClassifier:
-    """Create a QueryClassifier with Ollama config."""
-    factory = AgentFactory()
-    classifier = factory.create_agent("QueryClassifier")
-    return classifier
+
 
 @pytest.mark.integration
-@requires_ollama
-@requires_model
+@requires_local_server
+@requires_local_model
 class TestAgentRouter:
 
 
     @pytest.mark.asyncio
-    async def test_classify_code_help_query(self, classifier: QueryClassifier):
+    async def test_classify_code_help_query(self):
         """Test classification of a code help query."""
         query = "How do I implement a REST API endpoint in Python using FastAPI?"
-        router = AgentRouter()
-        response = await router.route(query)    
-        print(json.dumps(response.__dict__, indent=2, default=str))
+        factory = get_agent_factory()
+        router = factory.create_agent("AgentRouter")
+        response = await router.execute(AgentInput(query=query)) 
+        print(f"\n----\n{json.dumps(response.__dict__, indent=2, default=str)}\n----\n")
+ 
       
 
    

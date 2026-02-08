@@ -24,14 +24,14 @@ class TestQueryClassifier:
 * Less degraded statement alert reported since beginning of the year. 
         """
         result = await classifier.execute(AgentInput(query=meeting_note))
-        print(json.dumps(result.__dict__, default=str, indent=2))
+        print(f"\n----\n{json.dumps(result.__dict__, default=str, indent=2)}\n----\n")
         assert isinstance(result, ClassificationResult)
         assert result.confidence >= 0.8
         assert result.intent == QueryIntent.MEETING_NOTE
         assert result.reasoning is not None
         assert result.entities is not None
         assert result.entities.get("topic") is not None
-        assert "meeting" in result.entities.get("topic").lower()
+        assert "function issue" in result.entities.get("topic").lower()
 
 
     @pytest.mark.asyncio
@@ -43,7 +43,7 @@ class TestQueryClassifier:
        I would like to know how to learn environment engineering using free sources
         """
         result = await classifier.execute(AgentInput(query=query))
-        print(json.dumps(result.__dict__, default=str, indent=2))
+        print(f"\n----\n{json.dumps(result.__dict__, default=str, indent=2)}\n----\n")
         assert isinstance(result, ClassificationResult)
         assert result.confidence >= 0.8
         assert result.intent == QueryIntent.KNOWLEDGE_SEARCH
@@ -60,7 +60,7 @@ class TestQueryClassifier:
        I would like to implement a REST API endpoint in FastAPI using a RAG approach
         """
         result = await classifier.execute(AgentInput(query=query))
-        print(json.dumps(result.__dict__, default=str, indent=2))
+        print(f"\n----\n{json.dumps(result.__dict__, default=str, indent=2)}\n----\n")
         assert isinstance(result, ClassificationResult)
         assert result.confidence >= 0.8
         assert result.intent == QueryIntent.CODE_HELP

@@ -14,12 +14,12 @@ from agent_core.agents.base_agent import AgentInput
 
 config_dir = str(Path(__file__).parent.parent.parent /"agent_core" / "agents" / "config")
 
-from .conftest import requires_ollama, requires_model
+from .conftest import requires_local_server, requires_local_model
 
 
 @pytest.mark.integration
-@requires_ollama
-@requires_model
+@requires_local_server
+@requires_local_model
 class TestTaskAgent:
     """Given a meeting note the agent extracts the key points, persons present, and builds next steps."""
 
@@ -41,6 +41,6 @@ class TestTaskAgent:
         
         # Verify response type and basic fields
         assert isinstance(response, AgentResponse)
-        print(json.dumps(response.__dict__, indent=2, default=str))
+        print(f"\n----\n{json.dumps(response.__dict__, indent=2, default=str)}\n----\n")
         
   

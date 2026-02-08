@@ -173,7 +173,7 @@ class BaseAgent:
         """
         messages, context_used, should_use_rag= await self._build_messages(input_data)
         # Call LLM
-        print("Send request to LLM....")
+        print("\n----\nSend request to LLM....\n")
         response = await self._llm_client.chat_async(messages=messages, config=self._config)
         response_content = response.content
         return AgentResponse(

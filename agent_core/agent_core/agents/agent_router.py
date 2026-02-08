@@ -335,17 +335,8 @@ class AgentRouter(BaseAgent):
                 query=state.query,
                 conversation_history=state.conversation_history,
                 context=agent_context,
+                use_rag=agent._config.use_rag
             )
-            cfg = getattr(agent, "_config", None)
-            if cfg is not None and getattr(cfg, "use_rag", False):
-                input_data.use_rag = True
-            elif intent in (
-                QueryIntent.KNOWLEDGE_SEARCH,
-                QueryIntent.TASK_STATUS,
-                QueryIntent.TASK_PLANNING,
-                QueryIntent.CODE_HELP,
-            ):
-                input_data.use_rag = True
             state.agent_response = await agent.execute(input_data)
         except Exception as e:
             logger.error("Agent execution failed: %s", e)

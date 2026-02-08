@@ -54,8 +54,7 @@ class AgentConfig(BaseModel):
     provider: str = "huggingface",
     # RAG configuration
     use_rag: bool = False,
-    rag_top_k: int = 5,
-    rag_category: str = None
+    rag_top_k: int = 5
     
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
@@ -96,7 +95,6 @@ class AgentConfig(BaseModel):
             response_format=data.get('response_format'),
             use_rag=data.get('use_rag', False),
             rag_top_k=data.get('rag_top_k', 3),
-            rag_category=data.get('rag_category', None),
             extra=extra
         )
     

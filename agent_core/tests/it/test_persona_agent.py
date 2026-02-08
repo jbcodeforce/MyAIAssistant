@@ -11,12 +11,12 @@ import json
 from agent_core.agents.agent_factory import get_agent_factory
 from agent_core.agents.base_agent import AgentInput, AgentResponse
 
-from .conftest import requires_ollama, requires_model
+from .conftest import requires_local_server, requires_local_model
 
 
 @pytest.mark.integration
-@requires_ollama
-@requires_model
+@requires_local_server
+@requires_local_model
 class TestPersonaAgent:
     """Given a problem the agent builds a persona based on the problem."""
 
