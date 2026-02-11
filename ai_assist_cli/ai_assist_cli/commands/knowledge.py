@@ -4,11 +4,12 @@ import asyncio
 from pathlib import Path
 from typing import Optional
 
+import httpx
 import typer
 from rich.console import Console
+from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 from rich.table import Table
-from rich.panel import Panel
 
 from ai_assist_cli.services.knowledge_processor import (
     KnowledgeProcessor,
@@ -124,10 +125,20 @@ def process_knowledge(
     except ValueError as e:
         console.print(f"[red]Validation error: {e}[/red]")
         raise typer.Exit(1)
+    except httpx.HTTPStatusError as e:
+        console.print(f"[red]Backend HTTP error: {e.response.status_code} {e.response.reason_phrase}[/red]")
+        if e.response.text:
+            console.print(Panel(e.response.text[:1000], title="Response", border_style="red"))
+        console.print_exception(show_locals=False)
+        raise typer.Exit(1)
+    except httpx.RequestError as e:
+        console.print(f"[red]Backend unreachable: {type(e).__name__}[/red]")
+        console.print(f"[dim]{e}[/dim]")
+        console.print_exception(show_locals=False)
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Unexpected error: {e}[/red]")
-        if verbose:
-            console.print_exception()
+        console.print_exception(show_locals=False)
         raise typer.Exit(1)
 
 
@@ -162,9 +173,7 @@ def _show_results(results: list[ProcessingResult], verbose: bool):
     table.add_column("Type", style="cyan")
     table.add_column("Title/URI", max_width=50)
     table.add_column("Chunks", justify="right")
-    
-    if verbose:
-        table.add_column("Error", style="red", max_width=40)
+    table.add_column("Error", style="red", max_width=50)
 
     for result in results:
         if result.success:
@@ -185,15 +194,17 @@ def _show_results(results: list[ProcessingResult], verbose: bool):
         # Format action
         action_display = result.action if result.action else "-"
         
-        row = [status, action_display, result.spec.document_type, title_display, chunks]
-        
-        if verbose:
-            error = result.error[:40] if result.error else ""
-            row.append(error)
-        
+        error_display = (result.error[:50] + "..." if result.error and len(result.error) > 50 else result.error or "")
+        row = [status, action_display, result.spec.document_type, title_display, chunks, error_display]
         table.add_row(*row)
 
     console.print(table)
+
+    if verbose:
+        for result in results:
+            if not result.success and result.error_detail:
+                uri_short = result.spec.uri[:40] + ("..." if len(result.spec.uri) > 40 else "")
+                console.print(Panel(result.error_detail, title=f"[red]Details: {uri_short}[/red]", border_style="red"))
 
 
 def _show_summary(summary: ProcessingSummary):
@@ -248,7 +259,17 @@ def show_stats(
         
         console.print(table)
         
+    except httpx.HTTPStatusError as e:
+        console.print(f"[red]Backend HTTP error: {e.response.status_code} {e.response.reason_phrase}[/red]")
+        if e.response.text:
+            console.print(f"[dim]{e.response.text[:500]}[/dim]")
+        raise typer.Exit(1)
+    except httpx.RequestError as e:
+        console.print(f"[red]Backend unreachable: {type(e).__name__}[/red]")
+        console.print(f"[dim]{e}[/dim]")
+        raise typer.Exit(1)
     except Exception as e:
         console.print(f"[red]Error fetching stats: {e}[/red]")
+        console.print_exception(show_locals=False)
         raise typer.Exit(1)
 

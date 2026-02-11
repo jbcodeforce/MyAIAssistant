@@ -156,11 +156,11 @@ class AgentFactory:
                         # Create AgentConfig from YAML data
                         known_fields = {
                             'name', 'description', 'class', 'model', 'provider',
-                            'api_key', 'base_url', 'max_tokens', 'temperature',
+                            'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
                             'timeout', 'response_format'
                         }
                         extra = {k: v for k, v in data.items() if k not in known_fields}
-                        
+                        base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
                         agent_name = data.get('name', entry_name)
                         config = AgentConfig(
                             name=agent_name,
@@ -169,7 +169,7 @@ class AgentFactory:
                             model=data.get('model', LOCAL_MODEL),
                             provider=data.get('provider', 'huggingface'),
                             api_key=data.get('api_key'),
-                            base_url=data.get('base_url', LOCAL_BASE_URL),
+                            base_url=base_url,
                             max_tokens=int(data.get('max_tokens', 10000)),
                             temperature=float(data.get('temperature', 0.7)),
                             timeout=float(data.get('timeout', 60.0)),

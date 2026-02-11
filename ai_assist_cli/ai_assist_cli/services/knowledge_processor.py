@@ -2,10 +2,12 @@
 
 import json
 import os
+import traceback
 from pathlib import Path
 from typing import Optional
 from urllib.parse import urlparse
 
+import httpx
 from pydantic import BaseModel, field_validator
 
 from ai_assist_cli.services.api_client import (
@@ -58,6 +60,7 @@ class ProcessingResult(BaseModel):
     indexing: Optional[IndexKnowledgeResponse] = None
     success: bool = False
     error: Optional[str] = None
+    error_detail: Optional[str] = None  # traceback or response body for verbose
     action: str = ProcessingAction.FAILED  # created, updated, skipped, failed
 
 
@@ -209,11 +212,28 @@ class KnowledgeProcessor:
                 result.success = indexing.success
 
                 if not indexing.success:
-                    result.error = indexing.error
+                    result.error = indexing.error or "Indexing failed"
                     result.action = ProcessingAction.FAILED
 
+        except httpx.HTTPStatusError as e:
+            result.success = False
+            result.action = ProcessingAction.FAILED
+            body = (e.response.text or "").strip()
+            if body and len(body) > 400:
+                body = body[:400] + "..."
+            result.error = f"HTTP {e.response.status_code}: {e.response.reason_phrase or 'Error'}"
+            if body:
+                result.error_detail = body
+            else:
+                result.error_detail = str(e)
+        except httpx.RequestError as e:
+            result.success = False
+            result.action = ProcessingAction.FAILED
+            result.error = f"Connection error: {type(e).__name__}"
+            result.error_detail = str(e)
         except Exception as e:
             result.error = str(e)
+            result.error_detail = traceback.format_exc()
             result.success = False
             result.action = ProcessingAction.FAILED
 

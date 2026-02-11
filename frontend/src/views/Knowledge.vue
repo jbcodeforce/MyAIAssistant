@@ -15,7 +15,7 @@
         </div>
         <button 
           class="btn-chat" 
-          @click="showChatModal = true"
+          @click="router.push({ name: 'Assistant' })"
           title="Chat with Knowledge Base"
         >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -423,22 +423,17 @@
         </button>
       </template>
     </Modal>
-
-    <!-- RAG Chat Modal -->
-    <RagChatModal 
-      :show="showChatModal" 
-      @close="showChatModal = false"
-    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { useKnowledgeStore } from '@/stores/knowledgeStore'
 import { ragApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
-import RagChatModal from '@/components/chat/RagChatModal.vue'
 
+const router = useRouter()
 const knowledgeStore = useKnowledgeStore()
 
 const items = ref([])
@@ -460,7 +455,6 @@ const filterTag = ref('')
 const showModal = ref(false)
 const isEditing = ref(false)
 const editingId = ref(null)
-const showChatModal = ref(false)
 const formData = ref({
   title: '',
   description: '',

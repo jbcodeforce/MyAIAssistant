@@ -6,7 +6,6 @@ from typing import Optional
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 
 from ai_assist_cli.services.workspace import WorkspaceManager
 
@@ -21,7 +20,7 @@ def status(
         help="Path to workspace. Defaults to current directory.",
     ),
 ):
-    """Show workspace status and configuration summary."""
+    """Show workspace status and directory summary."""
     workspace_path = (path or Path.cwd()).resolve()
     manager = WorkspaceManager(workspace_path)
     
@@ -30,24 +29,11 @@ def status(
         console.print("Run [cyan]ai_assist init[/cyan] to create a workspace.")
         raise typer.Exit(1)
     
-    config = manager.load_config()
+    name = manager.get_workspace_name() or "N/A"
     
     console.print(f"\n[bold blue]Workspace Status[/bold blue]")
+    console.print(f"[dim]Name: {name}[/dim]")
     console.print(f"[dim]Location: {workspace_path}[/dim]\n")
-    
-    # Configuration table
-    table = Table(title="Configuration")
-    table.add_column("Setting", style="cyan")
-    table.add_column("Value", style="green")
-    
-    table.add_row("Name", config.get("name", "N/A"))
-    table.add_row("LLM Provider", config.get("llm_provider", "Not configured"))
-    table.add_row("LLM Model", config.get("llm_model", "Not configured"))
-    table.add_row("ChromaDB Path", str(config.get("chroma_persist_directory", "data/chroma")))
-    table.add_row("Database Path", str(config.get("database_path", "data/db/assistant.db")))
-    
-    console.print(table)
-    console.print()
     
     # Directory status
     dirs_table = Table(title="Directories")

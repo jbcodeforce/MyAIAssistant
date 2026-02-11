@@ -34,7 +34,7 @@ class WorkspaceManager:
         "notes",
     ]
 
-    CONFIG_FILE = "config.yaml"
+    WORKSPACE_MARKER = ".ai_assist_workspace"
     GLOBAL_CONFIG_FILE = "config.yaml"
     WORKSPACE_REGISTRY_FILE = Path.home() / ".ai_assist" / "workspaces.json"
 
@@ -48,8 +48,7 @@ class WorkspaceManager:
 
     def is_initialized(self) -> bool:
         """Check if workspace is initialized."""
-        config_file = self.path / self.CONFIG_FILE
-        return config_file.exists()
+        return (self.path / self.WORKSPACE_MARKER).exists()
 
     def initialize(self, name: str) -> list[Path]:
         """Initialize workspace structure.
@@ -71,11 +70,13 @@ class WorkspaceManager:
             dir_path.mkdir(parents=True, exist_ok=True)
             created_dirs.append(dir_path)
 
-        # Create configuration file
-        self._create_default_config(name)
-
         # Create default prompt templates
         self._create_default_prompts()
+
+        # Write workspace marker with name
+        marker_file = self.path / self.WORKSPACE_MARKER
+        with open(marker_file, "w") as f:
+            json.dump({"name": name}, f, indent=2)
 
         # Register workspace
         self._register_workspace(name)
@@ -255,37 +256,6 @@ When researching topics:
         with open(config_file) as f:
             return yaml.safe_load(f) or {}
 
-    def _create_default_config(self, name: str):
-        """Create default configuration file."""
-        config = {
-            "name": name,
-            "version": "1.0",
-            # Database settings
-            "database_path": "data/db/assistant.db",
-            "database_url": f"postgresql+asyncpg://postgres:postgres@{name}:5432/biz_assistant",
-            # LLM settings
-            "llm_provider": "ollama",
-            "llm_model": "gpt-oss:20b",
-            "llm_api_key": None,
-            "llm_base_url": "http://localhost:11434",
-            "llm_max_tokens": 2048,
-            "llm_temperature": 0.1,
-            # RAG settings
-            "embedding_model": "all-MiniLM-L6-v2",
-            "chunk_size": 1000,
-            "chunk_overlap": 200,
-            # Paths
-            "prompts_dir": "prompts",
-            "tools_dir": "tools",
-            "history_dir": "history",
-            "summaries_dir": "summaries",
-            "notes_dir": "notes",
-        }
-
-        config_file = self.path / self.CONFIG_FILE
-        with open(config_file, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
-
     def _create_default_prompts(self):
         """Create default prompt templates."""
         prompts_dir = self.path / "prompts"
@@ -340,31 +310,17 @@ Answer based on the context provided. If the context doesn't contain relevant in
         with open(registry_file, "w") as f:
             json.dump(workspaces, f, indent=2)
 
-    def load_config(self) -> dict[str, Any]:
-        """Load workspace configuration."""
-        config_file = self.path / self.CONFIG_FILE
-        if not config_file.exists():
-            return {}
-
-        with open(config_file) as f:
-            return yaml.safe_load(f) or {}
-
-    def set_config(self, key: str, value: Any):
-        """Set a configuration value."""
-        config = self.load_config()
-        
-        # Handle nested keys (e.g., "llm.model")
-        keys = key.split(".")
-        current = config
-        for k in keys[:-1]:
-            if k not in current:
-                current[k] = {}
-            current = current[k]
-        current[keys[-1]] = value
-
-        config_file = self.path / self.CONFIG_FILE
-        with open(config_file, "w") as f:
-            yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+    def get_workspace_name(self) -> str | None:
+        """Read workspace name from marker file."""
+        marker_file = self.path / self.WORKSPACE_MARKER
+        if not marker_file.exists():
+            return None
+        try:
+            with open(marker_file) as f:
+                data = json.load(f)
+            return data.get("name")
+        except (json.JSONDecodeError, OSError):
+            return None
 
     def clean(self) -> int:
         """Clean workspace data (history, summaries, cache).
@@ -405,7 +361,7 @@ Answer based on the context provided. If the context doesn't contain relevant in
             result.append({
                 "name": ws["name"],
                 "path": ws["path"],
-                "valid": path.exists() and (path / cls.CONFIG_FILE).exists(),
+                "valid": path.exists() and (path / cls.WORKSPACE_MARKER).exists(),
             })
 
         return result

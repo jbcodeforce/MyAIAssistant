@@ -24,14 +24,12 @@ frontend_process: Optional[subprocess.Popen] = None
 
 
 def find_workspace(start_path: Path) -> Optional[Path]:
-    """Find workspace by walking up directory tree looking for config.yaml."""
+    """Find workspace by walking up directory tree looking for workspace marker."""
     current = start_path.resolve()
     while current != current.parent:
-        config_file = current / "config.yaml"
-        if config_file.exists():
-            manager = WorkspaceManager(current)
-            if manager.is_initialized():
-                return current
+        manager = WorkspaceManager(current)
+        if manager.is_initialized():
+            return current
         current = current.parent
     return None
 
@@ -119,11 +117,7 @@ def run_dev_mode(workspace_path: Path, project_root: Path):
     
     backend_dir = project_root / "backend"
     frontend_dir = project_root / "frontend"
-    config_file = workspace_path / "config.yaml"
-    
-    # Set CONFIG_FILE environment variable
     env = os.environ.copy()
-    env["CONFIG_FILE"] = str(config_file.resolve())
     
     # Check requirements
     console.print("[yellow]Checking requirements...[/yellow]")
@@ -143,7 +137,6 @@ def run_dev_mode(workspace_path: Path, project_root: Path):
     # Start backend
     console.print("\n[green]Starting Backend...[/green]")
     console.print(f"  Port: 8000")
-    console.print(f"  Config: {config_file}")
     
     backend_cmd = [
         "uv", "run", "--project", str(backend_dir),
@@ -231,21 +224,6 @@ def run_docker_mode(workspace_path: Path, project_root: Path):
         console.print("[red]Error: 'docker-compose' is not available[/red]")
         raise typer.Exit(1)
     
-    # Determine config file path
-    config_file = workspace_path / "config.yaml"
-    config_file_env = os.environ.get("CONFIG_FILE")
-    if config_file_env:
-        config_file = Path(config_file_env).resolve()
-        if not config_file.exists():
-            console.print(f"[red]Error: CONFIG_FILE specified but not found: {config_file}[/red]")
-            raise typer.Exit(1)
-        console.print(f"[dim]Using CONFIG_FILE from environment: {config_file}[/dim]")
-    else:
-        if not config_file.exists():
-            console.print(f"[red]Error: Workspace config file not found: {config_file}[/red]")
-            raise typer.Exit(1)
-        console.print(f"[dim]Using workspace config: {config_file}[/dim]")
-    
     # Find docker-compose.yml
     docker_compose_file = project_root / "docker-compose.yml"
     if not docker_compose_file.exists():
@@ -258,7 +236,6 @@ def run_docker_mode(workspace_path: Path, project_root: Path):
     
     # Create docker-compose override file
     console.print("\n[green]Starting services with Docker Compose...[/green]")
-    console.print(f"  Config file: {config_file}")
     console.print(f"  Workspace: {workspace_path}")
     console.print(f"  Data directory: {data_dir}")
     console.print(f"  Project root: {project_root}")
@@ -281,31 +258,10 @@ def run_docker_mode(workspace_path: Path, project_root: Path):
     
     backend_service = compose_config["services"]["backend"]
     
-    # Update volumes to mount workspace config and data
-    # Use absolute paths for volumes
-    config_abs_path = str(config_file.resolve())
+    # Update volumes to mount workspace data
     data_abs_path = str(data_dir.resolve())
-    
-    volumes = [
-        f"{data_abs_path}:/app/data",
-        f"{config_abs_path}:/workspace/config.yaml:ro",
-    ]
-    
+    volumes = [f"{data_abs_path}:/app/data"]
     backend_service["volumes"] = volumes
-    
-    # Ensure CONFIG_FILE is set in environment
-    if "environment" not in backend_service:
-        backend_service["environment"] = []
-    
-    if isinstance(backend_service["environment"], dict):
-        backend_service["environment"]["CONFIG_FILE"] = "/workspace/config.yaml"
-    elif isinstance(backend_service["environment"], list):
-        # Remove existing CONFIG_FILE if present
-        backend_service["environment"] = [
-            e for e in backend_service["environment"]
-            if not isinstance(e, str) or not e.startswith("CONFIG_FILE=")
-        ]
-        backend_service["environment"].append("CONFIG_FILE=/workspace/config.yaml")
     
     # Write temporary override file
     override_file = None
@@ -377,11 +333,8 @@ def run_command(
     By default, uses Docker Compose to start services with pre-built images.
     Use --dev flag to run services directly using uv and npm (development mode).
     
-    The command will auto-detect the workspace by looking for config.yaml in the
-    current directory or parent directories. You can also specify a workspace path.
-    
-    The CONFIG_FILE environment variable is respected. If not set, the workspace's
-    config.yaml will be used.
+    The command will auto-detect the workspace by looking for the workspace marker
+    in the current directory or parent directories. You can also specify a workspace path.
     """
     # Detect workspace
     if workspace_path:
@@ -420,7 +373,6 @@ def run_command(
     console.print("\n[yellow]Configuration:[/yellow]")
     console.print(f"  Project Root:  {project_root}")
     console.print(f"  Workspace:     {workspace_path}")
-    console.print(f"  Config File:   {workspace_path / 'config.yaml'}")
     
     # Run in appropriate mode
     if dev:

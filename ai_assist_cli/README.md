@@ -6,24 +6,20 @@ Command-line tool for managing AI Assistant's workspaces and global cross worksp
 
 The AI Assist CLI provides a comprehensive set of tools for managing AI Assistant workspaces and resources:
 
-### Configuration Management
-- **View configuration**: Display current workspace or global configuration
-- **Get/Set values**: Read and modify specific configuration values
-- **Edit config files**: Open configuration files in your default editor
-- **Environment variable support**: Respect `CONFIG_FILE` environment variable for custom configurations
-
 ### Workspace Management
-- **Initialize workspaces**: Create new workspaces with proper directory structure and configuration
-- **Workspace status**: View workspace configuration, directory status, and resource counts
+
+- **Initialize workspaces**: Create new workspaces with proper directory structure
+- **Workspace status**: View workspace name, location, and directory status
 - **List workspaces**: Discover and manage all registered workspaces
 - **Clean workspace data**: Remove history, summaries, and cache data
-- **Auto-detection**: Automatically detect workspace from current directory or parent directories
+- **Auto-detection**: Automatically detect workspace from current directory or parent directories (via workspace marker)
 
 ### Service Management
+
 - **Run services**: Start backend and frontend services with a single command
 - **Production mode**: Use Docker Compose to run services with pre-built images
 - **Development mode**: Run services directly with `uv` and `npm` for hot-reload development
-- **Auto-configuration**: Automatically mount workspace config and data directories
+- **Workspace data**: Mount workspace data directory when running with Docker
 - **Health checks**: Wait for services to be ready before completing startup
 
 ### Knowledge Base Management
@@ -99,22 +95,6 @@ ai_assist workspace list
 ai_assist workspace clean
 ```
 
-### Configuration management
-
-```bash
-# Show current configuration
-ai_assist config show
-
-# Get a specific value
-ai_assist config get llm_provider
-
-# Set a configuration value
-ai_assist config set llm_provider openai
-
-# Open config file in editor
-ai_assist config edit
-```
-
 ### Running services
 
 The `run` command starts both backend and frontend services. It supports two modes:
@@ -129,15 +109,11 @@ ai_assist run
 
 # Run with explicit workspace path
 ai_assist run /path/to/workspace
-
-# Use custom config file via environment variable
-CONFIG_FILE=/path/to/config.yaml ai_assist run
 ```
 
 This mode:
 - Uses Docker Compose to start backend, frontend, and ollama services
-- Mounts workspace config.yaml and data directory
-- Respects `CONFIG_FILE` environment variable if set
+- Mounts workspace data directory
 - Requires Docker and docker-compose to be installed
 
 #### Development mode
@@ -214,11 +190,11 @@ The global home directory contains resources shared across all workspaces:
 
 ### Workspace Directory
 
-Each workspace has its own local structure:
+Each workspace has its own local structure. A workspace is identified by the presence of `.ai_assist_workspace` (marker file with workspace name):
 
 ```
 my-workspace/
-├── config.yaml          # Workspace configuration
+├── .ai_assist_workspace  # Workspace marker (name)
 ├── data/
 │   ├── chroma/          # Vector database storage
 │   └── db/              # SQLite database
@@ -235,7 +211,7 @@ my-workspace/
 
 ### Global Configuration (`~/.ai_assist/config.yaml`)
 
-Default settings used across workspaces:
+Default settings used across workspaces (global home only; workspace settings are agent-based):
 
 ```yaml
 version: "1.0"
@@ -243,36 +219,6 @@ default_llm_provider: ollama
 default_llm_model: gpt-oss:20b
 default_llm_base_url: http://localhost:11434
 default_embedding_model: all-MiniLM-L6-v2
-```
-
-### Workspace Configuration
-
-Each workspace has its own `config.yaml`:
-
-```yaml
-name: my-workspace
-version: "1.0"
-
-# Database
-database_path: data/db/assistant.db
-database_url: postgresql+asyncpg://postgres:postgres@my-workspace:5432/biz_assistant
-
-# Vector store
-chroma_persist_directory: data/chroma
-chroma_collection_name: knowledge-base
-
-# LLM settings
-llm_provider: ollama
-llm_model: gpt-oss:20b
-llm_api_key: null
-llm_base_url: http://localhost:11434
-llm_max_tokens: 2048
-llm_temperature: 0.1
-
-# RAG settings
-embedding_model: all-MiniLM-L6-v2
-chunk_size: 1000
-chunk_overlap: 200
 ```
 
 ## Agent Definitions

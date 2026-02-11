@@ -1,6 +1,6 @@
 name: AgentRouter
 description: A specific agent that classifies queries and routes to specialized agents. It is used to route queries to the appropriate agent.
 class: agent_core.agents.agent_router.AgentRouter
-model: mistralai/ministral-3-14b-reasoning
+model: lfm2.5-1.2b-thinking-mlx-8bit
 temperature: 0.2
 max_tokens: 4096

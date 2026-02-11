@@ -1,6 +1,6 @@
 name: PersonaAgent
 description: Build a persona based on the user's problem.
 class: agent_core.agents.base_agent.BaseAgent
-model: mistralai/ministral-3-14b-reasoning
+model: lfm2.5-1.2b-thinking-mlx-8bit
 temperature: 0.5
 max_tokens: 2048

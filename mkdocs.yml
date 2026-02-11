@@ -45,7 +45,9 @@ markdown_extensions:
 
 nav:
   - Home: index.md
-  - User Guide: user_guide/index.md
+  - User Guide:
+      - Overview: user_guide/index.md
+      - Getting started (ai_assist CLI): user_guide/getting-started.md
   - Implementation:
       - Overview: implementation/index.md
       - Todo Management: implementation/todo.md

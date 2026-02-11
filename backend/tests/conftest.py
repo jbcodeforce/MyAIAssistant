@@ -35,14 +35,16 @@ def get_test_rag_service() -> RAGService:
 
 
 def cleanup_test_rag():
-    """Clean up the test RAG service."""
+    """Clean up the test RAG service (clear Chroma content and metadata)."""
     global _test_rag_service, _test_chroma_dir
     if _test_rag_service is not None:
-        # Delete all documents from the collection
         try:
-            all_ids = _test_rag_service.collection.get()["ids"]
-            if all_ids:
-                _test_rag_service.collection.delete(ids=all_ids)
+            vs = _test_rag_service.vector_store
+            for coll in (vs.knowledge_content, vs.knowledge_metadata):
+                result = coll.get(include=[])
+                ids = result.get("ids") or []
+                if ids:
+                    coll.delete(ids=ids)
         except Exception:
             pass
     if _test_chroma_dir is not None:

@@ -81,7 +81,13 @@
         <span class="nav-label">Knowledge</span>
       </router-link>
 
-
+      <!-- Assistant -->
+      <router-link to="/assistant" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="nav-label">Assistant</span>
+      </router-link>
 
       <!-- Meetings -->
       <router-link to="/meetings" class="nav-item" active-class="active">

@@ -30,7 +30,6 @@ ai_assist_cli/
 │   ├── commands/           # Command implementations
 │   │   ├── __init__.py
 │   │   ├── init.py         # ai_assist init
-│   │   ├── config.py       # ai_assist config *
 │   │   ├── workspace.py    # ai_assist workspace *
 │   │   └── global_cmd.py   # ai_assist global *
 │   └── services/           # Business logic
@@ -45,11 +44,6 @@ ai_assist_cli/
 ```
 ai_assist
 ├── init [path]              # Initialize workspace
-├── config                   # Configuration management
-│   ├── show                 # Show all config
-│   ├── get <key>            # Get specific value
-│   ├── set <key> <value>    # Set value
-│   └── edit                 # Open in editor
 ├── workspace                # Workspace management
 │   ├── status               # Show workspace status
 │   ├── list                 # List all workspaces
@@ -73,7 +67,7 @@ Main CLI entry point in `cli.py`:
 import typer
 from rich.console import Console
 
-from ai_assist_cli.commands import init, config, workspace, global_cmd
+from ai_assist_cli.commands import init, workspace, global_cmd
 
 app = typer.Typer(
     name="ai_assist",
@@ -85,7 +79,6 @@ console = Console()
 
 # Register subcommand groups
 app.add_typer(workspace.app, name="workspace", help="Workspace management commands")
-app.add_typer(config.app, name="config", help="Configuration management commands")
 app.add_typer(global_cmd.app, name="global", help="Global resources management")
 
 # Register top-level commands
@@ -119,7 +112,7 @@ def status(
         help="Path to workspace. Defaults to current directory.",
     ),
 ):
-    """Show workspace status and configuration summary."""
+    """Show workspace status and directory summary."""
     workspace_path = (path or Path.cwd()).resolve()
     manager = WorkspaceManager(workspace_path)
     
@@ -136,23 +129,21 @@ Business logic in `services/` directory:
 
 ```python
 class WorkspaceManager:
-    """Manages AI Assistant workspace structure and configuration."""
+    """Manages AI Assistant workspace structure."""
     
     GLOBAL_HOME = Path.home() / ".ai_assist"
-    CONFIG_FILE = "config.yaml"
+    WORKSPACE_MARKER = ".ai_assist_workspace"
     
     def __init__(self, path: Path):
         self.path = path.resolve()
     
     def is_initialized(self) -> bool:
-        """Check if workspace is initialized."""
-        return (self.path / self.CONFIG_FILE).exists()
+        """Check if workspace is initialized (marker file exists)."""
+        return (self.path / self.WORKSPACE_MARKER).exists()
     
-    def load_config(self) -> dict[str, Any]:
-        """Load workspace configuration."""
-        config_file = self.path / self.CONFIG_FILE
-        with open(config_file) as f:
-            return yaml.safe_load(f) or {}
+    def get_workspace_name(self) -> str | None:
+        """Read workspace name from marker file (JSON with 'name' key)."""
+        ...
 ```
 
 ### Rich Output Formatting
@@ -170,7 +161,7 @@ console = Console()
 table = Table(title="Configuration")
 table.add_column("Setting", style="cyan")
 table.add_column("Value", style="green")
-table.add_row("Name", config.get("name", "N/A"))
+table.add_row("Name", manager.get_workspace_name() or "N/A")
 console.print(table)
 
 # Colored text
@@ -255,50 +246,22 @@ Cross-workspace resources:
 
 ### Workspace Directory
 
-Per-workspace structure:
+Per-workspace structure. A workspace is identified by the marker file `.ai_assist_workspace` (JSON with `name`). Settings are agent-based; no workspace config.yaml.
 
 ```
 workspace/
-├── config.yaml          # Workspace configuration
+├── .ai_assist_workspace  # Marker (JSON: {"name": "..."})
 ├── data/
 │   ├── chroma/          # Vector database
-│   └── db/              # SQLite database
+│   └── db/               # SQLite database
 ├── prompts/             # Local prompt templates
-├── tools/               # Local tool definitions
-├── history/             # Chat history
-├── summaries/           # Conversation summaries
-└── notes/               # Documents for RAG
+├── tools/                # Local tool definitions
+├── history/              # Chat history
+├── summaries/            # Conversation summaries
+└── notes/                # Documents for RAG
 ```
 
 ## Configuration Files
-
-### Workspace config.yaml
-
-```yaml
-name: my-workspace
-version: "1.0"
-
-# Database
-database_path: data/db/assistant.db
-database_url: postgresql+asyncpg://postgres:postgres@my-workspace:5432/biz_assistant
-
-# Vector store
-chroma_persist_directory: data/chroma
-chroma_collection_name: knowledge-base
-
-# LLM settings
-llm_provider: ollama
-llm_model: gpt-oss:20b
-llm_api_key: null
-llm_base_url: http://localhost:11434
-llm_max_tokens: 2048
-llm_temperature: 0.1
-
-# RAG settings
-embedding_model: all-MiniLM-L6-v2
-chunk_size: 1000
-chunk_overlap: 200
-```
 
 ### Agent Definition (YAML)
 

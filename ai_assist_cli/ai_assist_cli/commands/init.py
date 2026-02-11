@@ -42,7 +42,6 @@ def init_command(
       - cache/: Shared cache
     
     - <workspace>/: Local workspace directory
-      - config.yaml: Workspace configuration
       - data/chroma/: Vector database
       - prompts/: Local prompt templates
       - tools/: Local tool definitions
@@ -105,18 +104,13 @@ def init_command(
     console.print(tree)
     console.print()
     
-    # Show configuration file
-    config_file = workspace_path / "config.yaml"
     console.print(
         Panel(
             f"[green]Workspace initialized successfully.[/green]\n\n"
-            f"Configuration file: [cyan]{config_file}[/cyan]\n"
-            f"Global config: [cyan]{global_home / 'config.yaml'}[/cyan]\n\n"
             f"Next steps:\n"
-            f"  1. Edit [cyan]config.yaml[/cyan] to configure your LLM provider\n"
-            f"  2. Add documents to [cyan]notes/[/cyan] for RAG indexing\n"
-            f"  3. Add shared prompts to [cyan]~/.ai_assist/prompts/[/cyan]\n"
-            f"  4. Run [cyan]ai_assist workspace status[/cyan] to check configuration",
+            f"  1. Add documents to [cyan]notes/[/cyan] for RAG indexing\n"
+            f"  2. Add shared prompts to [cyan]~/.ai_assist/prompts/[/cyan]\n"
+            f"  3. Run [cyan]ai_assist workspace status[/cyan] to check workspace",
             title="Success",
             border_style="green",
         )

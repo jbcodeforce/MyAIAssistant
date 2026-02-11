@@ -11,7 +11,7 @@ import logging
 import yaml
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import AsyncIterator, Optional, Dict, Any
+from typing import AsyncIterator, Optional, Dict, Any, Union
 
 from pydantic import BaseModel, Field
 from agent_core.agents.agent_config import AgentConfig, LOCAL_MODEL, LOCAL_BASE_URL
@@ -77,7 +77,7 @@ class AgentRouter(BaseAgent):
     _DEFAULT_AGENT_NAME = "GeneralAgent"
 
     @staticmethod
-    def _load_router_config(config_dir: Optional[str]) -> Dict[str, Any]:
+    def _load_router_config(config_dir: Optional[Union[str, Path]]) -> Dict[str, Any]:
         """
         Load router config from config_dir/router.yaml or return built-in default.
 
@@ -86,7 +86,7 @@ class AgentRouter(BaseAgent):
         """
         mapping = dict(AgentRouter._DEFAULT_ROUTER_MAPPING)
         default_agent = AgentRouter._DEFAULT_AGENT_NAME
-        if config_dir:
+        if config_dir is not None:
             path = Path(config_dir) / "router.yaml"
             if path.exists():
                 try:
@@ -104,6 +104,7 @@ class AgentRouter(BaseAgent):
         self,
         config: Optional[AgentConfig] = None,
         llm_client: Optional[LLMCallable] = None,
+        config_dir: Optional[Union[str, Path]] = None,
     ):
         """
         Initialize the router.
@@ -113,12 +114,21 @@ class AgentRouter(BaseAgent):
         agent name and maps QueryIntent to agent name for routing.
 
         Args:
+            config: Optional agent config. If None, uses default.
+            llm_client: Optional LLM client. If None, uses default.
             config_dir: Optional path to agent configuration directory.
-                       If None, uses AgentFactory default.
+                        When set, the factory is initialized with this path and
+                        router.yaml is loaded from it. If None, uses factory
+                        default and config.agent_dir for router.yaml.
         """
         super().__init__(config=config, llm_client=llm_client)
-        factory = get_agent_factory()
-        router_cfg = self._load_router_config(config_dir = self._config.agent_dir)
+        if config_dir is not None:
+            factory = get_agent_factory(config_dir=Path(config_dir) if isinstance(config_dir, str) else config_dir)
+            router_config_dir: Optional[Union[str, Path]] = config_dir
+        else:
+            factory = get_agent_factory()
+            router_config_dir = self._config.agent_dir if self._config.agent_dir is not None else None
+        router_cfg = self._load_router_config(router_config_dir)
         default_agent_name = router_cfg["default_agent"]
         mapping_raw = router_cfg["mapping"]
 

@@ -106,9 +106,12 @@ class RAGService:
             # First, remove any existing chunks for this knowledge item
             await self.remove_knowledge(knowledge_id)
 
-            # Load the document
+            # Load the document (recursive for folder type so subfolders are included)
             logger.info(f"Loading document from {uri}")
-            loaded_docs = await self.document_loader.load(uri, document_type)
+            recursive = document_type == "folder"
+            loaded_docs = await self.document_loader.load(
+                uri, document_type, recursive=recursive
+            )
 
             if not loaded_docs:
                 return IndexingResult(

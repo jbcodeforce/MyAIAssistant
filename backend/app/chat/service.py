@@ -164,7 +164,8 @@ class ChatService:
         Chat using the knowledge base for context.
         """
         return ChatResponse(
-            message=user_message
+            message=user_message,
+            context_used=[]
         )   
 # Global chat service instance
 _chat_service: Optional[ChatService] = None

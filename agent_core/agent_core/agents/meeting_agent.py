@@ -117,9 +117,25 @@ class MeetingAgent(BaseAgent):
             json_text = self._extract_json(response_text)
             data = json.loads(json_text)
             
-            # Parse into Pydantic models
-            attendees = [Person(**p) for p in data.get("attendees", [])]
-            next_steps = [NextStep(**ns) for ns in data.get("next_steps", [])]
+            # Parse into Pydantic models (attendees may be list of strings or list of dicts)
+            raw_attendees = data.get("attendees", [])
+            attendees = []
+            for p in raw_attendees:
+                if isinstance(p, str):
+                    attendees.append(Person(name=p))
+                elif isinstance(p, dict):
+                    attendees.append(Person(**p))
+                else:
+                    attendees.append(Person(name=str(p)))
+            raw_next_steps = data.get("next_steps", [])
+            next_steps = []
+            for ns in raw_next_steps:
+                if isinstance(ns, dict):
+                    next_steps.append(NextStep(**ns))
+                elif isinstance(ns, str):
+                    next_steps.append(NextStep(what=ns, who="to_be_decided"))
+                else:
+                    next_steps.append(NextStep(what=str(ns), who="to_be_decided"))
             key_points = [KeyPoint(**kp) if isinstance(kp, dict) else KeyPoint(point=str(kp)) 
                          for kp in data.get("key_points", [])]
             
@@ -147,6 +163,9 @@ class MeetingAgent(BaseAgent):
         Returns:
             Extracted JSON string
         """
+        # Strip <think>...</think> blocks (e.g. from reasoning/thinking models)
+        text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.DOTALL)
+        text = text.strip()
         # Remove markdown code block if present
         json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
         if json_match:

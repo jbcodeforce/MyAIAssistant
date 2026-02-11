@@ -1,6 +1,7 @@
 """Tests for note parse command."""
 
 import asyncio
+import re
 import pytest
 from pathlib import Path
 from unittest.mock import patch
@@ -81,25 +82,22 @@ def test_note_parse_empty_file_exits_zero(tmp_path):
     """Parse with an empty file exits 0 and prints a message."""
     empty = tmp_path / "empty.md"
     empty.write_text("", encoding="utf-8")
-    with patch(
-        "ai_assist_cli.commands.note_cmd._parse_note",
-        side_effect=lambda content: _mock_parse_note(content),
-    ):
-        result = runner.invoke(
-            app,
-            ["note", "parse", str(empty), "--dry-run"],
-            catch_exceptions=False,
-        )
+    result = runner.invoke(
+        app,
+        ["note", "parse", str(empty), "--dry-run"],
+        catch_exceptions=False,
+    )
     assert result.exit_code == 0
     assert "empty" in result.output.lower()
 
 
 
-def test_note_parse_notes_1():
-    """Parse with a missing file path exits with code 1."""
+def test_note_parse_missing_file_exits_nonzero():
+    """Parse with a missing file path exits with nonzero code."""
+    missing = data_dir / "does_not_exist.md"
     result = runner.invoke(
         app,
-        ["note", "parse", str(data_dir / "notes_1.md"), "--dry-run"],
+        ["note", "parse", str(missing), "--dry-run"],
         catch_exceptions=False,
     )
     assert result.exit_code != 0

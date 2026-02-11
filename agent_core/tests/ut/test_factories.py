@@ -96,6 +96,34 @@ max_tokens: 500
         assert config.temperature == 0.4
         assert config.max_tokens == 4096
 
+    def test_agent_config_llm_url_from_yaml(self, tmp_path):
+        """Test that llm_url in YAML is mapped to base_url."""
+        agent_dir = tmp_path / "CustomLLMAgent"
+        agent_dir.mkdir()
+        yaml_content = """
+name: CustomLLMAgent
+description: Agent with custom LLM endpoint
+model: some-model
+llm_url: http://custom:1337/v1
+"""
+        (agent_dir / "agent.yaml").write_text(yaml_content)
+        config = AgentConfig.from_yaml(agent_dir / "agent.yaml")
+        assert config.base_url == "http://custom:1337/v1"
+
+    def test_agent_config_llm_url_overrides_base_url(self, tmp_path):
+        """Test that llm_url takes precedence over base_url when both are set."""
+        agent_dir = tmp_path / "OverrideAgent"
+        agent_dir.mkdir()
+        yaml_content = """
+name: OverrideAgent
+model: test-model
+base_url: http://default:1234/v1
+llm_url: http://custom:1337/v1
+"""
+        (agent_dir / "agent.yaml").write_text(yaml_content)
+        config = AgentConfig.from_yaml(agent_dir / "agent.yaml")
+        assert config.base_url == "http://custom:1337/v1"
+
 
 class TestAgentFactory:
     """Tests for the AgentFactory class."""

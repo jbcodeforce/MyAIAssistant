@@ -1,15 +1,13 @@
 """Shared fixtures and utilities for integration tests.
 
 This module provides common configuration and skip markers for tests
-that require external services like Ollama.
+that require a local LLM server (e.g. Osaurus).
 """
 
 import os
 import pytest
 import httpx
 
-
-# Environment configuration for Ollama
 from agent_core.agents.agent_config import LOCAL_BASE_URL, LOCAL_MODEL, get_available_models
 
 def is_local_server_available() -> bool:
@@ -31,7 +29,7 @@ def is_model_available(model: str = None) -> bool:
     try:
         model_names = get_available_models()
         model_base = model.split(":")[0]
-        return (model_base in name or name in model_base for name in model_names)
+        return any(model_base in name or name in model_base for name in model_names)
     except (httpx.ConnectError, httpx.TimeoutException):
         return False
 

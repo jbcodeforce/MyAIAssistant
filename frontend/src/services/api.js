@@ -265,6 +265,75 @@ export const chatApi = {
     })
   },
 
+  /**
+   * Stream knowledge-base / Assistant chat (POST /chat/generic/stream with force_intent).
+   * NDJSON: {"content": "..."} or {"done": true}. Calls onChunk(text), onDone(), onError(err).
+   * @param {string} message - The user's message
+   * @param {Array} conversationHistory - Previous messages [{role, content}]
+   * @param {function} onChunk - Called with (text) for each content chunk
+   * @param {function} onDone - Called when stream ends
+   * @param {function} onError - Called with (error) on fetch or parse error
+   */
+  async kbChatStream(message, conversationHistory = [], onChunk, onDone, onError) {
+    const baseURL = api.defaults.baseURL || ''
+    const url = `${baseURL}/chat/generic/stream`
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message,
+          conversation_history: conversationHistory,
+          n_results: 5,
+          force_intent: 'knowledge_search'
+        })
+      })
+      if (!response.ok) {
+        const errBody = await response.text()
+        let detail = response.statusText
+        try {
+          const j = JSON.parse(errBody)
+          if (j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+        } catch (_) {}
+        onError(new Error(detail))
+        return
+      }
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || ''
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed) continue
+          try {
+            const obj = JSON.parse(trimmed)
+            if (obj.content != null) onChunk(obj.content)
+            if (obj.done) {
+              onDone()
+              return
+            }
+          } catch (e) {
+            // skip malformed line
+          }
+        }
+      }
+      if (buffer.trim()) {
+        try {
+          const obj = JSON.parse(buffer.trim())
+          if (obj.content != null) onChunk(obj.content)
+        } catch (_) {}
+      }
+      onDone()
+    } catch (err) {
+      onError(err)
+    }
+  },
+
   healthCheck() {
     return api.get('/chat/health')
   }
@@ -376,6 +445,20 @@ export const agentsApi = {
    */
   list() {
     return api.get('/agents/')
+  },
+
+  /**
+   * Get one agent's full detail including sys_prompt (for edit form).
+   */
+  get(name) {
+    return api.get(`/agents/${encodeURIComponent(name)}`)
+  },
+
+  /**
+   * Save agent prompt to workspace agents folder. Body: { prompt: string }.
+   */
+  savePrompt(name, prompt) {
+    return api.put(`/agents/${encodeURIComponent(name)}/prompt`, { prompt })
   }
 }
 

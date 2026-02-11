@@ -6,6 +6,7 @@ intelligent routing to specialized agents.
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
@@ -103,16 +104,23 @@ class QueryClassifier(BaseAgent):
             summary_parts.append(f"{role}: {content}")
         return "\n".join(summary_parts)
 
+    def _extract_json(self, text: str) -> str:
+        """Extract JSON from text, stripping <think> blocks and markdown code fences."""
+        text = re.sub(r'<think>[\s\S]*?</think>', '', text, flags=re.DOTALL)
+        text = text.strip()
+        code_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', text)
+        if code_match:
+            return code_match.group(1).strip()
+        start = text.find('{')
+        end = text.rfind('}')
+        if start != -1 and end != -1 and end > start:
+            return text[start:end + 1]
+        return text.strip()
+
     def _parse_response(self, response_text: str) -> ClassificationResult:
         """Parse LLM response into ClassificationResult."""
         try:
-            # Try to extract JSON from the response
-            json_str = response_text.strip()
-            if json_str.startswith("```"):
-                # Handle markdown code blocks
-                lines = json_str.split("\n")
-                json_str = "\n".join(lines[1:-1])
-            
+            json_str = self._extract_json(response_text)
             data = json.loads(json_str)
             
             intent_str = data.get("intent", "general_chat")
