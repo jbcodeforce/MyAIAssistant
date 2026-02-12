@@ -35,16 +35,13 @@ def init_command(
     
     Creates:
     - ~/.ai_assist/: Global directory for cross-workspace resources
-      - prompts/: Shared prompt templates
       - agents/: Agent definitions
       - tools/: Shared tool definitions
-      - models/: Model configurations
-      - cache/: Shared cache
-    
+      - skills/: Shared skill definitions
+
     - <workspace>/: Local workspace directory
       - data/chroma/: Vector database
-      - prompts/: Local prompt templates
-      - tools/: Local tool definitions
+      - agents/: Agent definitions for a specific workspace
       - history/: Chat history
       - summaries/: Conversation summaries
       - notes/: Documents for RAG
@@ -82,7 +79,7 @@ def init_command(
     if not global_was_initialized:
         console.print(f"[bold green]Global directory created:[/bold green] {global_home}")
         global_tree = Tree(f"[bold]~/.ai_assist[/bold]")
-        for dir_name in ["prompts/", "agents/", "tools/", "models/", "cache/"]:
+        for dir_name in WorkspaceManager.GLOBAL_DIRS:
             global_tree.add(f"[magenta]{dir_name}[/magenta]")
         console.print(global_tree)
         console.print()
@@ -106,11 +103,7 @@ def init_command(
     
     console.print(
         Panel(
-            f"[green]Workspace initialized successfully.[/green]\n\n"
-            f"Next steps:\n"
-            f"  1. Add documents to [cyan]notes/[/cyan] for RAG indexing\n"
-            f"  2. Add shared prompts to [cyan]~/.ai_assist/prompts/[/cyan]\n"
-            f"  3. Run [cyan]ai_assist workspace status[/cyan] to check workspace",
+            f"[green]Workspace initialized successfully.[/green]\n\n",
             title="Success",
             border_style="green",
         )

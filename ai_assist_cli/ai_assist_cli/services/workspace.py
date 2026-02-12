@@ -16,19 +16,18 @@ class WorkspaceManager:
     
     # Global directory structure (shared across workspaces)
     GLOBAL_DIRS = [
-        "prompts",
         "agents",
         "tools",
-        "models",
-        "cache",
+        "skills"
     ]
 
     # Workspace directory structure (per-workspace)
     WORKSPACE_DIRS = [
         "data/chroma",
         "data/db",
-        "prompts",
+        "agents",
         "tools",
+        "skills",
         "history",
         "summaries",
         "notes",
@@ -70,9 +69,6 @@ class WorkspaceManager:
             dir_path.mkdir(parents=True, exist_ok=True)
             created_dirs.append(dir_path)
 
-        # Create default prompt templates
-        self._create_default_prompts()
-
         # Write workspace marker with name
         marker_file = self.path / self.WORKSPACE_MARKER
         with open(marker_file, "w") as f:
@@ -80,7 +76,6 @@ class WorkspaceManager:
 
         # Register workspace
         self._register_workspace(name)
-
         return created_dirs
 
     @classmethod
@@ -109,9 +104,6 @@ class WorkspaceManager:
         if not global_config.exists():
             cls._create_global_config()
         
-        # Create default global prompts
-        cls._create_global_prompts()
-        
         # Create default global agents
         cls._create_global_agents()
         
@@ -123,17 +115,15 @@ class WorkspaceManager:
         config = {
             "version": "1.0",
             # Default LLM settings (can be overridden per workspace)
-            "default_llm_provider": "ollama",
-            "default_llm_model": "gpt-oss:20b",
-            "default_llm_base_url": "http://localhost:11434",
+            "default_llm_provider": "osaurus",
+            "default_llm_model": "lfm2.5-1.2b-thinking-mlx-8bit",
+            "default_llm_base_url": "http://localhost:1334/v1",
             # Default embedding settings
             "default_embedding_model": "all-MiniLM-L6-v2",
-            # Paths
-            "prompts_dir": str(cls.GLOBAL_HOME / "prompts"),
+            # Paths to directories
             "agents_dir": str(cls.GLOBAL_HOME / "agents"),
             "tools_dir": str(cls.GLOBAL_HOME / "tools"),
-            "models_dir": str(cls.GLOBAL_HOME / "models"),
-            "cache_dir": str(cls.GLOBAL_HOME / "cache"),
+            "skills_dir": str(cls.GLOBAL_HOME / "skills"),
         }
         
         config_file = cls.GLOBAL_HOME / cls.GLOBAL_CONFIG_FILE
@@ -141,100 +131,13 @@ class WorkspaceManager:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False)
 
     @classmethod
-    def _create_global_prompts(cls):
-        """Create default global prompt templates."""
-        prompts_dir = cls.GLOBAL_HOME / "prompts"
-        
-        # Base system prompt
-        base_system = prompts_dir / "base_system.md"
-        if not base_system.exists():
-            base_system.write_text(
-                """You are a helpful AI assistant.
-
-Core principles:
-1. Be accurate and truthful
-2. Acknowledge uncertainty when appropriate
-3. Provide concise, actionable responses
-4. Respect user privacy and data
-"""
-            )
-        
-        # Coding assistant prompt
-        coding_prompt = prompts_dir / "coding_assistant.md"
-        if not coding_prompt.exists():
-            coding_prompt.write_text(
-                """You are an expert software engineer and coding assistant.
-
-When helping with code:
-1. Write clean, maintainable code following best practices
-2. Include appropriate error handling
-3. Add comments for complex logic
-4. Consider edge cases and performance
-5. Suggest tests when appropriate
-"""
-            )
-        
-        # Research assistant prompt
-        research_prompt = prompts_dir / "research_assistant.md"
-        if not research_prompt.exists():
-            research_prompt.write_text(
-                """You are a research assistant with expertise in information synthesis.
-
-When researching topics:
-1. Provide balanced perspectives on complex issues
-2. Cite sources when available
-3. Distinguish between facts and opinions
-4. Highlight areas of uncertainty or debate
-5. Suggest related topics for further exploration
-"""
-            )
-
-    @classmethod
     def _create_global_agents(cls):
         """Create default global agent definitions."""
         agents_dir = cls.GLOBAL_HOME / "agents"
         
-        # Default assistant agent
-        assistant_agent = agents_dir / "assistant.yaml"
-        if not assistant_agent.exists():
-            agent_config = {
-                "name": "assistant",
-                "description": "General-purpose AI assistant",
-                "system_prompt": "base_system.md",
-                "tools": [],
-                "temperature": 0.7,
-                "max_tokens": 2048,
-            }
-            with open(assistant_agent, "w") as f:
-                yaml.dump(agent_config, f, default_flow_style=False)
-        
-        # Coding agent
-        coding_agent = agents_dir / "coder.yaml"
-        if not coding_agent.exists():
-            agent_config = {
-                "name": "coder",
-                "description": "Software development assistant",
-                "system_prompt": "coding_assistant.md",
-                "tools": ["file_reader", "code_executor"],
-                "temperature": 0.3,
-                "max_tokens": 4096,
-            }
-            with open(coding_agent, "w") as f:
-                yaml.dump(agent_config, f, default_flow_style=False)
-        
-        # Research agent
-        research_agent = agents_dir / "researcher.yaml"
-        if not research_agent.exists():
-            agent_config = {
-                "name": "researcher",
-                "description": "Research and information synthesis assistant",
-                "system_prompt": "research_assistant.md",
-                "tools": ["web_search", "document_reader"],
-                "temperature": 0.5,
-                "max_tokens": 4096,
-            }
-            with open(research_agent, "w") as f:
-                yaml.dump(agent_config, f, default_flow_style=False)
+        # Create default global agent definitions
+        agents_dir.mkdir(parents=True, exist_ok=True)
+       
 
     @classmethod
     def get_global_home(cls) -> Path:
@@ -255,37 +158,6 @@ When researching topics:
         
         with open(config_file) as f:
             return yaml.safe_load(f) or {}
-
-    def _create_default_prompts(self):
-        """Create default prompt templates."""
-        prompts_dir = self.path / "prompts"
-
-        # System prompt
-        system_prompt = prompts_dir / "system.md"
-        system_prompt.write_text(
-            """You are a helpful AI assistant with access to a knowledge base.
-
-When answering questions:
-1. Use the provided context when relevant
-2. Be concise and accurate
-3. If you don't know something, say so
-4. Cite sources when available
-"""
-        )
-
-        # RAG prompt
-        rag_prompt = prompts_dir / "rag.md"
-        rag_prompt.write_text(
-            """Use the following context to answer the question.
-
-Context:
-{context}
-
-Question: {question}
-
-Answer based on the context provided. If the context doesn't contain relevant information, say so.
-"""
-        )
 
     def _register_workspace(self, name: str):
         """Register workspace in global registry."""

@@ -2,47 +2,7 @@
 
 Command-line tool for managing AI Assistant's workspaces and global cross workspace, knowledge, notes, history, tools, skills.
 
-## Features
-
-The AI Assist CLI provides a comprehensive set of tools for managing AI Assistant workspaces and resources:
-
-### Workspace Management
-
-- **Initialize workspaces**: Create new workspaces with proper directory structure
-- **Workspace status**: View workspace name, location, and directory status
-- **List workspaces**: Discover and manage all registered workspaces
-- **Clean workspace data**: Remove history, summaries, and cache data
-- **Auto-detection**: Automatically detect workspace from current directory or parent directories (via workspace marker)
-
-### Service Management
-
-- **Run services**: Start backend and frontend services with a single command
-- **Production mode**: Use Docker Compose to run services with pre-built images
-- **Development mode**: Run services directly with `uv` and `npm` for hot-reload development
-- **Workspace data**: Mount workspace data directory when running with Docker
-- **Health checks**: Wait for services to be ready before completing startup
-
-### Knowledge Base Management
-- **Process documents**: Index documents from websites, folders, or markdown files
-- **Batch processing**: Process multiple documents from JSON specification files
-- **Collection management**: Organize documents into collections/categories
-- **Statistics**: View RAG vector store statistics (chunks, documents, models)
-- **Dry-run mode**: Validate and preview processing without making changes
-- **Force re-indexing**: Re-index documents even when content is unchanged
-
-### Global Resources
-- **Cross-workspace resources**: Share prompts, agents, tools, and models across workspaces
-- **Global configuration**: Set default LLM and embedding settings
-- **Agent definitions**: Manage reusable agent configurations
-- **Prompt templates**: Create and share prompt templates
-- **Tool definitions**: Define and share custom tools
-
-### Developer Experience
-- **Rich output**: Beautiful terminal output with colors, tables, and progress indicators
-- **Error handling**: Clear error messages and validation
-- **Help system**: Comprehensive help text for all commands
-- **Flexible paths**: Support for relative and absolute paths
-- **Workspace registry**: Track and manage multiple workspaces
+[See design and implementation note](https://jbcodeforce.github.io/MyAIAssistant/implementation/)
 
 ## Installation
 
@@ -54,9 +14,7 @@ uv build
 
 cd ai_assist_cli
 uv build
-uv tool install /Users/jerome/Documents/Code/MyAIAssistant/ai_assist_cli/dist/ai_assist_cli-0.1.0-py3-none-any.whl \
-  --with /Users/jerome/Documents/Code/MyAIAssistant/agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
-  --force
+uv tool install dist/ai_assist_cli-0.1.0-py3-none-any.whl --force
 ```
 
 ## Usage
@@ -64,6 +22,8 @@ uv tool install /Users/jerome/Documents/Code/MyAIAssistant/ai_assist_cli/dist/ai
 ```sh
 ai_assist --help
 ```
+
+[See the command reference](https://jbcodeforce.github.io/MyAIAssistant/commands)
 
 ### Initialize a new workspace
 

@@ -2,6 +2,7 @@ site_name: MyAIAssistant Documentation
 site_description: Intelligent Todo and Knowledge Management System
 site_url: https://jeromeboyer.net/myaiassistant
 repo_url: https://github.com/jbcodeforce/myaiassistant
+copyright: Copyright &copy; 2025 - 2026 Jerome Boyer
 theme:
   name: material
   palette:
@@ -23,18 +24,38 @@ theme:
   features:
     - navigation.sections
     - navigation.expand
-    - navigation.top
-    - search.highlight
-    - content.code.copy
     - content.code.annotate
+    - content.code.annotation
+    - content.code.copy
+    - content.tooltips
+    - content.tabs.link
+    - search.suggest
+    - search.highlight
+    - navigation.instant
+    - navigation.instant.progress
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.tracking
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.footer
 
 plugins:
   - search
+  - minify:
+      minify_html: true
+  - mkdocstrings
+  - mermaid2
 
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:mermaid2.fence_mermaid_custom
   - pymdownx.tabbed:
       alternate_style: true
   - admonition
@@ -42,12 +63,13 @@ markdown_extensions:
   - tables
   - toc:
       permalink: true
-
+      toc_depth: 3
 nav:
   - Home: index.md
   - User Guide:
       - Overview: user_guide/index.md
       - Getting started (ai_assist CLI): user_guide/getting-started.md
+      - Commands: commands.md
   - Implementation:
       - Overview: implementation/index.md
       - Todo Management: implementation/todo.md
@@ -69,4 +91,5 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/jbcodeforce/myaiassistant
-
+    - icon: fontawesome/brands/linkedin
+      link: 'https://linkedin.com/in/jeromeboyer'

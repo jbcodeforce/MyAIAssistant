@@ -1,8 +1,6 @@
 # User Guide
 
-This guide covers how to use the main features of MyAIAssistant. As a web application, the configuration is set using a `config.yaml`, to specify where to access the database for the main entities, like tasks, organizations, documents, and where to access the vector store to keep document chunks and embeddings.
-
-As of now this tool should run locally. LLM is done locally, or remotely using one of the existing AI service (OpenAI, Anthropic, Mistral, Openrouter.ai, Huggingface).
+This guide covers how to use the main features of MyAIAssistant. This a web application runs local to the user's laptop. The backend is able to access the local file system, but isolated inside the concept of workspace. A CLI is provided to jumpstart the workspace creation and running the application.
 
 ## Architecture of the solution
 
@@ -14,7 +12,8 @@ The following figure illustrates the components of this repository and how they 
 * The **frontend single page application**, runs in a Web browser and interacts with the backend to manage day to day user interactions
 * the **ai_assist** CLI, helps to manage workspace and other interesting commands to manage content.
 
-The backend uses database server, Postgresql, a vector database, ChromaDN, and a local LLM server, ollama.
+The backend uses database server, a vector database, and a local LLM server.
+
 
 ## Setup
 
