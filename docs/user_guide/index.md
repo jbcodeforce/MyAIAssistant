@@ -14,6 +14,31 @@ The following figure illustrates the components of this repository and how they 
 
 The backend uses database server, a vector database, and a local LLM server.
 
+## Getting Started
+
+### Prerequisites
+
+* Clone this repository
+
+```sh
+git clone https://github.com/jbcodeforce/MyAIAssistant.git
+```
+
+* There are two mode of execution
+
+=== "Development mode"
+   For Local Development have the following installed.
+   
+   - Python 3.12+
+   - Node.js 18+
+   - uv package manager
+
+   See [this setup to get the step by steps](dependency-setup.md)
+
+=== "Docker"
+   For minimum installation the application is packages as two docker images.
+
+#### 
 
 ## Setup
 
@@ -45,19 +70,7 @@ docker-compose up -d
 ```
 
 
-### Prerequisites
 
-#### For Docker Deployment - User
-
-- Docker 20.10 or higher
-- Docker Compose 2.0 or higher
-- Ports 80 and 8000 available
-
-#### For Local Development - Developer
-
-- Python 3.12+
-- Node.js 18+
-- uv package manager (recommended)
 
 ### Configuration
 

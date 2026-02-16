@@ -222,25 +222,17 @@ install_cli() {
     fi
     
     # Download CLI package
-    CLI_DIR="$INSTALL_DIR/cli"
-    mkdir -p "$CLI_DIR"
-    
-    print_info "Downloading CLI package..."
-    download_file "$REPO_URL/ai_assist_cli/pyproject.toml" "$CLI_DIR/pyproject.toml"
-    
-    mkdir -p "$CLI_DIR/ai_assist_cli/commands"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/__init__.py" "$CLI_DIR/ai_assist_cli/__init__.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/cli.py" "$CLI_DIR/ai_assist_cli/cli.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/workspace.py" "$CLI_DIR/ai_assist_cli/workspace.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/__init__.py" "$CLI_DIR/ai_assist_cli/commands/__init__.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/init.py" "$CLI_DIR/ai_assist_cli/commands/init.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/config.py" "$CLI_DIR/ai_assist_cli/commands/config.py"
-    download_file "$REPO_URL/ai_assist_cli/ai_assist_cli/commands/workspace.py" "$CLI_DIR/ai_assist_cli/commands/workspace.py"
-    
-    print_info "Installing CLI with uv..."
-    cd "$CLI_DIR"
-    uv pip install --system -e .
-    cd "$INSTALL_DIR"
+    print_info "Building agent_core..."
+    cd $INSTALL_DIR/agent_core
+    uv build
+    print_info "Building ai_assist_cli..."
+    cd ../ai_assist_cli
+    uv build
+    print_info "Installing ai_assist_cli..."
+    uv tool install ./dist/ai_assist_cli-0.1.0-py3-none-any.whl \
+    --with ../agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
+    --force
+
     
     if command -v ai_assist &> /dev/null; then
         print_success "ai_assist CLI installed successfully"
@@ -253,40 +245,25 @@ install_cli() {
     fi
 }
 
-create_config() {
-    cat > "$INSTALL_DIR/config.yaml" << 'EOF'
-# MyAIAssistant Configuration
-# Modify these settings as needed for your environment
-
-# Database settings (PostgreSQL)
-# Uses Docker Compose service name as host
-database_url: "postgresql+asyncpg://postgres:postgres@postgres:5432/myaiassistant"
-
-# Knowledge base / Vector store settings
-chroma_persist_directory: "/app/data/chroma"
-chroma_collection_name: "km-db"
-
-# CORS settings (list of allowed origins)
-cors_origins:
-  - "http://localhost:5173"
-  - "http://localhost:3000"
-  - "http://localhost:80"
-  - "http://localhost"
-
-# LLM settings
-# Supported providers: ollama, openai, anthropic
-llm_provider: "ollama"
-llm_model: "gpt-oss:20b"
-llm_api_key: null
-llm_base_url: "http://host.docker.internal:11434"
-llm_max_tokens: 2048
-llm_temperature: 0.1
-EOF
-}
 
 # Main installation process
 main() {
     print_header
+
+    echo ""
+    print_header
+    print_info "Creating installation directory: $INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR"
+    cd "$INSTALL_DIR"
+    # Clone the repository if not already present in INSTALL_DIR
+    if [ ! -d "$INSTALL_DIR/.git" ]; then
+        print_info "Cloning MyAIAssistant repository into $INSTALL_DIR..."
+        git clone https://github.com/jbcodeforce/MyAIAssistant.git "$INSTALL_DIR"
+        print_success "Repository cloned"
+        cd "$INSTALL_DIR"
+    else
+        print_info "Repository already present in $INSTALL_DIR, skipping clone."
+    fi
 
     # Check for Docker
     print_info "Checking prerequisites..."
@@ -318,24 +295,10 @@ main() {
         exit 1
     fi
 
-    echo ""
-    print_info "Creating installation directory: $INSTALL_DIR"
-    mkdir -p "$INSTALL_DIR/data"
-    cd "$INSTALL_DIR"
-
     # Download docker-compose.yml
     print_info "Downloading docker-compose.yml..."
     download_file "$REPO_URL/docker-compose.yml" "$INSTALL_DIR/docker-compose.yml"
     print_success "docker-compose.yml downloaded"
-
-    # Create config.yaml if it doesn't exist
-    if [ -f "$INSTALL_DIR/config.yaml" ]; then
-        print_warning "config.yaml already exists, skipping..."
-    else
-        print_info "Creating config.yaml..."
-        create_config
-        print_success "config.yaml created"
-    fi
 
     if [ -d "$INSTALL_DIR/scripts" ]; then
         print_warning "scripts directory already exists, skipping..."

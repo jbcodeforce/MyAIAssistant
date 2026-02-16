@@ -1,6 +1,6 @@
-# Getting Started
+# Dependency Setup
 
-This guide walks you through starting MyAIAssistant using the `ai_assist` CLI. Complete these steps first; you can add workspace-specific steps later.
+The dependent libraries and tools necessary can be installed with the `.install.sh` tool.
 
 ## Prerequisites
 

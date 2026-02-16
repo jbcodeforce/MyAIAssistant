@@ -31,6 +31,9 @@ async def list_todos(
     urgency: Optional[str] = Query(None, description="Filter by urgency"),
     importance: Optional[str] = Query(None, description="Filter by importance"),
     category: Optional[str] = Query(None, description="Filter by category"),
+    search: Optional[str] = Query(
+        None, max_length=200, description="Filter by substring in title or description"
+    ),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -43,7 +46,8 @@ async def list_todos(
         status=status,
         urgency=urgency,
         importance=importance,
-        category=category
+        category=category,
+        search=search,
     )
     return TodoListResponse(todos=todos, total=total, skip=skip, limit=limit)
 

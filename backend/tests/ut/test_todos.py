@@ -229,3 +229,54 @@ async def test_list_todos_by_quadrant(client: AsyncClient):
     assert data["todos"][0]["urgency"] == "Urgent"
     assert data["todos"][0]["importance"] == "Important"
 
+
+@pytest.mark.asyncio
+async def test_list_todos_with_search(client: AsyncClient):
+    await client.post(
+        "/api/todos/",
+        json={
+            "title": "Review project documentation",
+            "description": "Check the README and API docs",
+            "status": "Open",
+        },
+    )
+    await client.post(
+        "/api/todos/",
+        json={
+            "title": "Deploy to staging",
+            "description": "Run the deployment script for staging",
+            "status": "Open",
+        },
+    )
+    await client.post(
+        "/api/todos/",
+        json={
+            "title": "Weekly sync",
+            "description": "Team standup and backlog review",
+            "status": "Started",
+        },
+    )
+
+    response = await client.get("/api/todos/?search=documentation")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert "documentation" in data["todos"][0]["title"].lower()
+
+    response = await client.get("/api/todos/?search=staging")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 1
+    assert "staging" in data["todos"][0]["description"].lower()
+
+    response = await client.get("/api/todos/?search=nonexistentword")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 0
+    assert len(data["todos"]) == 0
+
+    response = await client.get("/api/todos/?search=")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 3
+

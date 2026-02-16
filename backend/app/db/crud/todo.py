@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import Todo
@@ -21,6 +21,18 @@ async def get_todo(db: AsyncSession, todo_id: int) -> Optional[Todo]:
     return result.scalar_one_or_none()
 
 
+def _search_condition(term: str):
+    """Case-insensitive title/description match (SQLite + PostgreSQL)."""
+    pattern = f"%{term}%"
+    return or_(
+        func.lower(Todo.title).like(pattern),
+        (
+            Todo.description.isnot(None)
+            & func.lower(Todo.description).like(pattern)
+        ),
+    )
+
+
 async def get_todos(
     db: AsyncSession,
     skip: int = 0,
@@ -29,33 +41,38 @@ async def get_todos(
     urgency: Optional[str] = None,
     importance: Optional[str] = None,
     category: Optional[str] = None,
+    search: Optional[str] = None,
 ) -> tuple[list[Todo], int]:
-    query = select(Todo)
-    
+    conditions = []
+
+    if search and search.strip():
+        term = search.strip().lower()[:200]
+        conditions.append(_search_condition(term))
     if status:
-        # Support comma-separated status values (e.g., "Open,Started")
         status_list = [s.strip() for s in status.split(',')]
         if len(status_list) == 1:
-            query = query.where(Todo.status == status_list[0])
+            conditions.append(Todo.status == status_list[0])
         else:
-            query = query.where(Todo.status.in_(status_list))
+            conditions.append(Todo.status.in_(status_list))
     if urgency:
-        query = query.where(Todo.urgency == urgency)
+        conditions.append(Todo.urgency == urgency)
     if importance:
-        query = query.where(Todo.importance == importance)
+        conditions.append(Todo.importance == importance)
     if category:
-        query = query.where(Todo.category == category)
-    
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
+        conditions.append(Todo.category == category)
+
+    base_filter = and_(*conditions) if conditions else True
+    query = select(Todo).where(base_filter)
+
+    # Count with same filter (flat query so bind params apply correctly)
+    count_query = select(func.count()).select_from(Todo).where(base_filter)
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
-    
-    # Get paginated results
+
     query = query.order_by(Todo.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     todos = list(result.scalars().all())
-    
+
     return todos, total
 
 
