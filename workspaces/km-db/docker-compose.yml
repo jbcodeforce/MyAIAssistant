@@ -1,0 +1,50 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: km-db-postgres
+    hostname: km-db-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: km_assistant
+    volumes:
+      - km-postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    image: jbcodeforce/myaiassistant-backend:latest
+    container_name: km-db-backend
+    hostname: km-db-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - CONFIG_FILE=/workspace/config.yaml
+    volumes:
+      - ./data:/app/data
+      - ./config.yaml:/workspace/config.yaml:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  frontend:
+    image: jbcodeforce/myaiassistant-frontend:latest
+    container_name: km-db-frontend
+    hostname: km-db-frontend
+    ports:
+      - 80:80"
+    depends_on:
+      - backend
+    environment:
+      - API_URL=http://km-db-backend:8000
+    restart: unless-stopped
+
+volumes:
+  km-postgres-data:

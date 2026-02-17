@@ -61,15 +61,16 @@ def process_knowledge(
         help="Show detailed output including errors.",
     ),
 ):
-    """Process knowledge documents from a JSON specification file.
+    """Process knowledge documents from a JSON specification file which lists the documents or websites to be processed.
     
     The JSON file should contain an array of document specifications:
-    
+    ```json
     [
       {"document_type": "website", "uri": "https://...", "collection": "flink"},
       {"document_type": "folder", "uri": "$HOME/docs", "collection": "python"}
     ]
-    
+    ```
+
     Supported document_type values: website, folder, markdown
     
     The 'collection' field is mapped to 'category' in the backend for filtering.

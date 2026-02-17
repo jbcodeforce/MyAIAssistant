@@ -156,52 +156,46 @@ class TestYamlConfigOverrides:
             os.unlink(tmp_file_path)
 
 
-class TestYamlConfigSettingsSource:
-    """Test the YamlConfigSettingsSource class directly."""
+class TestYamlLoading:
+    """Test YAML config loading (_load_yaml_file and Settings.load_yaml_data)."""
 
     def test_load_yaml_file_returns_empty_for_missing_file(self):
         """Test that _load_yaml_file returns empty dict for missing files."""
-        from app.core.config import YamlConfigSettingsSource, Settings
-        
-        source = YamlConfigSettingsSource(Settings)
-        result = source._load_yaml_file(Path("/nonexistent/file.yaml"))
-        
+        from app.core.config import _load_yaml_file
+
+        result = _load_yaml_file(Path("/nonexistent/file.yaml"))
         assert result == {}
 
     def test_load_yaml_file_returns_empty_for_empty_file(self):
         """Test that _load_yaml_file returns empty dict for empty YAML files."""
-        from app.core.config import YamlConfigSettingsSource, Settings
-        
+        from app.core.config import _load_yaml_file
+
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False
         ) as tmp_file:
             tmp_file.write("")  # Empty file
             tmp_file_path = tmp_file.name
-        
+
         try:
-            source = YamlConfigSettingsSource(Settings)
-            result = source._load_yaml_file(Path(tmp_file_path))
-            
+            result = _load_yaml_file(Path(tmp_file_path))
             assert result == {}
         finally:
             os.unlink(tmp_file_path)
 
     def test_load_yaml_file_parses_valid_yaml(self):
         """Test that _load_yaml_file correctly parses valid YAML."""
-        from app.core.config import YamlConfigSettingsSource, Settings
-        
+        from app.core.config import _load_yaml_file
+
         test_data = {"database_url": "test://db", "app_name": "Test App"}
-        
+
         with tempfile.NamedTemporaryFile(
             mode="w", suffix=".yaml", delete=False
         ) as tmp_file:
             yaml.dump(test_data, tmp_file)
             tmp_file_path = tmp_file.name
-        
+
         try:
-            source = YamlConfigSettingsSource(Settings)
-            result = source._load_yaml_file(Path(tmp_file_path))
-            
+            result = _load_yaml_file(Path(tmp_file_path))
             assert result == test_data
         finally:
             os.unlink(tmp_file_path)

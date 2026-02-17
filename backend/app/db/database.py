@@ -27,7 +27,6 @@ def get_engine() -> AsyncEngine:
     if _engine is None:
         settings = get_settings()
         database_url = settings.database_url
-        
         if is_sqlite_url(database_url):
             # SQLite-specific configuration
             # Extract path and ensure directory exists

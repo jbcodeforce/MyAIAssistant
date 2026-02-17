@@ -299,7 +299,6 @@ Copy the `agent_core` code directly into your package or use a build script to i
    packages = ["ai_assist_cli", "agent_core"]
    ```
 
-3. **Copy agent_core during build**: Create a build script or use a tool like `setuptools` to copy agent_core into the package before building.
 
 #### Option 2: Remove agent-core from Dependencies
 
@@ -327,7 +326,7 @@ Build source distribution and wheel:
 cd ai_assist_cli
 
 # Clean previous builds
-rm -rf dist/ build/ *.egg-info
+rm -rf dist/ 
 
 # Build package
 uv build

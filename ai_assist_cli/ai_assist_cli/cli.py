@@ -16,7 +16,7 @@ console = Console()
 # Register subcommand groups
 app.add_typer(workspace.app, name="workspace", help="Workspace management commands")
 app.add_typer(global_cmd.app, name="global", help="Global resources management")
-app.add_typer(knowledge.app, name="knowledge", help="Knowledge base management")
+app.add_typer(knowledge.app, name="knowledge", help="Knowledge management commands")
 app.add_typer(note_cmd.app, name="note", help="Customer note commands")
 
 # Register top-level init command with explicit name

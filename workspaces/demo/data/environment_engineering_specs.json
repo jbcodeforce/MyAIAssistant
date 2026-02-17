@@ -1,0 +1,66 @@
+[
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/dwreginfo/drinking-water-treatment",
+    "collection": "water_treatment",
+    "title": "EPA Drinking Water Treatment",
+    "description": "EPA information on drinking water treatment processes and regulations",
+    "tags": "water, treatment, EPA, drinking water"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/ground-water-and-drinking-water/national-primary-drinking-water-regulations",
+    "collection": "water_treatment",
+    "title": "National Primary Drinking Water Regulations",
+    "description": "EPA regulations for drinking water contaminants and treatment requirements",
+    "tags": "water, regulations, contaminants, standards"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/ground-water-and-drinking-water/basic-information-about-your-drinking-water",
+    "collection": "water_treatment",
+    "title": "Basic Information About Drinking Water",
+    "description": "EPA guide to understanding drinking water quality and treatment",
+    "tags": "water, quality, safety, public health"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/air-quality-management-process",
+    "collection": "air_quality",
+    "title": "Air Quality Management Process",
+    "description": "EPA overview of air quality management and monitoring processes",
+    "tags": "air quality, management, monitoring, EPA"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/criteria-air-pollutants",
+    "collection": "air_quality",
+    "title": "Criteria Air Pollutants",
+    "description": "EPA information on the six criteria air pollutants and their standards",
+    "tags": "air pollution, standards, criteria pollutants, EPA"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/air-quality-designations",
+    "collection": "air_quality",
+    "title": "Air Quality Designations",
+    "description": "EPA air quality designations and attainment status information",
+    "tags": "air quality, designations, attainment, standards"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/air-trends",
+    "collection": "air_quality",
+    "title": "Air Trends",
+    "description": "EPA air quality trends and progress reports",
+    "tags": "air quality, trends, progress, monitoring"
+  },
+  {
+    "document_type": "website",
+    "uri": "https://www.epa.gov/indoor-air-quality-iaq",
+    "collection": "air_quality",
+    "title": "Indoor Air Quality",
+    "description": "EPA information on indoor air quality and health impacts",
+    "tags": "indoor air, IAQ, health, ventilation"
+  }
+]

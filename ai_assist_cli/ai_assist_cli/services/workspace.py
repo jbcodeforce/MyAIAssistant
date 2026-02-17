@@ -4,9 +4,10 @@ import json
 import shutil
 from pathlib import Path
 from typing import Any
-
+import typer
+from rich.console import Console
 import yaml
-
+console = Console()
 
 class WorkspaceManager:
     """Manages AI Assistant workspace structure and configuration."""
@@ -24,7 +25,6 @@ class WorkspaceManager:
     # Workspace directory structure (per-workspace)
     WORKSPACE_DIRS = [
         "data/chroma",
-        "data/db",
         "agents",
         "tools",
         "skills",
@@ -68,7 +68,15 @@ class WorkspaceManager:
             dir_path = self.path / dir_name
             dir_path.mkdir(parents=True, exist_ok=True)
             created_dirs.append(dir_path)
-
+        # Get docker-compose.yml file from git repository
+        docker_compose_file = self.path / "docker-compose.yml"
+        if not docker_compose_file.exists():
+            docker_compose_file = self.path / ".." / "code" / "docker-compose.yml"
+        if not docker_compose_file.exists():
+            console.print(f"[red]Error: docker-compose.yml not found at {docker_compose_file}[/red]")
+            raise typer.Exit(1)
+        with open(docker_compose_file, "w") as f:
+            f.write(docker_compose_file.read_text())
         # Write workspace marker with name
         marker_file = self.path / self.WORKSPACE_MARKER
         with open(marker_file, "w") as f:

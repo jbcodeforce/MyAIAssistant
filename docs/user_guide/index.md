@@ -16,126 +16,59 @@ The backend uses database server, a vector database, and a local LLM server.
 
 ## Getting Started
 
-### Prerequisites
+### Setup
 
-* Clone this repository
+* Go where you want to install the AI Assistant components, then:
+   ```bash
+   # If MYAIASSISTANT_DIR is not set it will be defaulted to $HOME/myaiassistant
+   export MYAIASSISTANT_DIR=$(pwd)/myaiassistant
+   curl -fsSL https://raw.githubusercontent.com/jbcodeforce/MyAIAssistant/main/install.sh | bash
+   ```
 
-```sh
-git clone https://github.com/jbcodeforce/MyAIAssistant.git
-```
+   This script:
 
-* There are two mode of execution
+   - Checks for all dependencies
+   - Prepare the ai_assist CLI
+   - Sets up the installation `MYAIASSISTANT_DIR`
 
+   The folder structure looks like. 
+   ```sh
+   ├── code
+   └── workspaces
+   ```
+
+* After installation:
+   ```bash
+   cd $MYAIASSISTANT_DIR
+   # Create one workspace, change first_ws as you want to name your workspace.
+   ai_assist init ./workspaces/first_ws
+   ```
+
+* There are two possible modes of execution, the ai_assist cli supports:
 === "Development mode"
-   For Local Development have the following installed.
+      This is to directly use python and nodejs for the backend and frontend components. For Local Development, have the following installed.
+      
+      - Python 3.12+
+      - Node.js 18+
+      - uv package manager
+
+      ```sh
+      ai_assist run --dev
+      ```
    
-   - Python 3.12+
-   - Node.js 18+
-   - uv package manager
-
-   See [this setup to get the step by steps](dependency-setup.md)
-
 === "Docker"
-   For minimum installation the application is packages as two docker images.
+      For minimum dependencies management, the application is packaged as two docker images.
 
-#### 
-
-## Setup
-
-### Option 1: One-line Install (No Clone Required)
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/jbcodeforce/MyAIAssistant/main/install.sh | bash
-```
-
-This script:
-- Checks for Docker and offers to install it if missing
-- Downloads `docker-compose.yml`, creates a default `config.yaml` and scripts for database management
-- Sets up the installation in `~/myaiassistant` (override with `MYAIASSISTANT_DIR`)
-
-After installation:
-```bash
-cd ~/myaiassistant
-docker-compose up -d
-# Web UI: http://localhost:80
-```
-
-### Option 2: Clone and Run
-
-```sh
-git clone https://github.com/jbcodeforce/MyAIAssistant.git
-cd MyAIAssistant
-docker-compose up -d
-# Web UI: http://localhost:80
-```
-
-
-
+      ```sh
+      ai_assist run 
+      ```
 
 ### Configuration
 
-There is a `config.yaml` to set access to the database and vector DB used. There is no need to change anything for first utilisation. There is a default database to support this user guide.
 
-In the future, a user may change the following elements of the config.yaml, to separate knowledge and project per major context. Like a student working for his/her university projects, then later for a company during a internship. The student may use two databases for that. The same way, a consultant who wants to have separate databases for very different set of activities linked to different knowledge and customer industry:
+## Home Page
 
-```yaml
-# Database settings
-database_url: "sqlite+aiosqlite:////app/data/myaiassistant.db"
-
-# Knowledge base / Vector store settings
-chroma_persist_directory: "/app/data/chroma"
-chroma_collection_name: "km-db"
-```
-
-* `database_url` can be another name to keep data for a separate context. The data folder will include the database file,
-* `chroma_persist_directory:`: the reference to the folder to persiste vector store and document chunks
-* `chroma_collection_name`: chrome collection name. From now there is one collection. It may be relevant in the future to support adding more collection and to query at the collection level.
-
-### Launch the Application
-
-#### Docker Compose (Recommended)
-
-The fastest way to run the full application:
-
-```bash
-docker-compose up -d
-```
-
-Access points:
-
-| Service | URL | Description |
-| ------- | --- | ----------- |
-| **Frontend** | [http://localhost:80](http://localhost:80) | Vue.js application. For user. |
-| Backend API | http://localhost:8000 | FastAPI server. During this app development.|
-| API Docs | http://localhost:8000/docs | Interactive Swagger UI. During this app development. |
-
-#### Local Development
-
-For development with hot reload:
-
-=== "Backend"
-   First start postgresql DB
-   ```sh
-   docker-compose up postgres -d
-   ```
-
-   Then the backend:
-    ```bash
-    cd backend
-    uv sync
-    uv run uvicorn app.main:app --reload
-    ```
-
-=== "Frontend"
-
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-
-
----
+The first page of the web application is the task dashboard. 
 
 ## Organization Management
 

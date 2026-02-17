@@ -195,10 +195,48 @@ install_uv() {
     # Source the env to get uv in path
     if [ -f "$HOME/.local/bin/env" ]; then
         source "$HOME/.local/bin/env"
-    elif [ -f "$HOME/.cargo/env" ]; then
-        source "$HOME/.cargo/env"
     fi
     export PATH="$HOME/.local/bin:$PATH"
+}
+
+install_llm() {
+    # Installs OSAURIS (macOS) or Ollama (Linux/other) for LLM support.
+    OS="$(uname -s)"
+    if [ "$OS" = "Darwin" ]; then
+        print_info "macOS detected. Installing osaurus..."
+        if ! command -v brew &> /dev/null; then
+            print_error "Homebrew is required to install osauris. Please install Homebrew first: https://brew.sh/"
+            return 1
+        fi
+        brew install osaurus
+        if command -v osaurus &> /dev/null; then
+            print_success "osaurus installed successfully."
+            return 0    
+        else
+            print_error "osaurus installation failed."
+            return 1
+        fi
+    else
+        print_info "Non-macOS detected. Installing Ollama..."
+        if command -v ollama &> /dev/null; then
+            print_success "Ollama is already installed."
+            return 0
+        fi
+        if [ "$OS" = "Linux" ]; then
+            curl -fsSL https://ollama.com/install.sh | sh
+        else
+            print_warning "Automatic Ollama installation is only supported on Linux. Please follow manual instructions: https://ollama.com/download"
+            return 1
+        fi
+        if command -v ollama &> /dev/null; then
+            print_success "Ollama installed successfully."
+            return 0
+        else
+            print_error "Ollama installation failed."
+            return 1
+        fi
+    fi
+
 }
 
 install_cli() {
@@ -223,7 +261,7 @@ install_cli() {
     
     # Download CLI package
     print_info "Building agent_core..."
-    cd $INSTALL_DIR/agent_core
+    cd $INSTALL_DIR/code/agent_core
     uv build
     print_info "Building ai_assist_cli..."
     cd ../ai_assist_cli
@@ -255,14 +293,17 @@ main() {
     print_info "Creating installation directory: $INSTALL_DIR"
     mkdir -p "$INSTALL_DIR"
     cd "$INSTALL_DIR"
-    # Clone the repository if not already present in INSTALL_DIR
-    if [ ! -d "$INSTALL_DIR/.git" ]; then
-        print_info "Cloning MyAIAssistant repository into $INSTALL_DIR..."
-        git clone https://github.com/jbcodeforce/MyAIAssistant.git "$INSTALL_DIR"
+    export MYAIASSISTANT_DIR=$(pwd)
+    mkdir -p "$INSTALL_DIR/code"
+    mkdir -p "$INSTALL_DIR/workspaces"
+    # Clone the repository if not already present in INSTALL_DIR/code
+    if [ ! -d "$INSTALL_DIR/code/.git" ]; then
+        print_info "Cloning MyAIAssistant repository into $INSTALL_DIR/code..."
+        git clone https://github.com/jbcodeforce/MyAIAssistant.git "$INSTALL_DIR/code"
         print_success "Repository cloned"
-        cd "$INSTALL_DIR"
+        cd "$INSTALL_DIR/code"
     else
-        print_info "Repository already present in $INSTALL_DIR, skipping clone."
+        print_info "Repository already present in $INSTALL_DIR/code , skipping clone."
     fi
 
     # Check for Docker
@@ -295,23 +336,6 @@ main() {
         exit 1
     fi
 
-    # Download docker-compose.yml
-    print_info "Downloading docker-compose.yml..."
-    download_file "$REPO_URL/docker-compose.yml" "$INSTALL_DIR/docker-compose.yml"
-    print_success "docker-compose.yml downloaded"
-
-    if [ -d "$INSTALL_DIR/scripts" ]; then
-        print_warning "scripts directory already exists, skipping..."
-    else
-        print_info "Creating scripts directory..."
-        mkdir -p "$INSTALL_DIR/scripts"
-        download_file "$REPO_URL/data/backup_ps_db.sh" "$INSTALL_DIR/scripts/backup_ps_db.sh"
-        chmod +x "$INSTALL_DIR/scripts/backup_ps_db.sh"
-        download_file "$REPO_URL/data/restore_pd_db.sh" "$INSTALL_DIR/scripts/restore_pd_db.sh"
-        chmod +x "$INSTALL_DIR/scripts/restore_pd_db.sh"
-        print_success "scripts directory created"
-    fi
-
     # Install CLI tool
     echo ""
     if [ "$CLI_INSTALL" = "true" ]; then
@@ -319,6 +343,7 @@ main() {
     else
         print_info "Skipping CLI installation (AI_ASSIST_CLI=false)"
     fi
+    install_llm || print_warning "LLM installation skipped or failed."
 
     echo ""
     echo -e "${GREEN}============================================${NC}"
@@ -327,29 +352,22 @@ main() {
     echo ""
     echo "Installation directory: $INSTALL_DIR"
     echo ""
-    echo "Files created:"
-    echo "  - docker-compose.yml"
-    echo "  - config.yaml"
-    echo "  - data/ (for persistent storage)"
-    if [ "$CLI_INSTALL" = "true" ]; then
-        echo "  - cli/ (ai_assist CLI tool)"
-    fi
+    echo "Folders created:"
+    echo "  - $INSTALL_DIR/code   the cloned code to access product features"
+    echo "  - $INSTALL_DIR/workspaces the folder to define your own isolated workspaces"
     echo ""
     echo -e "${BLUE}Next steps:${NC}"
     echo ""
     if command -v ai_assist &> /dev/null; then
         echo "1. Initialize a workspace:"
-        echo -e "   ${YELLOW}ai_assist init /path/to/my-workspace${NC}"
-        echo ""
-        echo "2. Or use the Docker-based deployment:"
-    else
-        echo "1. Review and customize config.yaml:"
+        echo "cd $INSTALL_DIR"
+        echo -e "   ${YELLOW}ai_assist init ./workspaces/business${NC}"
     fi
-    echo -e "   ${YELLOW}code $INSTALL_DIR/config.yaml${NC}"
     echo ""
-    echo "2. Configure your LLM provider in config.yaml:"
+    echo "2. Configure your LLM provider as environment variables:"
     echo "   - For Ollama (default): Ensure Ollama is running on port 11434"
     echo "   - For OpenAI: Set llm_provider, llm_model, and llm_api_key"
+    echo "   - For OSAURUS: Set llm_provider, llm_model, and llm_api_key"
     echo ""
     echo "3. Start MyAIAssistant:"
     echo -e "   ${YELLOW}cd $INSTALL_DIR && $COMPOSE_CMD up -d${NC}"

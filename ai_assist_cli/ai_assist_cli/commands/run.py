@@ -37,9 +37,15 @@ def find_workspace(start_path: Path) -> Optional[Path]:
 def find_project_root(workspace_path: Path) -> Optional[Path]:
     """Find project root containing backend/ and frontend/ directories."""
     current = workspace_path.resolve()
+
     while current != current.parent:
+        print(f"Finding project root in {current}")
+        # Support old structure (backend/, frontend/) and new (code/backend, code/frontend)
         backend_dir = current / "backend"
         frontend_dir = current / "frontend"
+        if not (backend_dir.exists() and frontend_dir.exists()):
+            backend_dir = current / "code" / "backend"
+            frontend_dir = current / "code" / "frontend"
         if backend_dir.exists() and frontend_dir.exists():
             return current
         current = current.parent
@@ -75,6 +81,25 @@ def wait_for_service(url: str, timeout: int = 30, service_name: str = "Service")
             time.sleep(1)
     console.print(f"  [red]{service_name} failed to start within {timeout} seconds[/red]")
     return False
+
+
+def _print_process_output(proc: subprocess.Popen, service_name: str) -> None:
+    """On startup failure, terminate process and print captured stdout/stderr."""
+    if proc.stdout is None and proc.stderr is None:
+        return
+    try:
+        proc.terminate()
+        out, err = proc.communicate(timeout=5)
+        if out:
+            console.print(f"\n[red]{service_name} stdout:[/red]")
+            console.print(out.decode(errors="replace"))
+        if err:
+            console.print(f"\n[red]{service_name} stderr:[/red]")
+            console.print(err.decode(errors="replace"))
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        console.print(f"[yellow]{service_name} did not exit in time; output may be truncated.[/yellow]")
 
 
 def cleanup_processes():
@@ -114,9 +139,15 @@ def signal_handler(signum, frame):
 def run_dev_mode(workspace_path: Path, project_root: Path):
     """Run services in development mode."""
     global backend_process, frontend_process
-    
-    backend_dir = project_root / "backend"
-    frontend_dir = project_root / "frontend"
+    # Choose backend_dir: prefer project_root/code/backend if it exists, else project_root/backend
+    code_backend_dir = project_root / "code" / "backend"
+    if code_backend_dir.exists():
+        backend_dir = code_backend_dir
+        frontend_dir=  project_root / "code" / "frontend"
+    else:
+        backend_dir = project_root / "backend"
+        frontend_dir=  project_root / "frontend"
+
     env = os.environ.copy()
     
     # Check requirements
@@ -135,18 +166,20 @@ def run_dev_mode(workspace_path: Path, project_root: Path):
         raise typer.Exit(1)
     
     # Start backend
-    console.print("\n[green]Starting Backend...[/green]")
+    console.print(f"\n[green]Starting Backend...{backend_dir}[/green]")
     console.print(f"  Port: 8000")
     
+    # Use backend dir as --project so uv uses that project's venv and dependencies.
+    # Keep cwd=workspace_path so the app's Path.cwd() is the workspace (config, data).
     backend_cmd = [
-        "uv", "run", "--project", str(backend_dir),
+        "uv", "run", "--project", str(backend_dir.resolve()),
         "uvicorn", "app.main:app",
         "--reload",
         "--host", "0.0.0.0",
         "--port", "8000",
         "--app-dir", str(backend_dir),
     ]
-    
+    console.print(f"{backend_cmd}")
     backend_process = subprocess.Popen(
         backend_cmd,
         cwd=str(workspace_path),
@@ -158,6 +191,7 @@ def run_dev_mode(workspace_path: Path, project_root: Path):
     console.print(f"  PID: {backend_process.pid}")
     
     if not wait_for_service("http://localhost:8000/health", service_name="Backend"):
+        _print_process_output(backend_process, "Backend")
         cleanup_processes()
         raise typer.Exit(1)
     
@@ -185,6 +219,7 @@ def run_dev_mode(workspace_path: Path, project_root: Path):
     console.print(f"  PID: {frontend_process.pid}")
     
     if not wait_for_service("http://localhost:3000", service_name="Frontend"):
+        _print_process_output(frontend_process, "Frontend")
         cleanup_processes()
         raise typer.Exit(1)
     
@@ -225,7 +260,7 @@ def run_docker_mode(workspace_path: Path, project_root: Path):
         raise typer.Exit(1)
     
     # Find docker-compose.yml
-    docker_compose_file = project_root / "docker-compose.yml"
+    docker_compose_file = project_root / "code" / "docker-compose.yml"
     if not docker_compose_file.exists():
         console.print(f"[red]Error: docker-compose.yml not found at {docker_compose_file}[/red]")
         raise typer.Exit(1)
@@ -373,7 +408,12 @@ def run_command(
     console.print("\n[yellow]Configuration:[/yellow]")
     console.print(f"  Project Root:  {project_root}")
     console.print(f"  Workspace:     {workspace_path}")
-    
+    config_path = workspace_path / "config.yaml"
+    if config_path.exists():
+        os.environ["CONFIG_FILE"] = str(config_path)
+        console.print(f"[green]Using config file:[/green] {config_path}")
+    else:
+        console.print(f"[yellow]No config.yaml found in workspace {workspace_path}. Using defaults or external config.[/yellow]")
     # Run in appropriate mode
     if dev:
         run_dev_mode(workspace_path, project_root)

@@ -1,0 +1,24 @@
+# Default configuration for MyAIAssistant Backend
+# These values are used unless overridden by:
+# 1. User config file (set CONFIG_FILE environment variable)
+# 2. Environment variables
+# 3. .env file
+
+# Database settings (SQLite for local deployment)
+# For PostgreSQL: postgresql+asyncpg://postgres:postgres@localhost:5432/biz_assistant
+database_url: "sqlite+aiosqlite:///./data/demo-assistant.db"
+
+# CORS settings (list of allowed origins)
+cors_origins:
+  - "http://localhost:5173"
+  - "http://localhost:3000"
+ 
+# LLM settings
+llm_provider: "osaurus"
+llm_model: "gpt-oss-20b-mlx-8bit"
+#llm_model: "mistral:7b-instruct"
+llm_api_key: null
+llm_base_url: "http://localhost:1337/v1"
+llm_max_tokens: 2048
+llm_temperature: 0.1
+

@@ -1,5 +1,7 @@
 site/
-workspaces/
+workspaces/biz-db
+workspaces/km_db
+workspaces/learning_ws
 index_customer_notes.sh
 index_km_notes.sh
 data/pg/
