@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Todo
+from app.db.models import Todo, Knowledge
 from app.api.schemas.todo import TodoCreate, TodoUpdate
 
 
@@ -178,4 +178,38 @@ async def count_active_todos_for_project(db: AsyncSession, project_id: int) -> i
     )
     result = await db.execute(query)
     return result.scalar_one()
+
+
+def _parse_tags_from_strings(tag_strings: list[str]) -> list[str]:
+    """Parse comma-separated tag strings into a sorted list of unique tags."""
+    seen: set[str] = set()
+    for s in tag_strings:
+        if not s or not s.strip():
+            continue
+        for part in s.split(","):
+            tag = part.strip()
+            if tag:
+                seen.add(tag)
+    return sorted(seen)
+
+
+async def get_distinct_tags(
+    db: AsyncSession,
+    include_knowledge: bool = True,
+) -> list[str]:
+    """
+    Return distinct tag values from Todo.tags and optionally Knowledge.tags.
+    Tags are stored as comma-separated strings; they are split, trimmed, and deduplicated.
+    """
+    tag_strings: list[str] = []
+    result = await db.execute(select(Todo.tags).where(Todo.tags.isnot(None)))
+    for val in result.scalars():
+        if val and isinstance(val, str):
+            tag_strings.append(val.strip())
+    if include_knowledge:
+        result = await db.execute(select(Knowledge.tags).where(Knowledge.tags.isnot(None)))
+        for val in result.scalars():
+            if val and isinstance(val, str):
+                tag_strings.append(val.strip())
+    return _parse_tags_from_strings(tag_strings)
 

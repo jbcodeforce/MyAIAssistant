@@ -129,15 +129,16 @@ async def test_generic_chat_api(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_generic_chat_stream_api(client: AsyncClient):
-    """Test /api/chat/generic/stream returns NDJSON stream with content and done lines."""
+    """Test /api/chat/generic/stream returns NDJSON stream with content and done line including context_used."""
     from app.main import app
 
-    # Mock ChatService that yields known chunks
+    class MockResponse:
+        message = "Hello world"
+        context_used = [{"title": "Doc", "uri": "/doc", "score": 0.9, "snippet": "snippet"}]
+
     class MockChatService:
-        async def chat_with_routing_stream(self, user_message, conversation_history=None, context=None, force_intent=None):
-            yield "Hello"
-            yield " "
-            yield "world"
+        async def chat_with_routing(self, user_message, conversation_history=None, context=None, force_intent=None):
+            return MockResponse()
 
     def override_get_chat():
         return MockChatService()
@@ -145,6 +146,7 @@ async def test_generic_chat_stream_api(client: AsyncClient):
     app.dependency_overrides[get_chat] = override_get_chat
     try:
         chunks = []
+        last_obj = None
         async with client.stream(
             "POST",
             "/api/chat/generic/stream",
@@ -160,7 +162,14 @@ async def test_generic_chat_stream_api(client: AsyncClient):
                 if "content" in obj:
                     chunks.append(obj["content"])
                 if obj.get("done"):
+                    last_obj = obj
                     break
-        assert chunks == ["Hello", " ", "world"]
+        assert "".join(chunks) == "Hello world"
+        assert last_obj is not None
+        assert last_obj.get("done") is True
+        assert "context_used" in last_obj
+        assert len(last_obj["context_used"]) == 1
+        assert last_obj["context_used"][0]["title"] == "Doc"
+        assert last_obj["context_used"][0]["score"] == 0.9
     finally:
         app.dependency_overrides.pop(get_chat, None)

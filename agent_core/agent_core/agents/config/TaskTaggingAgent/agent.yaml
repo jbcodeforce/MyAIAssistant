@@ -1,0 +1,6 @@
+name: TaskTaggingAgent
+description: Classify tasks with tags using database-backed tools (get_available_tags, task_list, update_task). Tools run in backend context via tool_provider.
+class: agent_core.agents.task_tagging_agent.TaskTaggingAgent
+model: claude-sonnet-4-5
+temperature: 0.2
+max_tokens: 4096

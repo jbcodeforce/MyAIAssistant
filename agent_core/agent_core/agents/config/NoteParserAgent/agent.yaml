@@ -4,3 +4,5 @@ class: agent_core.agents.note_parser_agent.NoteParserAgent
 model: lfm2.5-1.2b-thinking-mlx-8bit
 temperature: 0.3
 max_tokens: 30000
+response_format:
+  type: json_object

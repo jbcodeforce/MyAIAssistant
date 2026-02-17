@@ -230,7 +230,7 @@ export const chatApi = {
             const obj = JSON.parse(trimmed)
             if (obj.content != null) onChunk(obj.content)
             if (obj.done) {
-              onDone()
+              onDone(obj.context_used || [])
               return
             }
           } catch (e) {
@@ -242,9 +242,13 @@ export const chatApi = {
         try {
           const obj = JSON.parse(buffer.trim())
           if (obj.content != null) onChunk(obj.content)
+          if (obj.done) {
+            onDone(obj.context_used || [])
+            return
+          }
         } catch (_) {}
       }
-      onDone()
+      onDone([])
     } catch (err) {
       onError(err)
     }
@@ -314,7 +318,7 @@ export const chatApi = {
             const obj = JSON.parse(trimmed)
             if (obj.content != null) onChunk(obj.content)
             if (obj.done) {
-              onDone()
+              onDone(obj.context_used || [])
               return
             }
           } catch (e) {
@@ -326,9 +330,13 @@ export const chatApi = {
         try {
           const obj = JSON.parse(buffer.trim())
           if (obj.content != null) onChunk(obj.content)
+          if (obj.done) {
+            onDone(obj.context_used || [])
+            return
+          }
         } catch (_) {}
       }
-      onDone()
+      onDone([])
     } catch (err) {
       onError(err)
     }

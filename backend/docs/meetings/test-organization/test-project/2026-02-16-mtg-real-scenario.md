@@ -1,13 +1,9 @@
-# Notes updated by AI: Kafka issues and visibility enhancements
+# Notes updated by AI: Meeting notes cleaned for clarity and conciseness.
 ## Key Points
-- Visibility improvements
-- Kafka issues
-- Data processing enhancements
+- Kafka lag reduction
 
 ## Next Steps
-- Implement CDC integration (assigned to to_be_decided)
-- Resolve Java skill gap (assigned to to_be_decided)
-- Fix OpenSearch sink configuration (assigned to to_be_decided)
+- Reduce Kafka consumer lag (assigned to team)
 
 ---
 # Original: Greg, Michael, Chris, + 8 people

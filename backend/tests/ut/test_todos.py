@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import AsyncMock, patch
 from httpx import AsyncClient
 
 
@@ -24,6 +25,37 @@ async def test_create_todo(client: AsyncClient):
     assert data["importance"] == "Important"
     assert "id" in data
     assert "created_at" in data
+
+
+@pytest.mark.asyncio
+async def test_create_todo_with_tags(client: AsyncClient):
+    response = await client.post(
+        "/api/todos/",
+        json={
+            "title": "Tagged Todo",
+            "status": "Open",
+            "tags": "planning,code"
+        }
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["tags"] == "planning,code"
+
+
+@pytest.mark.asyncio
+async def test_update_todo_tags(client: AsyncClient):
+    create_response = await client.post(
+        "/api/todos/",
+        json={"title": "Todo to tag", "status": "Open"}
+    )
+    todo_id = create_response.json()["id"]
+    response = await client.put(
+        f"/api/todos/{todo_id}",
+        json={"tags": "research,documentation"}
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["tags"] == "research,documentation"
 
 
 @pytest.mark.asyncio
@@ -279,4 +311,40 @@ async def test_list_todos_with_search(client: AsyncClient):
     assert response.status_code == 200
     data = response.json()
     assert data["total"] == 3
+
+
+@pytest.mark.asyncio
+async def test_tag_task_not_found(client: AsyncClient):
+    response = await client.post("/api/todos/999/tag")
+    assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_tag_task_mock_agent(client: AsyncClient):
+    """POST /api/todos/{id}/tag returns tags from agent (mocked to avoid Claude call)."""
+    create_response = await client.post(
+        "/api/todos/",
+        json={"title": "Task to tag", "description": "Review docs", "status": "Open"},
+    )
+    todo_id = create_response.json()["id"]
+
+    mock_response = type("R", (), {})()
+    mock_response.message = "Tagged with planning, documentation."
+    mock_response.metadata = {"tags": ["planning", "documentation"]}
+    mock_response.agent_type = "task_tagging"
+
+    mock_agent = AsyncMock()
+    mock_agent.execute = AsyncMock(return_value=mock_response)
+
+    mock_factory = type("F", (), {})()
+    mock_factory.create_agent = lambda name, **kw: mock_agent
+
+    with patch("app.api.todos.get_agent_factory", return_value=mock_factory):
+        response = await client.post(f"/api/todos/{todo_id}/tag")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["agent_type"] == "task_tagging"
+    assert "planning" in data["tags"]
+    assert "documentation" in data["tags"]
+    assert "Tagged" in data["message"]
 

@@ -89,8 +89,8 @@
                   <div v-if="msg.showContext" class="context-list">
                     <div v-for="(ctx, i) in msg.context" :key="i" class="context-item">
                       <span class="context-title">{{ ctx.title }}</span>
-                      <span class="context-score">{{ Math.round(ctx.score * 100) }}% match</span>
-                      <p class="context-snippet">{{ ctx.snippet }}</p>
+                      <span class="context-score">{{ formatScore(ctx.score) }}</span>
+                      <p class="context-snippet">{{ ctx.snippet || ctx.content || '' }}</p>
                     </div>
                   </div>
                 </div>
@@ -247,6 +247,14 @@ function scrollToBottom() {
       messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
     }
   })
+}
+
+function formatScore(score) {
+  const n = score != null ? Number(score) : NaN
+  if (Number.isFinite(n)) {
+    return n <= 1 ? `${Math.round(n * 100)}% match` : `${Math.round(n)}% match`
+  }
+  return '—'
 }
 
 function formatMessage(content) {

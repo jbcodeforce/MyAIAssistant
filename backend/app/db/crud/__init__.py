@@ -14,6 +14,7 @@ from app.db.crud.todo import (
     get_unclassified_todos,
     get_todos_by_project,
     count_active_todos_for_project,
+    get_distinct_tags,
 )
 
 from app.db.crud.knowledge import (
@@ -102,6 +103,7 @@ __all__ = [
     "get_unclassified_todos",
     "get_todos_by_project",
     "count_active_todos_for_project",
+    "get_distinct_tags",
     # Knowledge
     "create_knowledge",
     "get_knowledge",

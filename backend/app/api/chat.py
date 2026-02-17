@@ -17,6 +17,23 @@ from app.api.schemas.chat import (
 from agent_core.agents.query_classifier import QueryIntent
 
 
+def _normalize_context_used(context_used):
+    """Ensure context_used is a list of dicts with title, uri, score, snippet/content."""
+    if not isinstance(context_used, list):
+        return []
+    return [
+        {
+            "title": c.get("title", "") if isinstance(c, dict) else "",
+            "uri": c.get("uri", "") if isinstance(c, dict) else "",
+            "score": c.get("score") if isinstance(c, dict) else None,
+            "snippet": (c.get("snippet") or c.get("content", "")) if isinstance(c, dict) else "",
+            "content": c.get("content", "") if isinstance(c, dict) else "",
+        }
+        for c in context_used
+        if isinstance(c, dict)
+    ]
+
+
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -60,16 +77,17 @@ async def chat_about_todo(
             use_rag=request.use_rag
         )
         
+        normalized = _normalize_context_used(response.context_used)
         return ChatResponse(
             message=response.message,
             context_used=[
                 ContextItem(
                     title=ctx["title"],
                     uri=ctx["uri"],
-                    score=ctx["score"],
-                    snippet=ctx["snippet"]
+                    score=float(ctx["score"]) if ctx["score"] is not None else 0.0,
+                    snippet=ctx["snippet"] or ctx["content"]
                 )
-                for ctx in response.context_used
+                for ctx in normalized
             ]
         )
     except ValueError as e:
@@ -128,16 +146,17 @@ async def generic_chat(
         )
         
         
+        normalized = _normalize_context_used(response.context_used)
         return ChatResponse(
             message=response.message,
             context_used=[
                 ContextItem(
                     title=ctx["title"],
                     uri=ctx["uri"],
-                    score=ctx["score"],
-                    snippet=ctx["snippet"]
+                    score=float(ctx["score"]) if ctx["score"] is not None else 0.0,
+                    snippet=ctx["snippet"] or ctx["content"]
                 )
-                for ctx in response.context_used
+                for ctx in normalized
             ]
         )
     except ValueError as e:
@@ -174,16 +193,29 @@ async def generic_chat_stream(
                 detail=f"Invalid intent: {request.force_intent}"
             )
 
+    def _context_item_dict(ctx: dict) -> dict:
+        return {
+            "title": ctx["title"],
+            "uri": ctx["uri"],
+            "score": float(ctx["score"]) if ctx["score"] is not None else 0.0,
+            "snippet": ctx["snippet"] or ctx["content"],
+        }
+
     async def stream_generator():
         try:
-            async for chunk in chat_service.chat_with_routing_stream(
+            response = await chat_service.chat_with_routing(
                 user_message=request.message,
                 conversation_history=history,
-                context=request.context,
+                context=request.context or {},
                 force_intent=force_intent,
-            ):
-                yield (json.dumps({"content": chunk}) + "\n").encode("utf-8")
-            yield (json.dumps({"done": True}) + "\n").encode("utf-8")
+            )
+            normalized = _normalize_context_used(response.context_used)
+            context_used = [_context_item_dict(ctx) for ctx in normalized]
+            message = response.message or ""
+            chunk_size = 80
+            for i in range(0, len(message), chunk_size):
+                yield (json.dumps({"content": message[i : i + chunk_size]}) + "\n").encode("utf-8")
+            yield (json.dumps({"done": True, "context_used": context_used}) + "\n").encode("utf-8")
         except Exception as e:
             import logging
             logging.exception("Generic chat stream error")

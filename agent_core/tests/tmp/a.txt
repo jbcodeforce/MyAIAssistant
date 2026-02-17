@@ -1,0 +1,155 @@
+'<think> Okay, let\'s tackle this. The user provided a query where they want me to extract structured information from a given document following specific rules. The task is to output a JSON object based on the provided structure. 
+
+First, I need to parse the input document carefully. The input starts with "# ABCD" which I assume is part of the markdown structure, but looking at the structure given, the main sections are H1, Team, Products, etc. Wait, actually, the user mentioned the document structure has H1 as organization or customer name. The first line is "# ABCD", but according to the rules, the organization name should be extracted from H1. Since the first line is "# ABCD", perhaps the organization is "ABCD"? Wait, no. Wait, the user says the H1 is the organization or customer name. The example given in the rules says the organization name is from H1. Since the input starts with "# ABCD", maybe the organization is "ABCD"? Or maybe the first line is just a header? Hmm, perhaps I should look at the example structure provided.
+
+The user provided an example output structure where "organization" is a key. Since the input starts with "# ABCD", perhaps the organization is "ABCD". Alternatively, maybe the H1 here is "Consumer amd Community Bank - Dallas", but that seems unlikely. Wait, the user\'s instruction says the markdown has H1 as organization or customer name. Since the input starts with "# ABCD", maybe the H1 is "ABCD"? Or perhaps the user just wants to extract "ABCD" as the organization. Alternatively, maybe the organization is "Consumer amd Community Bank - Dallas", but that\'s part of the markdown. Wait, perhaps I should look at the "## Team" section. The team section mentions Matt TheBuilder(confluent champion). The organization might be "Community Bank - Dallas". Alternatively, since the user\'s instruction says the organization is the name from H1, which is "# ABCD", perhaps the organization is "ABCD". Alternatively, maybe the user expects the organization to be "Consumer amd Community Bank - Dallas" as per the first line? Hmm, this is a bit ambiguous. Wait, perhaps the H1 is "ABCD" because the first line is "# ABCD". Alternatively, maybe the user just wants to take the first line as the H1. Since the user says "organization name" is from H1, perhaps the H1 is "# ABCD", so the organization is "ABCD". I\'ll proceed with "ABCD" as the organization name.
+
+Next, the Team section has Matt TheBuilder(confluent champion). So persons should be Matt TheBuilder with role Confluent Champion. 
+
+Products section lists CC & CP Flink, Tableflow, etc. The products are listed as * CC & CP Flink, * Tableflow, etc. The user wants all persons from Team and org-named sections. The Team section has Matt TheBuilder. The org-named section is "Consumer amd Community Bank - Dallas". So persons would be Matt TheBuilder. 
+
+The project is "ABCD engagement"? Wait, the project name might be "ABCD engagement" or similar. The description says "ABCD is already a Confluent Cloud customer...", so project name could be "ABCD Engagement". The description would be the merged context text from the context section. The context section mentions "ABCD Consumer bank ... evaluation...", so the description would be that merged text. 
+
+Past steps: The past steps include PoC done by ABCD, integration storage S3 for Tableflow, etc. The past_steps section mentions "PoC done by ABCD", so the past_steps entry would be that. 
+
+Meetings section: The section "## Context" has some bullet points, but the user says to treat each qualifying section as a meeting. The Context section here might be the "## Context" section, but the user might consider the "## Context" as a section to be a meeting? Or perhaps the "## Context" section\'s content is the main context. Alternatively, the "## Context" section\'s content is the main context. The user\'s instruction says to treat each qualifying section as a meeting. Since "Context" is a section, perhaps it\'s a meeting. 
+
+The organization is "ABCD", persons is ["Matt TheBuilder"], project name is "ABCD Engagement", description is the merged context text. 
+
+Now, structuring the JSON: 
+
+organization: "ABCD", 
+persons: [{"name": "Matt TheBuilder", "role": "Confluent Champion", "context": "Team section"}], 
+project: {name: "ABCD Engagement", description: merged context text}, 
+meetings: [{"title": "Context", "content": merged context text}], 
+
+Wait, the context section\'s content is the entire "## Context" section\'s text. The context section\'s content is:
+
+* CA at Matt Hawk (confluent champion): 2000 apps on Kafka - PaaS
+* Need to Standardize on Flink. Consumer bank runs Flink oss
+* Portability: cloud and on-premise 
+* 2 PoCs: one for CC & CP
+* DRI () leading a CP Flink PoC (Robert is helping)
+* CC Flink PoC (consumer bank) - 3 weeks ( from now to end-)
+* 2026 plannification
+* [13 items to address to plan PoC/ how to test / success criteria - Enablement / Practices
+* Clarify on the how.
+
+So the context description would be all those points merged into a single string. 
+
+Putting all together, the JSON should have organization: "ABCD", persons: [Matt], project: {name: "ABCD Engagement", description: "Merged context text...", past_steps: [{"what": "PoC done by ABCD", "who": "ABCD"}], meetings: ["Context", "Content of context text"], 
+
+Wait, the past_steps section mentions "PoC done by ABCD", so past_steps entry is {"what": "PoC done by ABCD", "who": "ABCD"}. 
+
+The description for project is "ABCD is already a Confluent Cloud customer...", so project\'s description would be that. 
+
+Now, ensuring that all persons are extracted correctly. The Team section has Matt TheBuilder, so persons is one entry. 
+
+Now, the output must be a JSON object following the structure given. 
+
+Now, checking the rules again: extract exactly one organization (ABCD), all persons from Team and org-named sections (Matt), project name is ABCD Engagement, past_steps has one entry, meetings is ["Context"], etc. 
+
+So the final JSON should look like:
+
+{
+  "organization": "ABCD",
+  "persons": [
+    {
+      "name": "Matt TheBuilder",
+      "role": "Confluent Champion",
+      "context": "Team section text"
+    }
+  ],
+  "project": {
+    "name": "ABCD Engagement",
+    "description": "Merged context text...",
+    "past_steps": [
+      {
+        "what": "PoC done by ABCD",
+        "who": "ABCD"
+      }
+    ],
+  "meetings": [
+    {
+      "title": "Context",
+      "content": "All the context points merged..."
+    }
+  ]
+}
+
+Now, constructing the exact content for the context description. The context section\'s content is all the bullet points. Need to combine them into a single string. Let\'s see:
+
+The context content is:
+
+* CA at Matt Hawk (confluent champion): 2000 apps on Kafka - PaaS
+* Need to Standardize on Flink. Consumer bank runs Flink oss
+* Portability: cloud and on-premise 
+* 2 PoCs: one for CC & CP
+* DRI () leading a CP Flink PoC (Robert is helping)
+* CC Flink PoC (consumer bank) - 3 weeks ( from now to end-)
+* 2026 plannification
+* [13 items to address to plan PoC/ how to test / success criteria - Enablement / Practices
+* Clarify on the how.
+
+So combining all these into one string: 
+
+"* CA at Matt Hawk (confluent champion): 2000 apps on Kafka - PaaS\
+* Need to Standardize on Flink. Consumer bank runs Flink oss\
+* Portability: cloud and on-premise\
+* 2 PoCs: one for CC & CP\
+* DRI () leading a CP Flink PoC (Robert is helping)\
+* CC Flink PoC (consumer bank) - 3 weeks ( from now to end-)* 2026 plannification\
+* [13 items to address to plan PoC/ how to test / success criteria - Enablement / Practices\
+* Clarify on the how."
+
+So the description field for project is that long string. 
+
+Putting all together into the JSON structure. Now, ensuring that the output is strictly JSON, no extra text. The user said to respond only with the JSON. 
+
+I need to make sure that the keys are correct: organization, persons, project, meetings. 
+
+Thus, the final JSON should be as structured above.
+</think>
+
+```json
+{
+  "organization": "ABCD",
+  "persons": [
+    {
+      "name": "Matt TheBuilder",
+      "role": "Confluent Champion",
+      "context": "Team section"
+    }
+  ],
+  "project": {
+    "name": "ABCD Engagement",
+    "description": "Merged context text: * CA at Matt Hawk (confluent champion): 2000 apps on Kafka - PaaS\
+* Need to Standardize on Flink. Consumer bank runs Flink oss\
+* Portability: cloud and on-premise\
+* 2 PoCs: one for CC & CP\
+* DRI () leading a CP Flink PoC (Robert is helping)\
+* CC Flink PoC (consumer bank) - 3 weeks ( from now to end-)* 2026 plannification\
+* [13 items to address to plan PoC/ how to test / success criteria - Enablement / Practices\
+* Clarify on the how.",
+    "past_steps": [
+      {
+        "what": "PoC done by ABCD",
+        "who": "ABCD"
+      }
+    ]
+  },
+  "meetings": [
+    {
+      "title": "Context",
+      "content": "* CA at Matt Hawk (confluent champion): 2000 apps on Kafka - PaaS\
+* Need to Standardize on Flink. Consumer bank runs Flink oss\
+* Portability: cloud and on-premise\
+* 2 PoCs: one for CC & CP\
+* DRI () leading a CP Flink PoC (Robert is helping)\
+* CC Flink PoC (consumer bank) - 3 weeks ( from now to end-)* 2026 plannification\
+* [13 items to address to plan PoC/ how to test / success criteria - Enablement / Practices\
+* Clarify on the how."
+    }
+  ]
+}
+```'

@@ -45,6 +45,15 @@ class MeetingExtract(BaseModel):
     content: str
 
 
+class NoteParserExtraction(BaseModel):
+    """Root structure for LLM extraction output; aligns prompt and parsing."""
+
+    organization: Optional[OrganizationExtract] = None
+    persons: list[PersonExtract] = Field(default_factory=list)
+    project: Optional[ProjectExtract] = None
+    meetings: list[MeetingExtract] = Field(default_factory=list)
+
+
 class NoteParserResponse(AgentResponse):
     """Extended response from IndexParserAgent with structured extraction data."""
     organization: Optional[OrganizationExtract] = None
@@ -64,6 +73,20 @@ class NoteParserAgent(BaseAgent):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    def build_system_prompt(self, context: Optional[dict] = None) -> str:
+        """Build system prompt with base template plus expected JSON schema."""
+        base = super().build_system_prompt(context)
+        schema = NoteParserExtraction.model_json_schema()
+        schema_block = (
+            "\n\n### Expected JSON schema\n\n"
+            "Respond with a JSON object that conforms to this schema:\n\n"
+            "```json\n"
+            f"{json.dumps(schema, indent=2)}\n"
+            "```\n\n"
+            "Respond ONLY with the JSON object, no additional text or markdown."
+        )
+        return base + schema_block
 
     async def execute(self, input_data: AgentInput) -> NoteParserResponse:
         """
@@ -111,30 +134,16 @@ class NoteParserAgent(BaseAgent):
         """
         Parse the LLM response into structured extraction data.
 
-        Returns:
-            Tuple of (parsed data dict or None, error message or None)
+        Tolerates LLM returning primitives (e.g. organization as a string);
+        only unpacks dicts for Pydantic models.
         """
         try:
             json_text = self._extract_json(response_text)
             data = json.loads(json_text)
-            organization = None
-            if data.get("organization"):
-                organization = OrganizationExtract(**data["organization"])
-            persons = [
-                PersonExtract(**p) for p in data.get("persons", [])
-            ]
-            project = None
-            if data.get("project"):
-                proj = data["project"]
-                project = ProjectExtract(
-                    name=proj.get("name"),
-                    description=proj.get("description"),
-                    past_steps=[StepExtract(**s) for s in proj.get("past_steps", [])],
-                    next_steps=[StepExtract(**s) for s in proj.get("next_steps", [])],
-                )
-            meetings = [
-                MeetingExtract(**m) for m in data.get("meetings", [])
-            ]
+            organization = self._parse_organization(data.get("organization"))
+            persons = self._parse_persons(data.get("persons", []))
+            project = self._parse_project(data.get("project"))
+            meetings = self._parse_meetings(data.get("meetings", []))
             return {
                 "organization": organization,
                 "persons": persons,
@@ -147,6 +156,61 @@ class NoteParserAgent(BaseAgent):
         except Exception as e:
             logger.warning("Failed to parse index parser output: %s", e)
             return None, f"Parse error: {str(e)}"
+
+    def _parse_organization(self, raw: Optional[object]) -> Optional[OrganizationExtract]:
+        """Parse organization; raw may be a dict or a string (name only)."""
+        if raw is None:
+            return None
+        if isinstance(raw, dict):
+            return OrganizationExtract(**raw)
+        if isinstance(raw, str):
+            return OrganizationExtract(name=raw, description=None)
+        return None
+
+    def _parse_persons(self, raw: object) -> list[PersonExtract]:
+        """Parse persons list; items may be dicts or strings (name only)."""
+        if not isinstance(raw, list):
+            return []
+        result = []
+        for p in raw:
+            if isinstance(p, dict):
+                result.append(PersonExtract(**p))
+            elif isinstance(p, str):
+                result.append(PersonExtract(name=p, role=None, context=None))
+        return result
+
+    def _parse_project(self, raw: Optional[object]) -> Optional[ProjectExtract]:
+        """Parse project; raw may be a dict or a string (name only)."""
+        if raw is None:
+            return None
+        if isinstance(raw, str):
+            return ProjectExtract(name=raw, description=None, past_steps=[], next_steps=[])
+        if not isinstance(raw, dict):
+            return None
+        proj = raw
+        past = [
+            StepExtract(**s) if isinstance(s, dict) else StepExtract(what=str(s), who="to_be_decided")
+            for s in proj.get("past_steps", [])
+        ]
+        next_st = [
+            StepExtract(**s) if isinstance(s, dict) else StepExtract(what=str(s), who="to_be_decided")
+            for s in proj.get("next_steps", [])
+        ]
+        return ProjectExtract(
+            name=proj.get("name"),
+            description=proj.get("description"),
+            past_steps=past,
+            next_steps=next_st,
+        )
+
+    def _parse_meetings(self, raw: object) -> list[MeetingExtract]:
+        """Parse meetings list; items must be dicts with title and content."""
+        if not isinstance(raw, list):
+            return []
+        return [
+            MeetingExtract(**m) for m in raw
+            if isinstance(m, dict) and "title" in m and "content" in m
+        ]
 
     def _extract_json(self, text: str) -> str:
         """Extract JSON from text, handling markdown code blocks and invalid syntax."""

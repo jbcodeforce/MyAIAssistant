@@ -61,8 +61,8 @@
               <div v-if="msg.showContext" class="context-list">
                 <div v-for="(ctx, i) in msg.context" :key="i" class="context-item">
                   <span class="context-title">{{ ctx.title }}</span>
-                  <span class="context-score">{{ Math.round(ctx.score * 100) }}% match</span>
-                  <p class="context-snippet">{{ ctx.snippet }}</p>
+                  <span class="context-score">{{ formatScore(ctx.score) }}</span>
+                  <p class="context-snippet">{{ ctx.snippet || ctx.content || '' }}</p>
                 </div>
               </div>
             </div>
@@ -146,6 +146,14 @@ function scrollToBottom() {
   })
 }
 
+function formatScore(score) {
+  const n = score != null ? Number(score) : NaN
+  if (Number.isFinite(n)) {
+    return n <= 1 ? `${Math.round(n * 100)}% match` : `${Math.round(n)}% match`
+  }
+  return '—'
+}
+
 function formatMessage(content) {
   let formatted = content
     .replace(/```(\w+)?\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>')
@@ -197,7 +205,11 @@ async function sendMessage() {
       }
       scrollToBottom()
     },
-    () => {
+    (contextUsed) => {
+      const last = messages.value[messages.value.length - 1]
+      if (last && last.role === 'assistant' && Array.isArray(contextUsed) && contextUsed.length > 0) {
+        last.context = contextUsed
+      }
       isLoading.value = false
       scrollToBottom()
     },

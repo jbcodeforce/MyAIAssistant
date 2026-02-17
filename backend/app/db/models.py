@@ -108,6 +108,9 @@ class Todo(Base):
     # Category for grouping todos
     category: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     
+    # Tags for flexible classification (comma-separated, consistent with Knowledge)
+    tags: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    
     # Link to project (optional)
     project_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("projects.id"), nullable=True

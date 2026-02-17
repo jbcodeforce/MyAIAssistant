@@ -17,6 +17,7 @@ from app.api.meeting_refs import router as meeting_refs_router
 from app.api.assets import router as assets_router
 from app.api.persons import router as persons_router
 from app.api.agents import router as agents_router
+from app.api.tags import router as tags_router
 
 
 @asynccontextmanager
@@ -60,6 +61,7 @@ def create_app() -> FastAPI:
     application.include_router(assets_router, prefix="/api")
     application.include_router(persons_router, prefix="/api")
     application.include_router(agents_router, prefix="/api")
+    application.include_router(tags_router, prefix="/api")
 
     return application
 

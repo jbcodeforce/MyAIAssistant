@@ -99,6 +99,8 @@ class DefaultHFAdapter:
         }
         if is_local:
             chat_kwargs["model"] = config.model
+        if config.response_format:
+            chat_kwargs["response_format"] = config.response_format
 
         try:
             if is_local:
@@ -139,6 +141,8 @@ class DefaultHFAdapter:
         }
         if is_local:
             chat_kwargs["model"] = config.model
+        if config.response_format:
+            chat_kwargs["response_format"] = config.response_format
 
         try:
             if is_local:
@@ -186,6 +190,8 @@ class DefaultHFAdapter:
         }
         if is_local:
             chat_kwargs["model"] = config.model
+        if config.response_format:
+            chat_kwargs["response_format"] = config.response_format
 
         try:
             if is_local:
