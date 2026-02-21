@@ -11,6 +11,7 @@ export const useMetricsStore = defineStore('metrics', () => {
   const taskStatusOverTime = ref(null)
   const organizationsCreated = ref(null)
   const meetingsCreated = ref(null)
+  const weeklyTodoMetrics = ref(null)
   const loading = ref(false)
   const error = ref(null)
 
@@ -63,6 +64,15 @@ export const useMetricsStore = defineStore('metrics', () => {
     return taskStatusOverTime.value.totals
   })
 
+  const weeklyTodoDataPoints = computed(() => {
+    if (!weeklyTodoMetrics.value?.data_points) return []
+    return weeklyTodoMetrics.value.data_points
+  })
+
+  const totalWeeklyTodoMinutes = computed(() => {
+    return weeklyTodoMetrics.value?.total_minutes || 0
+  })
+
   // Actions
   async function fetchDashboardMetrics(period = 'daily', days = 30) {
     loading.value = true
@@ -77,6 +87,7 @@ export const useMetricsStore = defineStore('metrics', () => {
       taskStatusOverTime.value = data.task_status_over_time
       organizationsCreated.value = data.organizations_created
       meetingsCreated.value = data.meetings_created
+      weeklyTodoMetrics.value = data.weekly_todos
       return data
     } catch (err) {
       error.value = err.response?.data?.detail || 'Failed to fetch metrics'
@@ -144,6 +155,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     taskStatusOverTime,
     organizationsCreated,
     meetingsCreated,
+    weeklyTodoMetrics,
     loading,
     error,
     // Getters
@@ -162,6 +174,8 @@ export const useMetricsStore = defineStore('metrics', () => {
     taskStatusTotals,
     organizationsDataPoints,
     meetingsDataPoints,
+    weeklyTodoDataPoints,
+    totalWeeklyTodoMinutes,
     // Actions
     fetchDashboardMetrics,
     fetchProjectMetrics,

@@ -177,6 +177,16 @@
               </svg>
               View Projects
             </router-link>
+            <router-link 
+              :to="`/organizations/${organization.id}/todos`" 
+              class="view-projects-link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
+                <path d="M6 9.01V9"/>
+              </svg>
+              View Tasks
+            </router-link>
           </div>
         </div>
       </div>
@@ -496,10 +506,27 @@ function openCreateModal() {
   editingId.value = null
   formData.value = {
     name: '',
-    stakeholders: '',
-    team: '',
-    description: '',
-    related_products: ''
+    stakeholders: `## Key Contacts
+- **Name** - Role, responsibilities
+- **Name** - Role, responsibilities`,
+    team: `## Internal Team
+- **Account Manager**: Name
+- **Technical Lead**: Name`,
+    description: `## Account Strategy
+
+### Goals
+- Goal 1
+- Goal 2
+
+### Current Status
+Brief overview of current engagement
+
+### Next Steps
+- Action item 1
+- Action item 2`,
+    related_products: `## Products in Use
+- **Product Name** - Status (Production/Evaluation/POC)
+- **Product Name** - Status`
   }
   resetTabs()
   showModal.value = true
@@ -510,10 +537,27 @@ function openEditModal(organization) {
   editingId.value = organization.id
   formData.value = {
     name: organization.name,
-    stakeholders: organization.stakeholders || '',
-    team: organization.team || '',
-    description: organization.description || '',
-    related_products: organization.related_products || ''
+    stakeholders: organization.stakeholders || `## Key Contacts
+- **Name** - Role, responsibilities
+- **Name** - Role, responsibilities`,
+    team: organization.team || `## Internal Team
+- **Account Manager**: Name
+- **Technical Lead**: Name`,
+    description: organization.description || `## Account Strategy
+
+### Goals
+- Goal 1
+- Goal 2
+
+### Current Status
+Brief overview of current engagement
+
+### Next Steps
+- Action item 1
+- Action item 2`,
+    related_products: organization.related_products || `## Products in Use
+- **Product Name** - Status (Production/Evaluation/POC)
+- **Product Name** - Status`
   }
   resetTabs()
   showModal.value = true
@@ -921,6 +965,8 @@ function formatDate(dateString) {
 }
 
 .organization-footer {
+  display: flex;
+  gap: 0.5rem;
   padding-top: 0.625rem;
   border-top: 1px solid #f3f4f6;
 }

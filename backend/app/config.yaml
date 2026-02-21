@@ -26,5 +26,9 @@ llm_base_url: "http://localhost:11434"
 llm_max_tokens: 2048
 llm_temperature: 0.1
 
+# Logging (set log_level to DEBUG for trace/debug; use LOG_LEVEL env to override)
+log_level: "INFO"
+# log_file: null   # default: ./logs/app.log
+
 # Meeting notes storage
 notes_root: "docs/meetings"

@@ -26,6 +26,14 @@
         >
           <span class="toolbar-icon strike">S</span>
         </button>
+        <button
+          type="button"
+          :class="{ active: editor.isActive('link') }"
+          @click="setLink"
+          title="Link (selected text becomes hyperlink)"
+        >
+          <span class="toolbar-icon link-icon">Link</span>
+        </button>
       </div>
 
       <div class="toolbar-divider"></div>
@@ -116,6 +124,7 @@
 import { watch, onBeforeUnmount } from 'vue'
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import StarterKit from '@tiptap/starter-kit'
+import Link from '@tiptap/extension-link'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 
@@ -136,6 +145,11 @@ const editor = useEditor({
   content: props.modelValue,
   extensions: [
     StarterKit,
+    Link.configure({
+      openOnClick: true,
+      HTMLAttributes: { target: '_blank', rel: 'noopener noreferrer nofollow' },
+      defaultProtocol: 'https',
+    }),
     TaskList,
     TaskItem.configure({
       nested: true,
@@ -147,6 +161,21 @@ const editor = useEditor({
     emit('update:modelValue', html === '<p></p>' ? '' : html)
   }
 })
+
+function setLink() {
+  const e = editor.value
+  if (!e) return
+  const previous = e.getAttributes('link').href
+  const url = window.prompt('URL for link', previous || 'https://')
+  if (url == null) return
+  const href = url.trim()
+  if (!href) {
+    e.chain().focus().extendMarkRange('link').unsetLink().run()
+    return
+  }
+  const normalized = /^[a-z][a-z0-9+.-]*:/i.test(href) ? href : `https://${href}`
+  e.chain().focus().extendMarkRange('link').setLink({ href: normalized }).run()
+}
 
 // Watch for external changes to modelValue
 watch(
@@ -312,6 +341,21 @@ onBeforeUnmount(() => {
   border-radius: 3px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 0.9em;
+}
+
+.editor-content :deep(.tiptap a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.editor-content :deep(.tiptap a:hover) {
+  color: #1d4ed8;
+}
+
+.toolbar-icon.link-icon {
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .editor-content :deep(.tiptap pre) {

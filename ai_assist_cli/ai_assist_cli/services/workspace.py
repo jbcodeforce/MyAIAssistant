@@ -1,5 +1,6 @@
 """Workspace management module."""
 
+import os
 import json
 import shutil
 from pathlib import Path
@@ -70,13 +71,14 @@ class WorkspaceManager:
             created_dirs.append(dir_path)
         # Get docker-compose.yml file from git repository
         docker_compose_file = self.path / "docker-compose.yml"
-        if not docker_compose_file.exists():
-            docker_compose_file = self.path / ".." / "code" / "docker-compose.yml"
-        if not docker_compose_file.exists():
-            console.print(f"[red]Error: docker-compose.yml not found at {docker_compose_file}[/red]")
-            raise typer.Exit(1)
-        with open(docker_compose_file, "w") as f:
-            f.write(docker_compose_file.read_text())
+        # Copy the docker-compose.yml into the workspace directory (overwrite if exists)
+        from shutil import copyfile
+        source_docker_compose = Path(os.getenv("MYAIASSISTANT_DIR")) / "code" / "docker-compose.yml"
+        if not source_docker_compose.exists():
+            source_docker_compose = Path(os.getenv("MYAIASSISTANT_DIR")) /  "docker-compose.yml"
+        if docker_compose_file != source_docker_compose and source_docker_compose.exists():
+            # copy from source to workspace
+            copyfile(source_docker_compose, docker_compose_file)
         # Write workspace marker with name
         marker_file = self.path / self.WORKSPACE_MARKER
         with open(marker_file, "w") as f:

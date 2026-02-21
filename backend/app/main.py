@@ -5,6 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings, get_config_info, setup_logging
 from app.db.database import init_db
+from app.middleware.request_logging import RequestLoggingMiddleware
 from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
 from app.api.rag import router as rag_router
@@ -18,6 +19,7 @@ from app.api.assets import router as assets_router
 from app.api.persons import router as persons_router
 from app.api.agents import router as agents_router
 from app.api.tags import router as tags_router
+from app.api.weekly_todos import router as weekly_todos_router
 
 
 @asynccontextmanager
@@ -48,6 +50,9 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Request logging for tracing and debugging (method, path, status, duration)
+    application.add_middleware(RequestLoggingMiddleware)
+
     # Include routers
     application.include_router(todos_router, prefix="/api")
     application.include_router(knowledge_router, prefix="/api")
@@ -62,6 +67,7 @@ def create_app() -> FastAPI:
     application.include_router(persons_router, prefix="/api")
     application.include_router(agents_router, prefix="/api")
     application.include_router(tags_router, prefix="/api")
+    application.include_router(weekly_todos_router, prefix="/api")
 
     return application
 

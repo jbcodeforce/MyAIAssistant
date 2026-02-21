@@ -11,6 +11,7 @@ from app.api.schemas.organization import (
     OrganizationResponse,
     OrganizationListResponse,
 )
+from app.api.schemas.todo import TodoListResponse
 
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -97,4 +98,25 @@ async def delete_organization(
     if not success:
         raise HTTPException(status_code=404, detail="Organization not found")
     return None
+
+
+@router.get("/{organization_id}/todos", response_model=TodoListResponse)
+async def list_organization_todos(
+    organization_id: int,
+    skip: int = Query(0, ge=0, description="Number of records to skip"),
+    limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Retrieve all todos linked to projects belonging to this organization.
+    """
+    # Verify organization exists
+    organization = await crud.get_organization(db=db, organization_id=organization_id)
+    if not organization:
+        raise HTTPException(status_code=404, detail="Organization not found")
+    
+    todos, total = await crud.get_todos_by_organization(
+        db=db, organization_id=organization_id, skip=skip, limit=limit
+    )
+    return TodoListResponse(todos=todos, total=total, skip=skip, limit=limit)
 

@@ -174,6 +174,26 @@ async def test_delete_todo(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_list_todos_with_date_filters(client: AsyncClient):
+    """List todos with completed_after filter."""
+    create_response = await client.post(
+        "/api/todos/",
+        json={"title": "To Complete", "status": "Open"},
+    )
+    assert create_response.status_code == 201
+    todo_id = create_response.json()["id"]
+    await client.put(f"/api/todos/{todo_id}", json={"status": "Completed"})
+    # List with completed_after in the past: should include this todo
+    from datetime import datetime, timezone, timedelta
+    past = (datetime.now(timezone.utc) - timedelta(days=1)).strftime("%Y-%m-%dT%H:%M:%S")
+    response = await client.get(f"/api/todos/?completed_after={past}&status=Completed")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] >= 1
+    assert any(t["id"] == todo_id for t in data["todos"])
+
+
+@pytest.mark.asyncio
 async def test_list_todos_with_filters(client: AsyncClient):
     # Create todos with different attributes
     await client.post(
@@ -347,4 +367,18 @@ async def test_tag_task_mock_agent(client: AsyncClient):
     assert "planning" in data["tags"]
     assert "documentation" in data["tags"]
     assert "Tagged" in data["message"]
+
+
+@pytest.mark.asyncio
+async def test_metrics_tasks_completed_by_month(client: AsyncClient):
+    """GET /api/metrics/tasks/completed-by-month returns list of {period, count}."""
+    response = await client.get("/api/metrics/tasks/completed-by-month?since_days=365")
+    assert response.status_code == 200
+    data = response.json()
+    assert isinstance(data, list)
+    for item in data:
+        assert "period" in item
+        assert "count" in item
+        assert isinstance(item["period"], str)
+        assert isinstance(item["count"], int)
 

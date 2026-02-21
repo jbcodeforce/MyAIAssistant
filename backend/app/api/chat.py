@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.database import get_db
 from app.db import crud
 from app.chat.service import ChatService, ChatMessage, get_chat_service
+from app.data_query.service import BackendDataQueryToolProvider
 from app.core.config import get_settings
 from app.api.schemas.chat import (
     ChatRequest,
@@ -105,7 +106,8 @@ async def chat_about_todo(
 @router.post("/generic", response_model=ChatResponse)
 async def generic_chat(
     request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat)
+    db: AsyncSession = Depends(get_db),
+    chat_service: ChatService = Depends(get_chat),
 ):
     """
     This endpoint allows querying the general knowledge base, meeting notes, assets descriptions, etc. without 
@@ -137,15 +139,15 @@ async def generic_chat(
                 status_code=400,
                 detail=f"Invalid intent: {request.force_intent}"
             )
+    context = dict(request.context or {})
+    context["data_query_provider"] = BackendDataQueryToolProvider(db=db)
     try:
         response = await chat_service.chat_with_routing(
             user_message=request.message,
             conversation_history=history,
-            context=request.context,
+            context=context,
             force_intent=force_intent
         )
-        
-        
         normalized = _normalize_context_used(response.context_used)
         return ChatResponse(
             message=response.message,
@@ -173,6 +175,7 @@ async def generic_chat(
 @router.post("/generic/stream")
 async def generic_chat_stream(
     request: ChatRequest,
+    db: AsyncSession = Depends(get_db),
     chat_service: ChatService = Depends(get_chat),
 ):
     """
@@ -201,12 +204,15 @@ async def generic_chat_stream(
             "snippet": ctx["snippet"] or ctx["content"],
         }
 
+    context = dict(request.context or {})
+    context["data_query_provider"] = BackendDataQueryToolProvider(db=db)
+
     async def stream_generator():
         try:
             response = await chat_service.chat_with_routing(
                 user_message=request.message,
                 conversation_history=history,
-                context=request.context or {},
+                context=context,
                 force_intent=force_intent,
             )
             normalized = _normalize_context_used(response.context_used)

@@ -1,11 +1,20 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from typing import Optional
 
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Todo, Knowledge
+from app.db.models import Todo, Knowledge, Project
 from app.api.schemas.todo import TodoCreate, TodoUpdate
+
+
+def _ensure_utc_dt(value: date | datetime) -> datetime:
+    """Convert date or naive datetime to timezone-aware UTC datetime for DB comparison."""
+    if isinstance(value, date) and not isinstance(value, datetime):
+        value = datetime.combine(value, datetime.min.time(), tzinfo=timezone.utc)
+    elif isinstance(value, datetime) and value.tzinfo is None:
+        value = value.replace(tzinfo=timezone.utc)
+    return value
 
 
 async def create_todo(db: AsyncSession, todo: TodoCreate) -> Todo:
@@ -42,6 +51,10 @@ async def get_todos(
     importance: Optional[str] = None,
     category: Optional[str] = None,
     search: Optional[str] = None,
+    completed_after: Optional[date | datetime] = None,
+    completed_before: Optional[date | datetime] = None,
+    updated_after: Optional[date | datetime] = None,
+    updated_before: Optional[date | datetime] = None,
 ) -> tuple[list[Todo], int]:
     conditions = []
 
@@ -60,6 +73,18 @@ async def get_todos(
         conditions.append(Todo.importance == importance)
     if category:
         conditions.append(Todo.category == category)
+    if completed_after is not None:
+        dt = _ensure_utc_dt(completed_after)
+        conditions.append(Todo.completed_at.isnot(None) & (Todo.completed_at >= dt))
+    if completed_before is not None:
+        dt = _ensure_utc_dt(completed_before)
+        conditions.append(Todo.completed_at.isnot(None) & (Todo.completed_at <= dt))
+    if updated_after is not None:
+        dt = _ensure_utc_dt(updated_after)
+        conditions.append(Todo.updated_at >= dt)
+    if updated_before is not None:
+        dt = _ensure_utc_dt(updated_before)
+        conditions.append(Todo.updated_at <= dt)
 
     base_filter = and_(*conditions) if conditions else True
     query = select(Todo).where(base_filter)
@@ -74,6 +99,34 @@ async def get_todos(
     todos = list(result.scalars().all())
 
     return todos, total
+
+
+async def get_tasks_completed_counts_by_month(
+    db: AsyncSession,
+    since: datetime,
+) -> list[dict]:
+    """
+    Return counts of completed tasks by month from `since` to now.
+    Each item: {"period": "YYYY-MM", "count": int}. Portable across SQLite and PostgreSQL.
+    """
+    since_utc = _ensure_utc_dt(since)
+    query = (
+        select(Todo.completed_at)
+        .where(
+            Todo.completed_at.isnot(None),
+            Todo.completed_at >= since_utc,
+        )
+    )
+    result = await db.execute(query)
+    dates = [row[0] for row in result.all()]
+    # Aggregate by YYYY-MM in Python for portability
+    from collections import Counter
+    periods = Counter()
+    for d in dates:
+        if d is not None:
+            key = d.strftime("%Y-%m") if hasattr(d, "strftime") else f"{d.year:04d}-{d.month:02d}"
+            periods[key] += 1
+    return [{"period": p, "count": c} for p, c in sorted(periods.items())]
 
 
 async def update_todo(
@@ -156,6 +209,32 @@ async def get_todos_by_project(
 ) -> tuple[list[Todo], int]:
     """Get all todos for a specific project."""
     query = select(Todo).where(Todo.project_id == project_id)
+    
+    # Get total count
+    count_query = select(func.count()).select_from(query.subquery())
+    total_result = await db.execute(count_query)
+    total = total_result.scalar_one()
+    
+    # Get paginated results
+    query = query.order_by(Todo.created_at.desc()).offset(skip).limit(limit)
+    result = await db.execute(query)
+    todos = list(result.scalars().all())
+    
+    return todos, total
+
+
+async def get_todos_by_organization(
+    db: AsyncSession,
+    organization_id: int,
+    skip: int = 0,
+    limit: int = 100,
+) -> tuple[list[Todo], int]:
+    """Get all todos for all projects belonging to a specific organization."""
+    query = select(Todo).join(
+        Project, Todo.project_id == Project.id
+    ).where(
+        Project.organization_id == organization_id
+    )
     
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())

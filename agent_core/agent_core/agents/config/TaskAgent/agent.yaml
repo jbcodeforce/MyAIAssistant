@@ -2,5 +2,5 @@ name: TaskAgent
 description: Task planning and management agent that helps users plan, organize, and break down tasks into actionable steps.
 class: agent_core.agents.base_agent.BaseAgent
 model: lfm2.5-1.2b-thinking-mlx-8bit
-temperature: 0.2
-max_tokens: 2048
+temperature: 0.6
+max_tokens: 4096

@@ -89,9 +89,35 @@ Full documentation available at [https://jeromeboyer.net/myaiassistant](https://
 MyAIAssistant/
 ├── backend/        # FastAPI application
 ├── frontend/       # Vue.js application
+├── mcp_todos/      # MCP server for todos (Cursor / agents)
 ├── docs/           # MkDocs documentation
 └── docker-compose.yml
 ```
+
+## MCP server (Cursor / agents)
+
+The `mcp_todos` package exposes todo create/search/update/delete as MCP tools so agents (e.g. Cursor) can manage todos in the backend.
+
+**Run the MCP server** (backend must be running, e.g. `http://localhost:8000`):
+
+```bash
+cd mcp_todos && uv sync && uv run python -m mcp_todos
+```
+
+**Configuration**
+
+- **MYAI_BACKEND_URL**: Backend base URL. Default: `http://localhost:8000`. Set this if the backend runs on another host or port.
+
+**Cursor MCP configuration**
+
+Add an MCP server in Cursor (Settings > MCP) with:
+
+- Command: `uv`
+- Args: `run`, `python`, `-m`, `mcp_todos`
+- Cwd: path to `MyAIAssistant/mcp_todos`
+- Env (optional): `MYAI_BACKEND_URL` if not using the default
+
+See [mcp_todos/README.md](mcp_todos/README.md) for details and example `.cursor/mcp.json`.
 
 ## License
 

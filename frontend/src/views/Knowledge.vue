@@ -211,7 +211,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <Modal :show="showModal" :title="isEditing ? 'Edit Knowledge' : 'Add Knowledge'" @close="closeModal">
+    <Modal :show="showModal" :title="isEditing ? 'Edit Knowledge' : 'Add Knowledge'" size="wide" @close="closeModal">
       <form @submit.prevent="handleSubmit" class="knowledge-form">
         <div class="form-group">
           <label for="title">Title *</label>
@@ -1409,6 +1409,17 @@ function clearFolderSelection() {
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
+/* Modal width override - make 25% wider (750px instead of default 600px) */
+:deep(.modal-container.modal-wide) {
+  max-width: 750px;
+}
+
+/* Source field full width */
+.form-group input[type="text"],
+.form-group input[type="url"] {
+  width: 100%;
+}
+
 /* File path input styles */
 .file-path-input {
   display: flex;
@@ -1419,6 +1430,7 @@ function clearFolderSelection() {
   border-radius: 6px;
   background: white;
   transition: border-color 0.15s, box-shadow 0.15s;
+  width: 100%;
 }
 
 .file-path-input:focus-within {
@@ -1454,6 +1466,7 @@ function clearFolderSelection() {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  width: 100%;
 }
 
 .folder-picker-btn {

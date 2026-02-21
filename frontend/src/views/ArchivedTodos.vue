@@ -72,7 +72,7 @@
               <td class="col-date">{{ formatDate(todo.created_at) }}</td>
               <td class="col-date">{{ todo.completed_at ? formatDate(todo.completed_at) : '-' }}</td>
               <td class="col-actions">
-                <button class="btn-icon" @click="openEditModal(todo)" title="Edit description">
+                <button class="btn-icon" @click="openEditModal(todo)" title="Edit todo">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     <path d="m15 5 4 4"/>
@@ -104,33 +104,13 @@
       </div>
     </div>
 
-    <Modal :show="showEditModal" title="Edit Description" @close="closeEditModal">
-      <form @submit.prevent="handleSaveEdit" class="edit-form">
-        <div class="form-group">
-          <label for="edit-title">Title</label>
-          <input
-            id="edit-title"
-            :value="editingTodo?.title"
-            type="text"
-            class="form-input"
-            disabled
-          />
-        </div>
-        <div class="form-group">
-          <label for="edit-description">Description</label>
-          <textarea
-            id="edit-description"
-            v-model="editDescription"
-            rows="5"
-            placeholder="Enter description"
-            class="form-input"
-          ></textarea>
-        </div>
-        <div class="form-actions">
-          <button type="button" @click="closeEditModal" class="btn-secondary">Cancel</button>
-          <button type="submit" class="btn-primary">Save</button>
-        </div>
-      </form>
+    <Modal :show="showEditModal" title="Edit Todo" size="large" @close="closeEditModal">
+      <TodoForm
+        :initial-data="editingTodo"
+        :is-edit="true"
+        @submit="handleSaveEdit"
+        @cancel="closeEditModal"
+      />
     </Modal>
   </div>
 </template>
@@ -139,6 +119,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import Modal from '@/components/common/Modal.vue'
+import TodoForm from '@/components/todo/TodoForm.vue'
 
 const todoStore = useTodoStore()
 
@@ -151,7 +132,6 @@ const error = ref(null)
 
 const showEditModal = ref(false)
 const editingTodo = ref(null)
-const editDescription = ref('')
 
 const sortedTodos = computed(() => {
   return [...archivedTodos.value].sort((a, b) => {
@@ -236,29 +216,27 @@ async function handleDelete(todo) {
 }
 
 function openEditModal(todo) {
-  editingTodo.value = todo
-  editDescription.value = todo.description || ''
+  editingTodo.value = { ...todo }
   showEditModal.value = true
 }
 
 function closeEditModal() {
   showEditModal.value = false
   editingTodo.value = null
-  editDescription.value = ''
 }
 
-async function handleSaveEdit() {
+async function handleSaveEdit(todoData) {
   if (!editingTodo.value) return
   
   try {
-    await todoStore.updateTodo(editingTodo.value.id, { description: editDescription.value })
+    await todoStore.updateTodo(editingTodo.value.id, todoData)
     const idx = archivedTodos.value.findIndex(t => t.id === editingTodo.value.id)
     if (idx !== -1) {
-      archivedTodos.value[idx].description = editDescription.value
+      archivedTodos.value[idx] = { ...archivedTodos.value[idx], ...todoData }
     }
     closeEditModal()
   } catch (err) {
-    console.error('Failed to update description:', err)
+    console.error('Failed to update todo:', err)
   }
 }
 
@@ -586,58 +564,6 @@ function truncate(text, maxLength) {
 
 .btn-secondary:hover {
   background-color: #f9fafb;
-}
-
-.edit-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.edit-form .form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.edit-form label {
-  font-weight: 600;
-  color: #374151;
-  font-size: 0.875rem;
-}
-
-.edit-form .form-input {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 1rem;
-  transition: all 0.2s;
-}
-
-.edit-form .form-input:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-.edit-form .form-input:disabled {
-  background-color: #f3f4f6;
-  color: #6b7280;
-  cursor: not-allowed;
-}
-
-.edit-form textarea.form-input {
-  resize: vertical;
-  font-family: inherit;
-}
-
-.edit-form .form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
 }
 
 @media (max-width: 1024px) {

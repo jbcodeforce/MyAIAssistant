@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -36,6 +37,17 @@ async def create_todo(
     return await crud.create_todo(db=db, todo=todo)
 
 
+def _parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    """Parse ISO date or datetime string to datetime; return None if invalid or empty."""
+    if not value or not value.strip():
+        return None
+    value = value.strip().replace("Z", "+00:00")
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 @router.get("/", response_model=TodoListResponse)
 async def list_todos(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
@@ -47,11 +59,19 @@ async def list_todos(
     search: Optional[str] = Query(
         None, max_length=200, description="Filter by substring in title or description"
     ),
+    completed_after: Optional[str] = Query(None, description="Filter by completed_at >= (ISO date/datetime)"),
+    completed_before: Optional[str] = Query(None, description="Filter by completed_at <= (ISO date/datetime)"),
+    updated_after: Optional[str] = Query(None, description="Filter by updated_at >= (ISO date/datetime)"),
+    updated_before: Optional[str] = Query(None, description="Filter by updated_at <= (ISO date/datetime)"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Retrieve a list of todos with optional filtering.
     """
+    completed_after_dt = _parse_iso_datetime(completed_after)
+    completed_before_dt = _parse_iso_datetime(completed_before)
+    updated_after_dt = _parse_iso_datetime(updated_after)
+    updated_before_dt = _parse_iso_datetime(updated_before)
     todos, total = await crud.get_todos(
         db=db,
         skip=skip,
@@ -61,6 +81,10 @@ async def list_todos(
         importance=importance,
         category=category,
         search=search,
+        completed_after=completed_after_dt,
+        completed_before=completed_before_dt,
+        updated_after=updated_after_dt,
+        updated_before=updated_before_dt,
     )
     return TodoListResponse(todos=todos, total=total, skip=skip, limit=limit)
 

@@ -1,0 +1,6 @@
+name: DataQueryAgent
+description: Answers questions about the user's tasks and projects by querying the backend (lists, completion stats, graphs).
+class: agent_core.agents.data_query_agent.DataQueryAgent
+model: lfm2.5-1.2b-thinking-mlx-8bit
+temperature: 0.2
+max_tokens: 4096

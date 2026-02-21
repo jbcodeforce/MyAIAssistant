@@ -32,7 +32,7 @@
       </div>
 
       <div class="form-group">
-        <label for="category">Category</label>
+        <label for="category">Categories</label>
         <input
           id="category"
           v-model="form.category"
@@ -99,7 +99,7 @@
       <button type="button" @click="$emit('cancel')" class="btn-secondary">
         Cancel
       </button>
-      <button type="submit" class="btn-primary">
+      <button type="submit" class="btn-primary" :disabled="isTitleEmpty">
         {{ isEdit ? 'Update' : 'Create' }} Todo
       </button>
     </div>
@@ -107,7 +107,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
 import { projectsApi, assetsApi } from '@/services/api'
 
@@ -123,6 +123,10 @@ const props = defineProps({
 })
 
 const emit = defineEmits(['submit', 'cancel'])
+
+const isTitleEmpty = computed(() => {
+  return !form.value.title || form.value.title.trim().length === 0
+})
 
 const projects = ref([])
 const loadingProjects = ref(false)
@@ -295,8 +299,14 @@ textarea.form-input {
   color: white;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: #1d4ed8;
+}
+
+.btn-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .btn-secondary {

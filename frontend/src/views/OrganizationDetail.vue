@@ -28,6 +28,16 @@
           </svg>
           View Projects
         </router-link>
+        <router-link 
+          :to="`/organizations/${organization.id}/todos`" 
+          class="btn-primary"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
+            <path d="M6 9.01V9"/>
+          </svg>
+          View Tasks
+        </router-link>
       </div>
     </div>
 
@@ -363,10 +373,27 @@ async function loadOrganization() {
 function editOrganization() {
   formData.value = {
     name: organization.value.name,
-    stakeholders: organization.value.stakeholders || '',
-    team: organization.value.team || '',
-    description: organization.value.description || '',
-    related_products: organization.value.related_products || ''
+    stakeholders: organization.value.stakeholders || `## Key Contacts
+- **Name** - Role, responsibilities
+- **Name** - Role, responsibilities`,
+    team: organization.value.team || `## Internal Team
+- **Account Manager**: Name
+- **Technical Lead**: Name`,
+    description: organization.value.description || `## Account Strategy
+
+### Goals
+- Goal 1
+- Goal 2
+
+### Current Status
+Brief overview of current engagement
+
+### Next Steps
+- Action item 1
+- Action item 2`,
+    related_products: organization.value.related_products || `## Products in Use
+- **Product Name** - Status (Production/Evaluation/POC)
+- **Product Name** - Status`
   }
   resetTabs()
   showEditModal.value = true

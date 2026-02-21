@@ -8,9 +8,9 @@
 
 ## Project Goals
 
-MyAIAssistant helps users organize tasks, reference subject-matter knowledge, and leverage AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work.
+MyAIAssistant helps users organize tasks, projects, organizations, persons, reference subject-matter knowledge, by leverage AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work. It is also including an agent management and definition, so tasks can be automated, like getting news of the days, get Slack channel summary...
 
-Based on [Stephen Covey's "7 Habits of Highly Effective People"](https://jbcodeforce.github.io/leadership/7_habits/) the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
+For task management, the approach is based on [Stephen Covey's "7 Habits of Highly Effective People"](https://jbcodeforce.github.io/leadership/7_habits/) the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
 
 ![](./images/aia_dashboard.png)
 
@@ -56,7 +56,9 @@ There are ton of to do apps, why a new one? The main drivers for creating this a
 
 ## Quick Start
 
-[See user guide](./user_guide/index.md)
+* [Getting started with workspace and the application.](./user_guide/index.md)
+* [Task management user guide](./user_guide/tasks.md).
+
 
 ## Understanding the implementation
 

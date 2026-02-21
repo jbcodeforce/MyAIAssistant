@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TypedDict
 
-from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON
+from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -46,8 +46,13 @@ class Organization(Base):
 
 
 # Type alias for Step JSON structure
-# Step contains: {"what": str, "who": str}
-StepType = dict[str, str]
+# Step contains: {"what": str, "who": str, "todo_id": Optional[int]}
+class StepDict(TypedDict, total=False):
+    what: str
+    who: str
+    todo_id: Optional[int]
+
+StepType = StepDict
 
 
 class Project(Base):
@@ -409,3 +414,74 @@ class SLPassessment(Base):
 
     def __repr__(self) -> str:
         return f"SLPassessment(id={self.id!r}, created_at={self.created_at!r})"
+
+
+class WeeklyTodo(Base):
+    __tablename__ = "weekly_todos"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    todo_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("todos.id", ondelete="SET NULL"), nullable=True
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    allocations: Mapped[list["WeeklyTodoAllocation"]] = relationship(
+        "WeeklyTodoAllocation", back_populates="weekly_todo", cascade="all, delete-orphan"
+    )
+
+    def __repr__(self) -> str:
+        return f"WeeklyTodo(id={self.id!r}, title={self.title!r})"
+
+
+class WeeklyTodoAllocation(Base):
+    __tablename__ = "weekly_todo_allocations"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    weekly_todo_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("weekly_todos.id", ondelete="CASCADE"), nullable=False
+    )
+    week_key: Mapped[str] = mapped_column(String(20), nullable=False)
+
+    mon: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    tue: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    wed: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    thu: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    fri: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sat: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    sun: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now()
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
+
+    weekly_todo: Mapped["WeeklyTodo"] = relationship(
+        "WeeklyTodo", back_populates="allocations"
+    )
+
+    __table_args__ = (
+        UniqueConstraint("weekly_todo_id", "week_key", name="uq_weekly_todo_allocations_todo_week"),
+    )
+
+    def __repr__(self) -> str:
+        return f"WeeklyTodoAllocation(id={self.id!r}, weekly_todo_id={self.weekly_todo_id!r}, week_key={self.week_key!r})"

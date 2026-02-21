@@ -47,6 +47,24 @@
           </div>
           <div class="message-content">
             <div class="message-text" v-html="formatMessage(msg.content)"></div>
+            <div v-if="msg.role === 'user'" class="message-rag-toggle">
+              <label class="rag-switch">
+                <input 
+                  type="checkbox" 
+                  v-model="msg.useRag" 
+                  @change="toggleMessageRag(index)"
+                  :disabled="isLoading"
+                />
+                <span class="rag-slider"></span>
+                <span class="rag-label">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"/>
+                    <path d="m21 21-4.3-4.3"/>
+                  </svg>
+                  {{ msg.useRag ? 'RAG enabled' : 'RAG disabled' }}
+                </span>
+              </label>
+            </div>
             <div v-if="msg.context && msg.context.length > 0" class="message-context">
               <button class="context-toggle" @click="msg.showContext = !msg.showContext">
                 <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -98,6 +116,23 @@
     </div>
 
     <div class="chat-input-area">
+      <div class="input-controls">
+        <label class="rag-input-switch">
+          <input 
+            type="checkbox" 
+            v-model="useRagForNext"
+            :disabled="isLoading"
+          />
+          <span class="rag-slider"></span>
+          <span class="rag-label">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <path d="m21 21-4.3-4.3"/>
+            </svg>
+            {{ useRagForNext ? 'Search knowledge base' : 'Basic chat' }}
+          </span>
+        </label>
+      </div>
       <div class="input-row">
         <textarea
           ref="inputField"
@@ -133,6 +168,7 @@ const isLoading = ref(false)
 const error = ref(null)
 const messagesContainer = ref(null)
 const inputField = ref(null)
+const useRagForNext = ref(true)
 
 onMounted(() => {
   inputField.value?.focus()
@@ -170,10 +206,13 @@ async function sendMessage() {
   const message = inputMessage.value.trim()
   if (!message || isLoading.value) return
   const context = contextField.value.trim() || ''
+  const shouldUseRag = useRagForNext.value
+  
   messages.value.push({
     role: 'user',
     content: message,
-    context: context
+    context: context,
+    useRag: shouldUseRag
   })
 
   inputMessage.value = ''
@@ -188,45 +227,89 @@ async function sendMessage() {
     content: m.content
   }))
 
-  await chatApi.kbChatStream(
-    message,
-    history,
-    (text) => {
-      const last = messages.value[messages.value.length - 1]
-      if (last && last.role === 'assistant') {
-        last.content += text
-      } else {
-        messages.value.push({
-          role: 'assistant',
-          content: text,
-          context: [],
-          showContext: false
-        })
+  if (shouldUseRag) {
+    await chatApi.kbChatStream(
+      message,
+      history,
+      (text) => {
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          last.content += text
+        } else {
+          messages.value.push({
+            role: 'assistant',
+            content: text,
+            context: [],
+            showContext: false
+          })
+        }
+        scrollToBottom()
+      },
+      (contextUsed) => {
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant' && Array.isArray(contextUsed) && contextUsed.length > 0) {
+          last.context = contextUsed
+        }
+        isLoading.value = false
+        scrollToBottom()
+      },
+      (err) => {
+        console.error('RAG chat stream error:', err)
+        error.value = err.message || 'Failed to get response. Please try again.'
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') messages.value.pop()
+        isLoading.value = false
       }
-      scrollToBottom()
-    },
-    (contextUsed) => {
-      const last = messages.value[messages.value.length - 1]
-      if (last && last.role === 'assistant' && Array.isArray(contextUsed) && contextUsed.length > 0) {
-        last.context = contextUsed
+    )
+  } else {
+    // Send without RAG - use generic chat stream
+    await chatApi.genericChatStream(
+      message,
+      history,
+      (text) => {
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') {
+          last.content += text
+        } else {
+          messages.value.push({
+            role: 'assistant',
+            content: text,
+            context: [],
+            showContext: false
+          })
+        }
+        scrollToBottom()
+      },
+      (contextUsed) => {
+        isLoading.value = false
+        scrollToBottom()
+      },
+      (err) => {
+        console.error('Generic chat stream error:', err)
+        error.value = err.message || 'Failed to get response. Please try again.'
+        const last = messages.value[messages.value.length - 1]
+        if (last && last.role === 'assistant') messages.value.pop()
+        isLoading.value = false
       }
-      isLoading.value = false
-      scrollToBottom()
-    },
-    (err) => {
-      console.error('RAG chat stream error:', err)
-      error.value = err.message || 'Failed to get response. Please try again.'
-      const last = messages.value[messages.value.length - 1]
-      if (last && last.role === 'assistant') messages.value.pop()
-      isLoading.value = false
-    }
-  )
+    )
+  }
 }
 
 function sendSuggested(prompt, context) {
   inputMessage.value = prompt
   contextField.value = context
+  // Knowledge search suggestions should use RAG
+  if (context === 'knowledge_search' || context === 'research') {
+    useRagForNext.value = true
+  }
   sendMessage()
+}
+
+function toggleMessageRag(index) {
+  // This function handles when user toggles RAG for a past message
+  // Currently just updates the visual state
+  // Could potentially trigger re-sending the message in the future
+  console.log(`RAG toggled for message ${index}: ${messages.value[index].useRag}`)
 }
 </script>
 
@@ -493,6 +576,13 @@ function sendSuggested(prompt, context) {
   border-radius: 0 0 16px 16px;
 }
 
+.input-controls {
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .input-row {
   display: flex;
   gap: 0.75rem;
@@ -542,5 +632,90 @@ function sendSuggested(prompt, context) {
 .send-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* RAG Toggle Styles */
+.message-rag-toggle {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.rag-switch,
+.rag-input-switch {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+}
+
+.rag-switch input[type="checkbox"],
+.rag-input-switch input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.rag-slider {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 20px;
+  background-color: #334155;
+  border-radius: 20px;
+  transition: background-color 0.2s;
+}
+
+.rag-slider::before {
+  content: '';
+  position: absolute;
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+
+.rag-switch input[type="checkbox"]:checked + .rag-slider,
+.rag-input-switch input[type="checkbox"]:checked + .rag-slider {
+  background-color: #10b981;
+}
+
+.rag-switch input[type="checkbox"]:checked + .rag-slider::before,
+.rag-input-switch input[type="checkbox"]:checked + .rag-slider::before {
+  transform: translateX(16px);
+}
+
+.rag-switch input[type="checkbox"]:disabled + .rag-slider,
+.rag-input-switch input[type="checkbox"]:disabled + .rag-slider {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.rag-label {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+}
+
+.rag-input-switch .rag-label {
+  font-size: 0.8125rem;
+  color: #cbd5e1;
+}
+
+.rag-switch input[type="checkbox"]:checked ~ .rag-label,
+.rag-input-switch input[type="checkbox"]:checked ~ .rag-label {
+  color: #10b981;
+}
+
+.rag-label svg {
+  flex-shrink: 0;
 }
 </style>

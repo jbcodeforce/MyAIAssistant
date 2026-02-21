@@ -13,8 +13,10 @@ from app.db.crud.todo import (
     get_todos_by_urgency_importance,
     get_unclassified_todos,
     get_todos_by_project,
+    get_todos_by_organization,
     count_active_todos_for_project,
     get_distinct_tags,
+    get_tasks_completed_counts_by_month,
 )
 
 from app.db.crud.knowledge import (
@@ -92,6 +94,17 @@ from app.db.crud.person import (
     get_persons_by_organization,
 )
 
+from app.db.crud.weekly_todo import (
+    create_weekly_todo,
+    get_weekly_todo,
+    get_weekly_todos,
+    update_weekly_todo,
+    delete_weekly_todo,
+    get_allocation,
+    set_allocation,
+    list_allocations_for_week,
+)
+
 __all__ = [
     # Todo
     "create_todo",
@@ -102,8 +115,10 @@ __all__ = [
     "get_todos_by_urgency_importance",
     "get_unclassified_todos",
     "get_todos_by_project",
+    "get_todos_by_organization",
     "count_active_todos_for_project",
     "get_distinct_tags",
+    "get_tasks_completed_counts_by_month",
     # Knowledge
     "create_knowledge",
     "get_knowledge",
@@ -163,5 +178,14 @@ __all__ = [
     "delete_person",
     "get_persons_by_project",
     "get_persons_by_organization",
+    # WeeklyTodo
+    "create_weekly_todo",
+    "get_weekly_todo",
+    "get_weekly_todos",
+    "update_weekly_todo",
+    "delete_weekly_todo",
+    "get_allocation",
+    "set_allocation",
+    "list_allocations_for_week",
 ]
 

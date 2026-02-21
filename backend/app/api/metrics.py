@@ -6,7 +6,8 @@ from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
-from app.db.models import Project, Todo, Organization, Meeting, Asset
+from app.db import crud as db_crud
+from app.db.models import Project, Todo, Organization, Meeting, Asset, WeeklyTodo, WeeklyTodoAllocation
 from app.api.schemas.metrics import (
     StatusCount,
     ProjectMetrics,
@@ -18,6 +19,8 @@ from app.api.schemas.metrics import (
     TimeSeriesMetrics,
     StatusTimeSeriesDataPoint,
     TaskStatusOverTime,
+    WeeklyTodoDataPoint,
+    WeeklyTodoMetrics,
     DashboardMetrics
 )
 
@@ -77,6 +80,62 @@ async def get_asset_metrics(db: AsyncSession) -> AssetMetrics:
     total_usage = usage_result.scalar() or 0
     
     return AssetMetrics(total=total, total_usage=total_usage, by_status=by_status)
+
+
+async def get_weekly_todo_metrics(db: AsyncSession) -> WeeklyTodoMetrics:
+    """Get weekly todo time allocations for the current week."""
+    # Calculate current week_key (Monday of current week in YYYY-MM-DD format)
+    today = datetime.now()
+    monday = today - timedelta(days=today.weekday())
+    week_key = monday.strftime("%Y-%m-%d")
+    
+    # Query allocations for current week with weekly_todo join
+    query = select(
+        WeeklyTodo.title,
+        WeeklyTodoAllocation.mon,
+        WeeklyTodoAllocation.tue,
+        WeeklyTodoAllocation.wed,
+        WeeklyTodoAllocation.thu,
+        WeeklyTodoAllocation.fri,
+        WeeklyTodoAllocation.sat,
+        WeeklyTodoAllocation.sun
+    ).join(
+        WeeklyTodo, WeeklyTodo.id == WeeklyTodoAllocation.weekly_todo_id
+    ).where(
+        WeeklyTodoAllocation.week_key == week_key
+    )
+    
+    result = await db.execute(query)
+    rows = result.all()
+    
+    # Calculate totals for each weekly todo
+    data_points = []
+    total_minutes = 0
+    
+    for row in rows:
+        # Sum all day minutes for this weekly todo
+        todo_total = (
+            (row.mon or 0) +
+            (row.tue or 0) +
+            (row.wed or 0) +
+            (row.thu or 0) +
+            (row.fri or 0) +
+            (row.sat or 0) +
+            (row.sun or 0)
+        )
+        
+        if todo_total > 0:  # Only include if there's allocated time
+            data_points.append(WeeklyTodoDataPoint(
+                title=row.title,
+                total_minutes=todo_total
+            ))
+            total_minutes += todo_total
+    
+    return WeeklyTodoMetrics(
+        week_key=week_key,
+        data_points=data_points,
+        total_minutes=total_minutes
+    )
 
 
 async def get_tasks_completion_over_time(
@@ -427,6 +486,24 @@ async def get_tasks_metrics(db: AsyncSession = Depends(get_db)):
     return await get_task_metrics(db)
 
 
+@router.get("/tasks/completed-by-month")
+async def get_tasks_completed_by_month(
+    since_days: int = Query(
+        180,
+        ge=1,
+        le=365 * 2,
+        description="Number of days to look back for completed tasks by month",
+    ),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Get count of completed tasks by month (YYYY-MM) for chart/agent use.
+    Returns list of { \"period\": \"YYYY-MM\", \"count\": N }.
+    """
+    since = datetime.now() - timedelta(days=since_days)
+    return await db_crud.get_tasks_completed_counts_by_month(db=db, since=since)
+
+
 @router.get("/tasks/completion", response_model=TaskCompletionOverTime)
 async def get_task_completion_metrics(
     period: str = Query(
@@ -531,6 +608,17 @@ async def get_task_status_over_time_metrics(
     return await get_task_status_over_time(db, period, days)
 
 
+@router.get("/weekly-todos", response_model=WeeklyTodoMetrics)
+async def get_weekly_todo_metrics_endpoint(db: AsyncSession = Depends(get_db)):
+    """
+    Get weekly todo time allocation metrics for current week.
+    
+    Returns time allocated (in minutes) to each weekly todo for the
+    current week (Monday through Sunday).
+    """
+    return await get_weekly_todo_metrics(db)
+
+
 @router.get("/dashboard", response_model=DashboardMetrics)
 async def get_dashboard_metrics(
     period: str = Query(
@@ -561,6 +649,7 @@ async def get_dashboard_metrics(
     task_status_over_time = await get_task_status_over_time(db, period, days)
     organizations_created = await get_organizations_over_time(db, period, days)
     meetings_created = await get_meetings_over_time(db, period, days)
+    weekly_todos = await get_weekly_todo_metrics(db)
     
     return DashboardMetrics(
         projects=projects,
@@ -569,6 +658,7 @@ async def get_dashboard_metrics(
         tasks_completion=tasks_completion,
         task_status_over_time=task_status_over_time,
         organizations_created=organizations_created,
-        meetings_created=meetings_created
+        meetings_created=meetings_created,
+        weekly_todos=weekly_todos
     )
 

@@ -50,6 +50,9 @@
           <router-link to="/projects" class="nav-subitem" active-class="active">
             <span class="nav-label">Projects</span>
           </router-link>
+          <router-link to="/weekly-todo" class="nav-subitem" active-class="active">
+            <span class="nav-label">Weekly Todo</span>
+          </router-link>
         </div>
       </div>
 
@@ -187,7 +190,7 @@ const route = useRoute()
 const tasksExpanded = ref(true)
 
 const isTasksActive = computed(() => {
-  return route.path === '/unclassified' || route.path === '/archived' || route.path === '/projects'
+  return route.path === '/unclassified' || route.path === '/archived' || route.path === '/projects' || route.path === '/weekly-todo'
 })
 </script>
 

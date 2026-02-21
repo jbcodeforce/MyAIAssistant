@@ -88,6 +88,12 @@ nav:
   - User Guide:
       - Overview: user_guide/index.md
       - Getting started (ai_assist CLI): user_guide/getting-started.md
+      - Task management: user_guide/tasks.md
+      - Organization management: user_guide/organizations.md
+      - Project management: user_guide/projects.md
+      - Assets management: user_guide/assets.md
+      - Knowledge Mgt: user_guide/knowledge.md
+      - Agents management: user_guide/agents.md
       - Commands: commands.md
   - Implementation:
       - Overview: implementation/index.md

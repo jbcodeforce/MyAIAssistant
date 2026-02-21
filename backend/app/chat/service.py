@@ -82,7 +82,7 @@ class ChatService:
         response = await agent.execute(AgentInput(query=user_message,use_rag=use_rag,conversation_history=conversation_history, context=context))
         
         return ChatResponse(
-            message=response.content,
+            message=response.message,
             context_used=context
         )
 
@@ -116,12 +116,14 @@ class ChatService:
                     "role": msg.role,
                     "content": msg.content
                 })
-        
-        # Route through agent workflow
-        routed_response: RoutedResponse = await self._agent_router.route(
+        input_data = AgentInput(
             query=user_message,
-            conversation_history=history_dicts,
+            conversation_history=conversation_history or [],
             context=context or {},
+        )
+        # Route through agent workflow
+        routed_response: RoutedResponse = await self._agent_router.execute(
+            input_data=input_data,
             force_intent=force_intent
         )
         

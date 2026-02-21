@@ -23,6 +23,7 @@ class TestQueryIntent:
         assert QueryIntent.KNOWLEDGE_SEARCH == "knowledge_search"
         assert QueryIntent.TASK_PLANNING == "task_planning"
         assert QueryIntent.TASK_STATUS == "task_status"
+        assert QueryIntent.DATA_QUERY == "data_query"
         assert QueryIntent.GENERAL_CHAT == "general_chat"
         assert QueryIntent.CODE_HELP == "code_help"
         assert QueryIntent.UNCLEAR == "unclear"
@@ -31,6 +32,7 @@ class TestQueryIntent:
         """Test creating intent from string value."""
         intent = QueryIntent("knowledge_search")
         assert intent == QueryIntent.KNOWLEDGE_SEARCH
+        assert QueryIntent("data_query") == QueryIntent.DATA_QUERY
     
     def test_intent_invalid_string_raises(self):
         """Test that invalid string raises ValueError."""

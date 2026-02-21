@@ -15,6 +15,7 @@ import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
 import Persons from '@/views/Persons.vue'
 import Agents from '@/views/Agents.vue'
+import WeeklyTodo from '@/views/WeeklyTodo.vue'
 
 const routes = [
   {
@@ -39,6 +40,14 @@ const routes = [
     component: ArchivedTodos,
     meta: {
       title: 'Archived Todos - MyAIAssistant'
+    }
+  },
+  {
+    path: '/weekly-todo',
+    name: 'WeeklyTodo',
+    component: WeeklyTodo,
+    meta: {
+      title: 'Weekly Todo - MyAIAssistant'
     }
   },
   {
@@ -79,6 +88,14 @@ const routes = [
     component: OrganizationDetail,
     meta: {
       title: 'Organization - MyAIAssistant'
+    }
+  },
+  {
+    path: '/organizations/:id/todos',
+    name: 'OrganizationTodos',
+    component: () => import('@/views/OrganizationTodos.vue'),
+    meta: {
+      title: 'Organization Tasks - MyAIAssistant'
     }
   },
   {

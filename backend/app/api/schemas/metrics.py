@@ -190,6 +190,38 @@ class AssetMetrics(BaseModel):
     )
 
 
+class WeeklyTodoDataPoint(BaseModel):
+    """Single data point for weekly todo time allocation."""
+    title: str = Field(..., description="Weekly todo title")
+    total_minutes: int = Field(..., description="Total minutes allocated across all days")
+
+
+class WeeklyTodoMetrics(BaseModel):
+    """Weekly todo time allocation metrics for current week."""
+    week_key: str = Field(..., description="Week key in YYYY-MM-DD format (Monday)")
+    data_points: list[WeeklyTodoDataPoint] = Field(
+        default_factory=list,
+        description="List of weekly todos with their time allocations"
+    )
+    total_minutes: int = Field(..., description="Total minutes allocated to all weekly todos")
+    
+    model_config = ConfigDict(
+        json_schema_extra={
+            "examples": [
+                {
+                    "week_key": "2026-02-17",
+                    "data_points": [
+                        {"title": "Review PRs", "total_minutes": 240},
+                        {"title": "Team meetings", "total_minutes": 180},
+                        {"title": "Code refactoring", "total_minutes": 300}
+                    ],
+                    "total_minutes": 720
+                }
+            ]
+        }
+    )
+
+
 class DashboardMetrics(BaseModel):
     """Combined dashboard metrics response."""
     projects: ProjectMetrics = Field(..., description="Project metrics")
@@ -199,6 +231,7 @@ class DashboardMetrics(BaseModel):
     task_status_over_time: TaskStatusOverTime = Field(..., description="Task status changes over time")
     organizations_created: TimeSeriesMetrics = Field(..., description="Organizations created over time")
     meetings_created: TimeSeriesMetrics = Field(..., description="Meetings created over time")
+    weekly_todos: WeeklyTodoMetrics = Field(..., description="Weekly todo time allocations")
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -253,6 +286,13 @@ class DashboardMetrics(BaseModel):
                             {"date": "2025-12-01", "count": 2}
                         ],
                         "total": 2
+                    },
+                    "weekly_todos": {
+                        "week_key": "2025-12-01",
+                        "data_points": [
+                            {"title": "Review PRs", "total_minutes": 240}
+                        ],
+                        "total_minutes": 240
                     }
                 }
             ]

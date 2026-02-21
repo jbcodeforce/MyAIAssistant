@@ -5,6 +5,7 @@ mapping:
   knowledge_search: GeneralAgent
   task_planning: TaskAgent
   task_status: TaskAgent
+  data_query: DataQueryAgent
   code_help: CodeAgent
   general_chat: GeneralAgent
   unclear: GeneralAgent

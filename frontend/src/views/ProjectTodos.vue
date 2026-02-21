@@ -78,7 +78,12 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="todo in sortedTodos" :key="todo.id" :class="['todo-row', todo.status.toLowerCase()]">
+            <tr 
+              v-for="todo in sortedTodos" 
+              :key="todo.id" 
+              :class="['todo-row', todo.status.toLowerCase(), { 'highlighted': todo.id === highlightTodoId }]"
+              :ref="todo.id === highlightTodoId ? 'highlightedRow' : null"
+            >
               <td class="col-status">
                 <span :class="['status-badge', todo.status.toLowerCase()]">
                   {{ todo.status }}
@@ -138,7 +143,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { projectsApi, todosApi, organizationsApi } from '@/services/api'
 import { useUiStore } from '@/stores/uiStore'
@@ -158,6 +163,7 @@ const limit = 50
 const loading = ref(false)
 const error = ref(null)
 const showCreateModal = ref(false)
+const highlightTodoId = ref(null)
 
 const sortedTodos = computed(() => {
   return [...todos.value].sort((a, b) => {
@@ -226,6 +232,24 @@ async function loadProjectTodos() {
     todos.value = todosResponse.data.todos
     totalCount.value = todosResponse.data.total
     currentSkip.value = todosResponse.data.todos.length
+    
+    // Handle highlight query parameter
+    if (route.query.highlight) {
+      const todoId = parseInt(route.query.highlight)
+      highlightTodoId.value = todoId
+      
+      // Scroll to highlighted task after DOM updates
+      await nextTick()
+      const highlightedElement = document.querySelector('.todo-row.highlighted')
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      
+      // Clear highlight after 3 seconds
+      setTimeout(() => {
+        highlightTodoId.value = null
+      }, 3000)
+    }
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load project tasks'
     console.error('Failed to load project tasks:', err)
@@ -612,6 +636,25 @@ async function handleCreate(todoData) {
 
 .todo-row.cancelled:hover {
   background: #fef9c3;
+}
+
+.todo-row.highlighted {
+  animation: highlight-pulse 0.6s ease-in-out;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+  position: relative;
+}
+
+:global(.dark) .todo-row.highlighted {
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+@keyframes highlight-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.5);
+  }
 }
 
 .col-status {

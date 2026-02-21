@@ -75,6 +75,26 @@ curl http://localhost:8000/debug/config
 
 Note: For Docker Compose deployments, use `postgres` as the hostname (the service name).
 
+## Logging and debugging
+
+Logging is configured in `app/core/config.py` from settings. By default:
+
+- **Console and file**: Logs go to stdout and to `./logs/app.log`.
+- **Request logging**: Each HTTP request is logged at INFO: method, path, query, status code, and duration (logger name `app.request`).
+- **Application logs**: Use `logging.getLogger(__name__)` in modules; log at DEBUG for trace, INFO for normal, WARNING/ERROR for issues.
+
+To enable trace/debug logs:
+
+```bash
+# Environment variable (overrides config.yaml)
+LOG_LEVEL=DEBUG uv run uvicorn app.main:app --reload
+
+# Or set in config.yaml or CONFIG_FILE
+# log_level: "DEBUG"
+```
+
+With `LOG_LEVEL=DEBUG`, CRUD and API entry points log at DEBUG (e.g. weekly_todos create/get/list/allocations).
+
 ## Testing
 
 Tests use an in-memory SQLite database for isolation:

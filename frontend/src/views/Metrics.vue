@@ -140,6 +140,19 @@
             <span class="card-label">Asset Usage</span>
           </div>
         </div>
+
+        <div class="summary-card weekly-todos-card">
+          <div class="card-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+          </div>
+          <div class="card-content">
+            <span class="card-value">{{ totalWeeklyTodoMinutes }}</span>
+            <span class="card-label">Weekly Todo Minutes</span>
+          </div>
+        </div>
       </div>
 
       <!-- Charts Grid -->
@@ -209,6 +222,16 @@
             <p>No assets yet</p>
           </div>
         </div>
+                <!-- Weekly Todo Time Allocation -->
+                <div class="chart-card">
+          <h3 class="chart-title">Weekly Todo Time Allocation (Current Week)</h3>
+          <div class="bar-chart-container" v-if="weeklyTodoChartData.length > 0">
+            <BarChart :data="weeklyTodoChartData" :maxValue="maxWeeklyTodoValue" :barColor="'#8b5cf6'" />
+          </div>
+          <div v-else class="empty-chart">
+            <p>No time allocated to weekly todos this week</p>
+          </div>
+        </div>
 
         <!-- Task Status Over Time (Multi-line) -->
         <div class="chart-card wide">
@@ -246,6 +269,8 @@
             <p>No meetings in this period</p>
           </div>
         </div>
+
+
       </div>
     </div>
   </div>
@@ -343,6 +368,22 @@ const meetingsChartData = computed(() => {
 const maxMeetingsValue = computed(() => {
   if (metricsStore.meetingsDataPoints.length === 0) return 0
   return Math.max(...metricsStore.meetingsDataPoints.map(d => d.count), 1)
+})
+
+const totalWeeklyTodoMinutes = computed(() => {
+  return metricsStore.totalWeeklyTodoMinutes
+})
+
+const weeklyTodoChartData = computed(() => {
+  return metricsStore.weeklyTodoDataPoints.map(item => ({
+    label: item.title,
+    value: item.total_minutes
+  }))
+})
+
+const maxWeeklyTodoValue = computed(() => {
+  if (metricsStore.weeklyTodoDataPoints.length === 0) return 0
+  return Math.max(...metricsStore.weeklyTodoDataPoints.map(d => d.total_minutes), 1)
 })
 
 function formatDateLabel(dateStr) {
@@ -590,6 +631,16 @@ onMounted(() => {
 :global(.dark) .asset-usage-card .card-icon {
   background: linear-gradient(135deg, #831843 0%, #9d174d 100%);
   color: #f472b6;
+}
+
+.weekly-todos-card .card-icon {
+  background: linear-gradient(135deg, #ede9fe 0%, #ddd6fe 100%);
+  color: #7c3aed;
+}
+
+:global(.dark) .weekly-todos-card .card-icon {
+  background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
+  color: #c4b5fd;
 }
 
 .card-content {

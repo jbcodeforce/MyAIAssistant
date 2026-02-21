@@ -35,6 +35,15 @@
           </button>
         </form>
         <div class="dashboard-header-actions">
+          <router-link to="/weekly-todo" class="btn-weekly-todo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+              <line x1="16" x2="16" y1="2" y2="6"/>
+              <line x1="8" x2="8" y1="2" y2="6"/>
+              <line x1="3" x2="21" y1="10" y2="10"/>
+            </svg>
+            Weekly Todo
+          </router-link>
           <button class="btn-agent-chat" @click="showGenericChatModal = true">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -496,6 +505,43 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 0.75rem;
+}
+
+.btn-weekly-todo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1rem;
+  background: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btn-weekly-todo:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  color: #1e293b;
+}
+
+:global(.dark) .btn-weekly-todo {
+  background: #334155;
+  color: #e2e8f0;
+  border-color: #475569;
+}
+
+:global(.dark) .btn-weekly-todo:hover {
+  background: #475569;
+  border-color: #64748b;
+}
+
+.btn-weekly-todo svg {
+  width: 18px;
+  height: 18px;
 }
 
 .btn-agent-chat {

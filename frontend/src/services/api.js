@@ -58,6 +58,40 @@ export const todosApi = {
   }
 }
 
+export const weeklyTodosApi = {
+  list(params = {}) {
+    return api.get('/weekly-todos/', { params })
+  },
+
+  get(id) {
+    return api.get(`/weekly-todos/${id}`)
+  },
+
+  create(payload) {
+    return api.post('/weekly-todos/', payload)
+  },
+
+  update(id, payload) {
+    return api.put(`/weekly-todos/${id}`, payload)
+  },
+
+  delete(id) {
+    return api.delete(`/weekly-todos/${id}`)
+  },
+
+  getAllocations(weekKey) {
+    return api.get('/weekly-todos/allocations', { params: { week_key: weekKey } })
+  },
+
+  getAllocation(weeklyTodoId, weekKey) {
+    return api.get(`/weekly-todos/${weeklyTodoId}/allocations/${encodeURIComponent(weekKey)}`)
+  },
+
+  setAllocation(weeklyTodoId, weekKey, payload) {
+    return api.put(`/weekly-todos/${weeklyTodoId}/allocations/${encodeURIComponent(weekKey)}`, payload)
+  }
+}
+
 export const knowledgeApi = {
   list(params = {}) {
     return api.get('/knowledge/', { params })
@@ -124,6 +158,10 @@ export const organizationsApi = {
 
   delete(id) {
     return api.delete(`/organizations/${id}`)
+  },
+
+  getTodos(organizationId, params = {}) {
+    return api.get(`/organizations/${organizationId}/todos`, { params })
   }
 }
 
@@ -528,6 +566,13 @@ export const metricsApi = {
    */
   getTaskStatusOverTime(period = 'daily', days = 30) {
     return api.get('/metrics/tasks/status-over-time', { params: { period, days } })
+  },
+
+  /**
+   * Get weekly todo time allocation metrics for current week
+   */
+  getWeeklyTodos() {
+    return api.get('/metrics/weekly-todos')
   }
 }
 

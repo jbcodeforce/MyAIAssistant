@@ -16,7 +16,7 @@
           v-for="(item, index) in data"
           :key="index"
           class="bar-wrapper"
-          :title="`${item.fullDate || item.label}: ${item.value}`"
+          :title="`${item.label}: ${item.value}`"
         >
           <div
             class="bar"
@@ -25,7 +25,7 @@
           >
             <span v-if="item.value > 0" class="bar-value" :style="barColor ? { color: barColor } : {}">{{ item.value }}</span>
           </div>
-          <span class="bar-label">{{ item.label }}</span>
+          <span class="bar-label" :title="item.label">{{ truncateLabel(item.label) }}</span>
         </div>
       </div>
     </div>
@@ -65,6 +65,12 @@ function getBarStyle(value, index) {
   }
   return style
 }
+
+function truncateLabel(label) {
+  const maxLength = props.data.length <= 3 ? 25 : props.data.length <= 6 ? 18 : 12
+  if (label.length <= maxLength) return label
+  return label.substring(0, maxLength - 1) + '…'
+}
 </script>
 
 <style scoped>
@@ -78,7 +84,7 @@ function getBarStyle(value, index) {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding-bottom: 28px;
+  padding-bottom: 50px;
   min-width: 36px;
   text-align: right;
 }
@@ -105,7 +111,7 @@ function getBarStyle(value, index) {
   top: 0;
   left: 0;
   right: 0;
-  bottom: 28px;
+  bottom: 50px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -126,7 +132,7 @@ function getBarStyle(value, index) {
   display: flex;
   align-items: flex-end;
   gap: 2px;
-  padding-bottom: 28px;
+  padding-bottom: 50px;
   overflow-x: auto;
   scrollbar-width: thin;
 }
@@ -139,6 +145,22 @@ function getBarStyle(value, index) {
   flex-direction: column;
   align-items: center;
   height: 100%;
+}
+
+/* More space for fewer bars */
+.bars-container:has(.bar-wrapper:nth-child(-n+5)) {
+  gap: 12px;
+  padding-bottom: 60px;
+}
+
+.bars-container:has(.bar-wrapper:nth-child(-n+5)) .bar-wrapper {
+  max-width: 80px;
+  min-width: 40px;
+}
+
+.bars-container:has(.bar-wrapper:nth-child(-n+5)) .bar {
+  max-width: 60px;
+  min-width: 30px;
 }
 
 .bar {
@@ -203,18 +225,28 @@ function getBarStyle(value, index) {
 
 .bar-label {
   position: absolute;
-  bottom: 0;
-  font-size: 0.625rem;
+  bottom: -4px;
+  font-size: 0.6875rem;
   color: #6b7280;
   margin-top: 6px;
   white-space: nowrap;
-  transform: rotate(-45deg);
+  transform: rotate(-40deg);
   transform-origin: top left;
   text-align: left;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 :global(.dark) .bar-label {
   color: #9ca3af;
+}
+
+/* Better spacing for fewer bars */
+.bars-container:has(.bar-wrapper:nth-child(-n+5)) .bar-label {
+  font-size: 0.75rem;
+  bottom: -6px;
+  max-width: 160px;
 }
 
 /* Hide labels when there are many bars */

@@ -8,8 +8,9 @@ from pydantic import BaseModel, Field
 # Valid query intents for routing
 QueryIntentType = Literal[
     "knowledge_search",
-    "task_planning", 
+    "task_planning",
     "task_status",
+    "data_query",
     "general_chat",
     "code_help",
     "unclear"

@@ -26,6 +26,9 @@ class QueryIntent(str, Enum):
     TASK_PLANNING = "task_planning"
     TASK_STATUS = "task_status"
     
+    # Data/analytics: user asks about their tasks, projects, completion stats, graphs
+    DATA_QUERY = "data_query"
+    
     # General conversation
     GENERAL_CHAT = "general_chat"
     

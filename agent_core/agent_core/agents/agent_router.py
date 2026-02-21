@@ -70,6 +70,7 @@ class AgentRouter(BaseAgent):
         "routing": "AgentRouter",
         "task_planning": "TaskAgent",
         "task_status": "TaskAgent",
+        "data_query": "DataQueryAgent",
         "code_help": "CodeAgent",
         "general_chat": "GeneralAgent",
         "unclear": "GeneralAgent",
@@ -160,7 +161,24 @@ class AgentRouter(BaseAgent):
                 default_agent_name,
             )
 
-
+    async def route(
+        self,
+        *,
+        query: str,
+        conversation_history: Optional[list[dict]] = None,
+        context: Optional[dict] = None,
+        force_intent: Optional[QueryIntent] = None,
+    ) -> RoutedResponse:
+        """
+        Route a query through classification and agent execution (convenience API).
+        Builds AgentInput and calls execute().
+        """
+        input_data = AgentInput(
+            query=query,
+            conversation_history=conversation_history or [],
+            context=context or {},
+        )
+        return await self.execute(input_data, force_intent=force_intent)
 
     async def execute(
         self,
