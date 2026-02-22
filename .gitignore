@@ -7,4 +7,5 @@ index_km_notes.sh
 data/pg/
 **/.venv
 agent_core/data/chroma/
+agent_core/skaffold
 **/.env
