@@ -2,13 +2,12 @@
 
 ???- info "Versions"
     Creation Dec 2025: tasks management, org, project, meeting management.
-
     Update 02/2026: User Guide, agents management, workspace management, CLI
 
 
 ## Project Goals
 
-MyAIAssistant helps users organize tasks, projects, organizations, persons, reference subject-matter knowledge, by leverage AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work. It is also including an agent management and definition, so tasks can be automated, like getting news of the days, get Slack channel summary...
+MyAIAssistant helps users organize tasks, projects, organizations, persons, reference subject-matter knowledge, by leverage AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work by using AI help. It is also including an agent management and definition, so tasks can be automated, like getting news of the days, get Slack channel summary...
 
 For task management, the approach is based on [Stephen Covey's "7 Habits of Highly Effective People"](https://jbcodeforce.github.io/leadership/7_habits/) the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
 
@@ -16,10 +15,9 @@ For task management, the approach is based on [Stephen Covey's "7 Habits of High
 
 ## Project Principles
 
-1. **Run locally** - All core features work without external API dependencies
-2. **External configuration** - Environment-based configuration for flexibility
+1. **Run locally** - All core features work without external LLM API dependencies. Still it is possible to use remote service, but the approach is to define prompt, tools, specific context and run local models.
 3. **Privacy-first** - Data stays on local infrastructure
-4. **Efficient prioritization** - Eisenhower Matrix helps focus on high-impact work
+4. **Efficient prioritization** - Eisenhower Matrix helps focus on high-impact work, and tasj integrated to project and organization user may work with. This tool applies well to solution engineers, or consultants who have to manage lot of small engagements.
 
 With a drag-and-drop user interface it is easy to continuously re-prioritize tasks. With AI assistant, the tool helps to better run a working day, query what was done last wee, last month, last quarter...
 
@@ -58,40 +56,12 @@ There are ton of to do apps, why a new one? The main drivers for creating this a
 
 * [Getting started with workspace and the application.](./user_guide/index.md)
 * [Task management user guide](./user_guide/tasks.md).
+* [Project management user guide](./user_guide/projects.md)
+* [Organization management](./user_guide/organizations.md)
+* [Knowledge management for better AI context](./user_guide/knowledge.md)
 
 
 ## Understanding the implementation
 
 [See design and implementation chapter](./implementation/index.md).
 
-
-## Activities
-
-# Create Knowledge base
-
-Tool to vectorize folder content into ChromaDB for RAG.
-
-This script scans a folder for supported documents (markdown, text, HTML),
-processes them through the RAG pipeline, stores embeddings in ChromaDB,
-and saves metadata to the knowledge base database.
-
-The tool is reentrant: re-running it will update existing documents if their
-content has changed, and skip unchanged files.
-
-## Features
-
-Code is: `backend/tools/vectorize_folder.py`
-
-This CLI tool leverages the existing backend services:
-
-* DocumentLoader for loading markdown and HTML files
-* RecursiveTextSplitter for chunking content
-* ChromaDB with all-MiniLM-L6-v2 embeddings
-
-
-* Recursive folder scanning for supported file types
-* Configurable chunk size and overlap
-* Category and tags metadata support
-* Progress logging with file-by-file status
-* Collection statistics view
-* Handles .md, .markdown, .txt, and .html files
