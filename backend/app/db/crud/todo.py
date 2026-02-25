@@ -26,6 +26,7 @@ async def create_todo(db: AsyncSession, todo: TodoCreate) -> Todo:
 
 
 async def get_todo(db: AsyncSession, todo_id: int) -> Optional[Todo]:
+ 
     result = await db.execute(select(Todo).where(Todo.id == todo_id))
     return result.scalar_one_or_none()
 

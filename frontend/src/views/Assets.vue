@@ -92,6 +92,7 @@
               </td>
               <td class="col-url">
                 <a 
+                  v-if="item.reference_url"
                   :href="item.reference_url" 
                   target="_blank" 
                   rel="noopener noreferrer" 
@@ -105,6 +106,7 @@
                     <line x1="10" x2="21" y1="14" y2="3"/>
                   </svg>
                 </a>
+                <span v-else class="no-value">-</span>
               </td>
               <td class="col-reuse">
                 <span class="reuse-badge" :class="{ 'has-reuse': item.project_count > 0 }">
@@ -142,7 +144,7 @@
     </div>
 
     <!-- Create/Edit Modal -->
-    <Modal :show="showModal" :title="isEditing ? 'Edit Asset' : 'New Asset'" @close="closeModal">
+    <Modal :show="showModal" :title="isEditing ? 'Edit Asset' : 'New Asset'" :wide="true" @close="closeModal">
       <form @submit.prevent="handleSubmit" class="asset-form">
         <div class="form-group">
           <label for="name">Name *</label>
@@ -166,37 +168,34 @@
         </div>
 
         <div class="form-group">
-          <label for="reference_url">Reference URL *</label>
+          <label for="reference_url">Reference URL</label>
           <input 
             id="reference_url" 
             v-model="formData.reference_url" 
             type="url" 
-            required 
             placeholder="https://github.com/org/repo or https://docs.example.com/resource"
           />
           <span class="form-hint">URL to the code repository, document, or resource</span>
         </div>
 
-        <div class="form-row">
-          <div class="form-group">
-            <label for="project_id">Project</label>
-            <select id="project_id" v-model="formData.project_id">
-              <option :value="null">None</option>
-              <option v-for="project in projects" :key="project.id" :value="project.id">
-                {{ project.name }}
-              </option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="project_id">Project</label>
+          <select id="project_id" v-model="formData.project_id">
+            <option :value="null">None</option>
+            <option v-for="project in projects" :key="project.id" :value="project.id">
+              {{ project.name }}
+            </option>
+          </select>
+        </div>
 
-          <div class="form-group">
-            <label for="todo_id">Task</label>
-            <select id="todo_id" v-model="formData.todo_id">
-              <option :value="null">None</option>
-              <option v-for="todo in todos" :key="todo.id" :value="todo.id">
-                {{ truncate(todo.title, 40) }}
-              </option>
-            </select>
-          </div>
+        <div class="form-group">
+          <label for="todo_id">Task</label>
+          <select id="todo_id" v-model="formData.todo_id">
+            <option :value="null">None</option>
+            <option v-for="todo in todos" :key="todo.id" :value="todo.id">
+              {{ truncate(todo.title, 40) }}
+            </option>
+          </select>
         </div>
 
         <div class="form-group">
@@ -270,7 +269,7 @@ const hasMore = computed(() => {
 })
 
 const isFormValid = computed(() => {
-  return formData.value.name && formData.value.reference_url
+  return !!formData.value.name?.trim()
 })
 
 // Lifecycle
@@ -820,12 +819,6 @@ function truncate(text, maxLength) {
   min-height: 80px;
 }
 
-.form-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-}
-
 .form-hint {
   font-size: 0.75rem;
   color: #6b7280;
@@ -861,9 +854,6 @@ function truncate(text, maxLength) {
     gap: 0.75rem;
   }
 
-  .form-row {
-    grid-template-columns: 1fr;
-  }
 }
 </style>
 

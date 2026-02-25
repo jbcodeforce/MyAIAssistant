@@ -161,25 +161,6 @@ class AgentRouter(BaseAgent):
                 default_agent_name,
             )
 
-    async def route(
-        self,
-        *,
-        query: str,
-        conversation_history: Optional[list[dict]] = None,
-        context: Optional[dict] = None,
-        force_intent: Optional[QueryIntent] = None,
-    ) -> RoutedResponse:
-        """
-        Route a query through classification and agent execution (convenience API).
-        Builds AgentInput and calls execute().
-        """
-        input_data = AgentInput(
-            query=query,
-            conversation_history=conversation_history or [],
-            context=context or {},
-        )
-        return await self.execute(input_data, force_intent=force_intent)
-
     async def execute(
         self,
         input_data: AgentInput,
@@ -344,7 +325,7 @@ class AgentRouter(BaseAgent):
         """Routing step - select and execute appropriate agent."""
         intent = state.classification.intent
         agent_name = self.intent_mapping.get(intent, self.default_agent_name)
-        agent = self.agents.get(agent_name) or self.default_agent
+        agent = self.agents.get(agent_name)
 
         if not agent:
             state.error = f"No agent available for intent: {intent.value} (agent: {agent_name})"

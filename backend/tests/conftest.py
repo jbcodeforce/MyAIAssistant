@@ -10,6 +10,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.db.database import get_db
+from app.chat.service import get_chat_service
 from app.db.models import Base
 from app.api.rag import get_rag
 from agent_core.services.rag.service import RAGService
@@ -118,10 +119,13 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
     # Override both database and RAG service
     app.dependency_overrides[get_db] = override_get_db
     app.dependency_overrides[get_rag] = get_test_rag_service
-    
+
+    # Ensure app has chat service (lifespan does not run with ASGITransport)
+    app.state.chat_service = get_chat_service()
+
     # Clean up any previous test data from RAG
     cleanup_test_rag()
-    
+
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac

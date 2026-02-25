@@ -5,8 +5,8 @@ import json
 from dataclasses import dataclass
 from typing import AsyncIterator, Optional
 
-from app.core.config import get_settings, resolve_agent_config_dir
-from agent_core.agents.agent_factory import  AgentFactory, get_agent_factory
+from app.core.config import get_settings
+from agent_core.agents.agent_factory import get_agent_factory
 from agent_core.agents.base_agent import AgentInput
 from agent_core.agents.query_classifier import QueryIntent
 from agent_core.agents.agent_router import  RoutedResponse, AgentRouter
@@ -44,12 +44,11 @@ class ChatService:
     def __init__(
         self
     ):
-        # Get agent config directory from settings
+        # Get agent config directory from settings; reuse one factory and agents
         settings = get_settings()
-        config_dir = resolve_agent_config_dir(settings.agent_config_dir)
-        
-        # Initialize agent router with this config
-        self._agent_router = AgentRouter(config_dir=config_dir)
+        self._factory = get_agent_factory(config_dir=settings.agent_config_dir)
+        self._agent_router = self._factory.create_agent("AgentRouter")
+        self._task_agent = self._factory.create_agent("TaskAgent")
 
     async def chat_with_todo(
         self,
@@ -72,18 +71,18 @@ class ChatService:
         Returns:
             ChatResponse with the assistant's reply and context used
         """
-        # Get agent config directory from settings
-        settings = get_settings()
-        config_dir = resolve_agent_config_dir(settings.agent_config_dir)
-        factory = get_agent_factory(config_dir=config_dir)
-        agent = factory.create_agent("TaskAgent")
- 
         context = {"task_title": todo_title, "task_description": todo_description}
-        response = await agent.execute(AgentInput(query=user_message,use_rag=use_rag,conversation_history=conversation_history, context=context))
-        
+        response = await self._task_agent.execute(
+            AgentInput(
+                query=user_message,
+                use_rag=use_rag,
+                conversation_history=conversation_history,
+                context=context,
+            )
+        )
         return ChatResponse(
             message=response.message,
-            context_used=context
+            context_used=response.context_used if response.context_used else [context],
         )
 
     async def chat_with_routing(
@@ -134,28 +133,6 @@ class ChatService:
             agent_type=routed_response.agent_type,
             classification_confidence=routed_response.confidence
         )
-
-    async def chat_with_routing_stream(
-        self,
-        user_message: str,
-        conversation_history: list[ChatMessage] = None,
-        context: dict = None,
-        force_intent: QueryIntent = None,
-    ) -> AsyncIterator[str]:
-        """
-        Chat with routing, streaming response content chunk by chunk.
-        """
-        history_dicts = []
-        if conversation_history:
-            for msg in conversation_history:
-                history_dicts.append({"role": msg.role, "content": msg.content})
-        async for chunk in self._agent_router.route_stream(
-            query=user_message,
-            conversation_history=history_dicts,
-            context=context or {},
-            force_intent=force_intent,
-        ):
-            yield chunk
 
     async def chat_with_kb(
         self,

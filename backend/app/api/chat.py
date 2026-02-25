@@ -1,13 +1,13 @@
 """Chat API endpoints for LLM-powered task planning."""
 
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import crud
-from app.chat.service import ChatService, ChatMessage, get_chat_service
+from app.chat.service import ChatService, ChatMessage
 from app.data_query.service import BackendDataQueryToolProvider
 from app.core.config import get_settings
 from app.api.schemas.chat import (
@@ -39,9 +39,9 @@ def _normalize_context_used(context_used):
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
-def get_chat() -> ChatService:
-    """Dependency to get the chat service."""
-    return get_chat_service()
+def get_chat(request: Request) -> ChatService:
+    """Dependency to get the app-scoped chat service singleton."""
+    return request.app.state.chat_service
 
 
 @router.post("/todo/{todo_id}", response_model=ChatResponse)
@@ -106,22 +106,14 @@ async def chat_about_todo(
 @router.post("/generic", response_model=ChatResponse)
 async def generic_chat(
     request: ChatRequest,
-    db: AsyncSession = Depends(get_db),
     chat_service: ChatService = Depends(get_chat),
 ):
     """
     This endpoint allows querying the general knowledge base, meeting notes, assets descriptions, etc. without 
     being tied to a specific todo task. Useful for general questions about indexed documents and using a query routing system.
     This endpoint classifies the user's query to determine intent,
-    then routes to the appropriate specialized agent:
-    
-    - **knowledge_search**: RAG-based knowledge base search
-    - **task_planning**: Task breakdown and planning assistance
-    - **task_status**: Task status queries
-    - **code_help**: Programming and technical assistance
-    - **general_chat**: General conversation
-    - **research**: Deep research assistance
-    
+    then routes to the appropriate specialized agent.
+    If the force_intent is provided, it will override the automatic classification.
     The response includes classification metadata showing which
     agent handled the request and the confidence of classification.
     """
@@ -140,7 +132,6 @@ async def generic_chat(
                 detail=f"Invalid intent: {request.force_intent}"
             )
     context = dict(request.context or {})
-    context["data_query_provider"] = BackendDataQueryToolProvider(db=db)
     try:
         response = await chat_service.chat_with_routing(
             user_message=request.message,

@@ -1,0 +1,24 @@
+name: CalculatorAgent
+description: An agent that can perform basic arithmetic operations using tools.
+class: agent_core.agents.base_agent.BaseAgent
+model: lfm2.5-1.2b-thinking-mlx-8bit
+temperature: 0.1
+max_tokens: 2048
+tools:
+  - type: function
+    function:
+      name: add
+      description: Adds two numbers together.
+      parameters:
+        type: object
+        properties:
+          a:
+            type: number
+            description: The first number.
+          b:
+            type: number
+            description: The second number.
+        required:
+          - a
+          - b
+tool_choice: auto

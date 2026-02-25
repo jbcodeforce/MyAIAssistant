@@ -7,12 +7,14 @@ in agentic AI applications, along with base input/output Pydantic models.
 import importlib.resources
 import logging
 import re
-from typing import AsyncIterator, Optional, Tuple
+from typing import AsyncIterator, Optional, Tuple, List, Any
 from pydantic import BaseModel, Field
 
 from agent_core.agents._llm_default import DefaultHFAdapter, LLMCallable
 from agent_core.agents.agent_config import AgentConfig, LOCAL_BASE_URL, LOCAL_MODEL
 from agent_core.services.rag.service import RAGService
+from agent_core.types import ToolCall, ToolOutput, Message
+from agent_core.agents.tool_registry import get_global_tool_registry
 
 logger = logging.getLogger(__name__)
 
@@ -29,11 +31,13 @@ class AgentInput(BaseModel):
         conversation_history: Previous messages in the conversation
         context: Additional context (entities, metadata, task info, etc.)
         use_rag: Override RAG setting for this call (None uses instance default)
+        tool_outputs: Optional list of tool outputs to pass back to the agent
     """
     query: str
     conversation_history: list[dict] = Field(default_factory=list)
     context: dict = Field(default_factory=dict)
     use_rag: Optional[bool] = False
+    tool_outputs: Optional[List[ToolOutput]] = None
 
 
 class AgentResponse(BaseModel):
@@ -94,6 +98,8 @@ class BaseAgent:
         
         self.agent_type = self._config.name or "BaseAgent"
         self.rag_service = RAGService()
+        self._tool_registry = get_global_tool_registry()
+        self._available_tools = self._config.tools if self._config.tools else []
     
     def _load_system_prompt(self) -> str:
         """
@@ -171,17 +177,43 @@ class BaseAgent:
         Returns:
             AgentResponse with the result
         """
-        messages, context_used, should_use_rag= await self._build_messages(input_data)
-        # Call LLM
-        print("\n----\nSend request to LLM....\n")
-        response = await self._llm_client.chat_async(messages=messages, config=self._config)
-        response_content = response.content
-        return AgentResponse(
-            message=response_content,
-            context_used=context_used,
-            agent_type=self.agent_type,
-            metadata={"rag_enabled": should_use_rag and self.rag_service is not None}
-        )
+        messages, context_used, should_use_rag = await self._build_messages(input_data)
+        
+        # Tool use loop
+        while True:
+            logger.info(f"Sending messages to LLM: {messages}")
+            llm_response = await self._llm_client.chat_async(
+                messages=[m.to_dict() for m in messages],
+                config=self._config,
+                tools=self._available_tools,
+                tool_choice=self._config.tool_choice
+            )
+            
+            if llm_response.tool_calls:
+                tool_outputs = []
+                for tool_call in llm_response.tool_calls:
+                    logger.info(f"LLM requested tool call: {tool_call.function_name} with args {tool_call.arguments}")
+                    output = await self._handle_tool_call(tool_call)
+                    tool_outputs.append(output)
+                
+                # Add assistant's tool_calls message
+                messages.append(Message(role="assistant", tool_calls=llm_response.tool_calls))
+                # Add tool outputs as tool messages
+                for output in tool_outputs:
+                    messages.append(Message(
+                        role="tool",
+                        content=output.output,
+                        tool_call_id=output.tool_call_id
+                    ))
+            else:
+                # LLM provided a final answer
+                response_content = llm_response.content
+                return AgentResponse(
+                    message=response_content,
+                    context_used=context_used,
+                    agent_type=self.agent_type,
+                    metadata={"rag_enabled": should_use_rag and self.rag_service is not None}
+                )
 
     async def execute_stream(self, input_data: AgentInput) -> AsyncIterator[str]:
         """
@@ -193,14 +225,36 @@ class BaseAgent:
         messages, _context_used, _should_use_rag = await self._build_messages(input_data)
         stream_method = getattr(self._llm_client, "chat_async_stream", None)
         if callable(stream_method):
-            async for chunk in stream_method(messages, self._config):
+            async for chunk in stream_method(
+                [m.to_dict() for m in messages],
+                self._config,
+                tools=self._available_tools,
+                tool_choice=self._config.tool_choice
+            ):
                 yield chunk
         else:
-            response = await self._llm_client.chat_async(messages=messages, config=self._config)
+            response = await self._llm_client.chat_async(
+                messages=[m.to_dict() for m in messages],
+                config=self._config,
+                tools=self._available_tools,
+                tool_choice=self._config.tool_choice
+            )
             if response.content:
                 yield response.content
 
-    async def _build_messages(self, input_data: AgentInput) -> Tuple[list[dict], list[dict], bool]:
+    async def _handle_tool_call(self, tool_call: ToolCall) -> ToolOutput:
+        """Execute a tool call and return its output."""
+        try:
+            tool_func = self._tool_registry.get_tool(tool_call.function_name)
+            # Arguments from LLM are often strings, convert to appropriate types if needed
+            # For now, assume tool functions can handle string arguments or have type hints
+            result = await tool_func(**tool_call.arguments)
+            return ToolOutput(tool_call_id=tool_call.id, output=str(result))
+        except Exception as e:
+            logger.error(f"Error executing tool {tool_call.function_name}: {e}")
+            return ToolOutput(tool_call_id=tool_call.id, output=f"Error: {e}")
+
+    async def _build_messages(self, input_data: AgentInput) -> Tuple[List[Message], list[dict], bool]:
         """
         Process the input data for the agent.
         
@@ -224,26 +278,35 @@ class BaseAgent:
                 context_used = rag_results
                 rag_context = self._format_rag_context(rag_results)
         
-        messages = []
+        messages: List[Message] = []
         
         # Add system prompt
         system_prompt = self.build_system_prompt(context)
         if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
+            messages.append(Message(role="system", content=system_prompt))
         
         # Add RAG context as a system message if available
         if rag_context:
-            messages.append({
-                "role": "system", 
-                "content": f"Use the following context to help answer the user's question:\n\n{rag_context}"
-            })
+            messages.append(Message(
+                role="system", 
+                content=f"Use the following context to help answer the user's question:\n\n{rag_context}"
+            ))
         
         # Add conversation history
         if input_data.conversation_history:
-            messages.extend(input_data.conversation_history)
+            messages.extend([Message(**m) for m in input_data.conversation_history])
+        
+        # Add tool outputs from previous turn if any
+        if input_data.tool_outputs:
+            for tool_output in input_data.tool_outputs:
+                messages.append(Message(
+                    role="tool",
+                    content=tool_output.output,
+                    tool_call_id=tool_output.tool_call_id
+                ))
         
         # Add user query
-        messages.append({"role": "user", "content": input_data.query})
+        messages.append(Message(role="user", content=input_data.query))
         
         return messages, context_used, should_use_rag
 

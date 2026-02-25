@@ -139,8 +139,9 @@ class TestAgentFactory:
         assert factory is not None
         assert factory._configs is not None
         assert len(factory._configs) >= 2
-        factory = get_agent_factory()
-        assert factory is not None
+        _factory = get_agent_factory()
+        assert _factory is not None
+        assert _factory is factory
 
     def test_factory_singleton_no_config_dir(self):
         """Test loading default agents from the config folder."""

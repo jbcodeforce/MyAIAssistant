@@ -15,7 +15,7 @@ class TestQueryClassifier:
     @pytest.mark.asyncio
     async def test_1_classify_meeting_notes(self):
         """Test classifying a meeting notes query."""
-        real_factory =get_agent_factory(config_dir=config_dir)
+        real_factory = get_agent_factory(config_dir=config_dir)
         classifier = real_factory.create_agent("QueryClassifier")
         meeting_note = """
         ## Meeting 01/07

@@ -61,7 +61,10 @@ class AgentFactory:
         self._configs: Dict[str, AgentConfig] = {}
         
         # Step 1: Load default agents from package resources
-        if load_defaults:
+        local_definition = False
+        if config_dir is not None:
+            local_definition = config_dir.replace('/','.') in 'agent_core.agents.config'
+        if load_defaults and  not local_definition:
             default_agents = self._load_default_agents_from_resources()
             self._configs.update(default_agents)
             logger.debug(f"Loaded {len(default_agents)} default agents from package resources")
@@ -157,7 +160,8 @@ class AgentFactory:
                         known_fields = {
                             'name', 'description', 'class', 'model', 'provider',
                             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
-                            'timeout', 'response_format'
+                            'timeout', 'response_format', 'use_rag', 'rag_top_k',
+                            'tools', 'tool_choice'
                         }
                         extra = {k: v for k, v in data.items() if k not in known_fields}
                         base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
@@ -174,6 +178,10 @@ class AgentFactory:
                             temperature=float(data.get('temperature', 0.7)),
                             timeout=float(data.get('timeout', 60.0)),
                             response_format=data.get('response_format'),
+                            use_rag=data.get('use_rag', False),
+                            rag_top_k=data.get('rag_top_k', 3),
+                            tools=data.get('tools'),
+                            tool_choice=data.get('tool_choice'),
                             extra=extra,
                             sys_prompt=prompt_content,
                             agent_dir=self.RESOURCE_MARKER  # Mark as resource-based

@@ -287,7 +287,7 @@ class Asset(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    reference_url: Mapped[str] = mapped_column(String(2048), nullable=False)
+    reference_url: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     
     # Status: Started, Active, Completed
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="Started")

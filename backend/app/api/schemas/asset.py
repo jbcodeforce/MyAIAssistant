@@ -2,7 +2,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, Field, ConfigDict, field_validator
 
 
 class AssetStatus(str, Enum):
@@ -54,13 +54,18 @@ class AssetEntity(BaseModel):
 
 
 class AssetCreate(AssetEntity):
-    """Asset creation schema - name and reference_url are required."""
+    """Asset creation schema - only name is required."""
     name: str = Field(..., min_length=1, max_length=255, description="Asset name")
-    reference_url: str = Field(
-        ...,
+    reference_url: Optional[str] = Field(
+        None,
         max_length=2048,
         description="URL reference to the asset (code repository, document, etc.)"
     )
+
+    @field_validator("reference_url", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: str | None) -> str | None:
+        return v if v and v.strip() else None
     status: AssetStatus = Field(
         default=AssetStatus.STARTED,
         description="Asset status: Started, Active, or Completed"
@@ -91,7 +96,7 @@ class AssetResponse(AssetEntity):
     """Asset response with server-generated fields."""
     id: int
     name: str  # Always present in response
-    reference_url: str  # Always present in response
+    reference_url: Optional[str] = None  # Optional URL
     status: AssetStatus  # Always present in response
     project_count: int  # Always present in response
     created_at: datetime

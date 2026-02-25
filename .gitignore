@@ -9,3 +9,4 @@ data/pg/
 agent_core/data/chroma/
 agent_core/skaffold
 **/.env
+**/*.pyc

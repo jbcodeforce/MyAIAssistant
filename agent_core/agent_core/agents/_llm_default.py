@@ -5,12 +5,13 @@ and the protocol that injected clients must implement.
 """
 
 import os
-from typing import AsyncIterator, Optional, Protocol, runtime_checkable
+from typing import AsyncIterator, Optional, Protocol, runtime_checkable, List, Union
+import json
 
 from huggingface_hub import InferenceClient, AsyncInferenceClient
-from huggingface_hub.inference._generated.types import ChatCompletionOutput
+from huggingface_hub.inference._generated.types import ChatCompletionOutput, ChatCompletionInputToolCall
 
-from agent_core.types import LLMResponse, LLMError
+from agent_core.types import LLMResponse, LLMError, ToolCall
 from agent_core.agents.agent_config import AgentConfig
 
 
@@ -36,6 +37,17 @@ def _parse_response(response: ChatCompletionOutput, config: AgentConfig) -> LLMR
             "completion_tokens": response.usage.completion_tokens,
             "total_tokens": response.usage.total_tokens,
         }
+    
+    tool_calls: Optional[List[ToolCall]] = None
+    if choice.message.tool_calls:
+        tool_calls = []
+        for tc in choice.message.tool_calls:
+            if isinstance(tc, ChatCompletionInputToolCall):
+                tool_calls.append(ToolCall(
+                    id=tc.id,
+                    function_name=tc.function.name,
+                    arguments=json.loads(tc.function.arguments)
+                ))
 
     return LLMResponse(
         content=content,
@@ -44,6 +56,7 @@ def _parse_response(response: ChatCompletionOutput, config: AgentConfig) -> LLMR
         usage=usage,
         finish_reason=choice.finish_reason,
         raw_response=response.model_dump() if hasattr(response, "model_dump") else None,
+        tool_calls=tool_calls
     )
 
 
@@ -61,12 +74,22 @@ class LLMCallable(Protocol):
     """
 
     async def chat_async(
-        self, messages: list[dict], config: AgentConfig
+        self,
+        messages: list[dict],
+        config: AgentConfig,
+        tools: Optional[List[dict]] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
     ) -> LLMResponse:
         """Send a chat completion request asynchronously."""
         ...
 
-    def chat_sync(self, messages: list[dict], config: AgentConfig) -> LLMResponse:
+    def chat_sync(
+        self,
+        messages: list[dict],
+        config: AgentConfig,
+        tools: Optional[List[dict]] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
+    ) -> LLMResponse:
         """Send a chat completion request synchronously."""
         ...
 
@@ -84,7 +107,11 @@ class DefaultHFAdapter:
     """
 
     async def chat_async(
-        self, messages: list[dict], config: AgentConfig
+        self,
+        messages: list[dict],
+        config: AgentConfig,
+        tools: Optional[List[dict]] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
     ) -> LLMResponse:
         """Send async chat completion using AsyncInferenceClient."""
         token = _get_hf_token(config)
@@ -101,6 +128,10 @@ class DefaultHFAdapter:
             chat_kwargs["model"] = config.model
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
+        if tools:
+            chat_kwargs["tools"] = tools
+        if tool_choice:
+            chat_kwargs["tool_choice"] = tool_choice
 
         try:
             if is_local:
@@ -126,7 +157,11 @@ class DefaultHFAdapter:
             _raise_llm_error(e)
 
     async def chat_async_stream(
-        self, messages: list[dict], config: AgentConfig
+        self,
+        messages: list[dict],
+        config: AgentConfig,
+        tools: Optional[List[dict]] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
     ) -> AsyncIterator[str]:
         """Stream async chat completion; yields content chunks (token deltas)."""
         token = _get_hf_token(config)
@@ -143,6 +178,10 @@ class DefaultHFAdapter:
             chat_kwargs["model"] = config.model
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
+        if tools:
+            chat_kwargs["tools"] = tools
+        if tool_choice:
+            chat_kwargs["tool_choice"] = tool_choice
 
         try:
             if is_local:
@@ -176,7 +215,13 @@ class DefaultHFAdapter:
                 )
             _raise_llm_error(e)
 
-    def chat_sync(self, messages: list[dict], config: AgentConfig) -> LLMResponse:
+    def chat_sync(
+        self,
+        messages: list[dict],
+        config: AgentConfig,
+        tools: Optional[List[dict]] = None,
+        tool_choice: Optional[Union[str, dict]] = None,
+    ) -> LLMResponse:
         """Send sync chat completion using InferenceClient."""
         token = _get_hf_token(config)
         is_local = _is_local_server(config)
@@ -192,6 +237,10 @@ class DefaultHFAdapter:
             chat_kwargs["model"] = config.model
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
+        if tools:
+            chat_kwargs["tools"] = tools
+        if tool_choice:
+            chat_kwargs["tool_choice"] = tool_choice
 
         try:
             if is_local:

@@ -12,6 +12,7 @@ A library for building agentic AI applications with unified LLM integration via 
 - Agent factory for creating agents from configuration
 - Query classification for intent detection
 - Agent router for intelligent query routing to declared agents
+- mlx-lm integration for mac inference
 
 ## Installation
 
@@ -47,7 +48,6 @@ agent_core/
 │   ├── query_classifier.py        # QueryClassifier agent
 │   ├── agent_router.py            # AgentRouter for query routing
 │   └── ...
-├── client.py                      # LLMClient
 ├── config.py                      # Configuration utilities
 └── types.py                       # Message, LLMResponse
 ```
@@ -327,18 +327,6 @@ temperature: 0.7
 max_tokens: 2048
 ```
 
-Configuration fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `name` | string | Agent name (matches directory name) |
-| `description` | string | Human-readable description |
-| `class` | string | Fully qualified Python class name (optional - if omitted, uses generic agent) |
-| `model` | string | Model identifier |
-| `temperature` | float | Sampling temperature (default: 0.7) |
-| `max_tokens` | int | Maximum response tokens (default: 2048) |
-| `timeout` | float | Request timeout in seconds (default: 60.0) |
-
 The `class` field is optional. If omitted, the factory uses a generic agent implementation that works with any YAML configuration and prompt template.
 
 ### Using AgentConfig Programmatically
@@ -495,14 +483,6 @@ input_data = AgentInput(
     context={"task_id": "123"}
 )
 ```
-
-Input fields:
-
-| Field | Type | Description |
-|-------|------|-------------|
-| `query` | string | The user's input query |
-| `conversation_history` | list[dict] | Previous messages in the conversation |
-| `context` | dict | Additional context (entities, metadata, task info, etc.) |
 
 ### AgentResponse
 

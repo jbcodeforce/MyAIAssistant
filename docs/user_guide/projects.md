@@ -1,6 +1,6 @@
 # Project Management
 
-A project can be standalone or linked to an organization. This is a way to track time and n tasks attached to a project.
+A project can be standalone or linked to an organization. This is a way to track time and tasks attached to a project.
 
 ## Create a Project
 
@@ -15,7 +15,7 @@ A project can be standalone or linked to an organization. This is a way to track
 
 * Description is a high level, executive summary of the project.
 * The note section is to log some specific context for this project
-* The Past step and Next steps are quick list of things to address in the project. Each step may become a major task to work on. Steps are related to what need to be covered by the user but also by other people of the team. 
+* The Past step and Next steps are quick list of things to address in the project. Each step may become a major task to work on, but may stay just step. Steps are related to what need to be covered by the user but also by other people of the team. When the work needs to be tracked with the matrix, then it is good to create a task.
 
 ## Project View  
 
@@ -24,6 +24,8 @@ The project view can support filtering by organizations, and project status.
 ![](./images/proj_view.png)
 
 From a tile it is possible to navigate to the tasks list, edit the project, or delete it.
+
+Within the project home page, it is possible to filter the project per organizations, or status.
 
 ## Detail View of a Project
 

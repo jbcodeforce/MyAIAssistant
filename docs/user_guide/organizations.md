@@ -1,6 +1,8 @@
 # Organization Management
 
-Organization is a generic term for client, customer, university, Non-profit org... The core concept is to link persons, projects and assets to an organization.
+Organization is a generic term for client, customer, university, Non-profit org... The core concept is to link persons, projects, tasks and assets to an organization.
+
+It is not mandatory to use org and project to manage tasks, but it helps when you are engaged with different projects and want to classify tasks per project. An organization may also being fictive, just here to help organize work.
 
 ## Create Organization
 
@@ -17,6 +19,8 @@ Same user experience, the top-right button leads to create new organization:
 The Preview tab presents the content as markdown.
 
 ![](./images/org-md-view.png)
+
+* Once one project is added to the organization it will be possible to navigate from the Orgranization tile, via the `View Projects` button, to the project view.
 
 ## Work on Existing Organisations
 

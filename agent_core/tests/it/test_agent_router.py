@@ -40,7 +40,8 @@ class TestAgentRouter:
         router = factory.create_agent("AgentRouter")
         response = await router.execute(AgentInput(query=query)) 
         print(f"\n----\n{json.dumps(response.__dict__, indent=2, default=str)}\n----\n")
- 
+        assert response['intent'] in ["task_planning", "code_help"]
+        assert response['agent_type'] in ["TaskAgent"]
       
 
    

@@ -49,6 +49,11 @@ plugins:
   - mermaid2
 
 markdown_extensions:
+  - abbr
+  - attr_list
+  - md_in_html
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.highlight:
       anchor_linenums: true
   - pymdownx.superfences:
@@ -58,6 +63,8 @@ markdown_extensions:
           format: !!python/name:mermaid2.fence_mermaid_custom
   - pymdownx.tabbed:
       alternate_style: true
+  - codehilite
+  - footnotes
   - admonition
   - pymdownx.details
   - tables
