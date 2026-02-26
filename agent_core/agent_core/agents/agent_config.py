@@ -1,11 +1,11 @@
 from pydantic import BaseModel, Field
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict, Any, Union, List
 from pathlib import Path
 import yaml
 import os
 import httpx
 LOCAL_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:1337/v1")
-LOCAL_MODEL = os.getenv("LOCAL_LLM_MODEL", "lfm2.5-1.2b-thinking-mlx-8bit")
+LOCAL_MODEL = os.getenv("LOCAL_LLM_MODEL", "lfm2.5-1.2b-thinking-mlx-8bit") 
 REMOTE_MODEL = os.getenv("HF_REMOTE_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
 
 
@@ -56,8 +56,12 @@ class AgentConfig(BaseModel):
     provider: str = "huggingface"
     # RAG configuration
     use_rag: bool = False
+    rag_category: str = "default"
     rag_top_k: int = 5
-    
+    tools: Optional[List[Union[str, dict]]] = None
+    tool_choice: str = "auto"
+    tool_prompt: Optional[str] = None
+
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
         """
@@ -80,7 +84,7 @@ class AgentConfig(BaseModel):
         known_fields = {
             'name', 'description', 'class', 'model', 'provider',
             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
-            'timeout', 'response_format'
+            'timeout', 'response_format', 'tools', 'tool_choice', 'tool_prompt',
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
         base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
@@ -98,7 +102,10 @@ class AgentConfig(BaseModel):
             response_format=data.get('response_format'),
             use_rag=data.get('use_rag', False),
             rag_top_k=data.get('rag_top_k', 3),
-            extra=extra
+            tools=data.get('tools'),
+            tool_choice=data.get('tool_choice', 'auto'),
+            tool_prompt=data.get('tool_prompt'),
+            agent_dir=yaml_path.parent
         )
     
     def get_base_url(self) -> Optional[str]:

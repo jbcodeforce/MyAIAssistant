@@ -1,7 +1,6 @@
 import pytest
-import json
-from pathlib import Path
-from agent_core.agents.agent_factory import AgentFactory, get_agent_factory
+from agent_core.agents.agent_config import AgentConfig
+from agent_core.agents.agent_factory import get_agent_factory
 from agent_core.agents.base_agent import AgentInput, AgentResponse
 from agent_core.agents.tool_registry import get_global_tool_registry
 from .conftest import (
@@ -21,12 +20,16 @@ class TestCalculatorAgent:
     async def test_add_operation(self):
         """Test the CalculatorAgent's add tool."""
         factory = get_agent_factory()
+        config = AgentConfig(tool_choice="auto")
         calculator_agent = factory.create_agent("CalculatorAgent")
         
         query = "What is 10 + 25?"
         input_data = AgentInput(query=query)
-        
-        response = await calculator_agent.execute(input_data)
+        try:    
+            response = await calculator_agent.execute(input_data)
+        except Exception as e:
+            print(f"Error: {e}")
+            assert False
         
         assert isinstance(response, AgentResponse)
         assert "35" in response.message
@@ -46,7 +49,11 @@ class TestCalculatorAgent:
 
         for query, expected_result in queries:
             input_data = AgentInput(query=query)
-            response = await calculator_agent.execute(input_data)
+            try:    
+                response = await calculator_agent.execute(input_data)
+            except Exception as e:
+                print(f"Error: {e}")
+                assert False
             
             assert isinstance(response, AgentResponse)
             assert expected_result in response.message

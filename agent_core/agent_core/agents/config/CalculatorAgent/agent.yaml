@@ -1,7 +1,7 @@
 name: CalculatorAgent
 description: An agent that can perform basic arithmetic operations using tools.
 class: agent_core.agents.base_agent.BaseAgent
-model: lfm2.5-1.2b-thinking-mlx-8bit
+model: gpt-oss-20b-mlx-8bit
 temperature: 0.1
 max_tokens: 2048
 tools:
@@ -22,3 +22,5 @@ tools:
           - a
           - b
 tool_choice: auto
+# Optional: nudge models that otherwise ignore tools (e.g. some local/MLX backends)
+tool_prompt: "You have access to tools. Use the add tool when the user asks for a calculation or sum."

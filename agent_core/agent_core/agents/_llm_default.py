@@ -11,7 +11,7 @@ import json
 from huggingface_hub import InferenceClient, AsyncInferenceClient
 from huggingface_hub.inference._generated.types import ChatCompletionOutput, ChatCompletionInputToolCall
 
-from agent_core.types import LLMResponse, LLMError, ToolCall
+from agent_core.types import LLMResponse, LLMError, ToolCall, Message
 from agent_core.agents.agent_config import AgentConfig
 
 
@@ -62,7 +62,44 @@ def _parse_response(response: ChatCompletionOutput, config: AgentConfig) -> LLMR
 
 def _normalize_messages(messages: list[dict]) -> list[dict]:
     """Ensure messages are list of dicts with role and content."""
-    return [{"role": m.get("role", "user"), "content": m.get("content", "")} for m in messages]
+    results = []
+    for m in messages:
+        if isinstance(m, Message):
+            results.append({"role": m.role, "content": m.content})
+        else:
+            results.append(m)
+        
+    return results
+
+
+def _normalize_tools(tools: List[dict]) -> List[dict]:
+    """Ensure tools match OpenAI/HF chat completion format: type=function, function.name, function.parameters (JSON Schema)."""
+    normalized = []
+    for t in tools:
+        if not isinstance(t, dict):
+            continue
+        if "function" in t:
+            fn = t["function"]
+            if not isinstance(fn, dict) or "name" not in fn:
+                continue
+            name = fn["name"]
+            params = fn.get("parameters")
+            if params is None or not isinstance(params, dict):
+                params = {"type": "object", "properties": {}}
+            description = fn.get("description")
+        else:
+            name = t.get("name")
+            if not name:
+                continue
+            params = t.get("parameters")
+            if params is None or not isinstance(params, dict):
+                params = {"type": "object", "properties": {}}
+            description = t.get("description")
+        out = {"type": "function", "function": {"name": name, "parameters": params}}
+        if description is not None:
+            out["function"]["description"] = description
+        normalized.append(out)
+    return normalized
 
 
 @runtime_checkable
@@ -129,7 +166,9 @@ class DefaultHFAdapter:
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
         if tools:
-            chat_kwargs["tools"] = tools
+            chat_kwargs["tools"] = _normalize_tools(tools)
+            if getattr(config, "tool_prompt", None):
+                chat_kwargs["tool_prompt"] = config.tool_prompt
         if tool_choice:
             chat_kwargs["tool_choice"] = tool_choice
 
@@ -179,7 +218,9 @@ class DefaultHFAdapter:
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
         if tools:
-            chat_kwargs["tools"] = tools
+            chat_kwargs["tools"] = _normalize_tools(tools)
+            if getattr(config, "tool_prompt", None):
+                chat_kwargs["tool_prompt"] = config.tool_prompt
         if tool_choice:
             chat_kwargs["tool_choice"] = tool_choice
 
@@ -238,7 +279,9 @@ class DefaultHFAdapter:
         if config.response_format:
             chat_kwargs["response_format"] = config.response_format
         if tools:
-            chat_kwargs["tools"] = tools
+            chat_kwargs["tools"] = _normalize_tools(tools)
+            if getattr(config, "tool_prompt", None):
+                chat_kwargs["tool_prompt"] = config.tool_prompt
         if tool_choice:
             chat_kwargs["tool_choice"] = tool_choice
 

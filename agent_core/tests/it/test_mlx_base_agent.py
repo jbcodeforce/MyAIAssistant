@@ -19,6 +19,7 @@ class TestOpenAIAgents:
     def agent(self):
         """Create factory pointing to real config directory."""
         config = AgentConfig(model="mlx-community/Qwen3-4B-Instruct-2507-4bit")
+        config.max_tokens = 8000
         config.sys_prompt = config.sys_prompt or "You are a helpful assistant."
         agent = MLXBaseAgent(config=config)
         return agent
@@ -28,11 +29,11 @@ class TestOpenAIAgents:
     @pytest.mark.asyncio
     async def test_deep_thinker_agent(self, agent):
         """Test deep thinker agent."""
-        response = await agent.execute(AgentInput(query="what to address to reduce carbon footprint for water waste processing")) 
+        response = await agent.execute(AgentInput(query="how to reduce carbon footprint for water waste processing?")) 
         print(f"\n----\n{json.dumps(response.__dict__, indent=2, default=str)}\n----\n")
         assert response.message is not None
         assert response.context_used is not None
-        assert response.agent_type == "DeepThinker"
+        assert response.agent_type == "MLXBaseAgent"
       
 
    

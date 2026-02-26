@@ -74,6 +74,7 @@ class AgentRouter(BaseAgent):
         "code_help": "CodeAgent",
         "general_chat": "GeneralAgent",
         "unclear": "GeneralAgent",
+        "meeting_note": "MeetingAgent",
     }
     _DEFAULT_AGENT_NAME = "GeneralAgent"
 
@@ -124,7 +125,7 @@ class AgentRouter(BaseAgent):
         """
         super().__init__(config=config, llm_client=llm_client)
         if config_dir is not None:
-            factory = get_agent_factory(config_dir=Path(config_dir) if isinstance(config_dir, str) else config_dir)
+            factory = get_agent_factory(config_dir=(config_dir) if isinstance(config_dir, str) else config_dir)
             router_config_dir: Optional[Union[str, Path]] = config_dir
         else:
             factory = get_agent_factory()

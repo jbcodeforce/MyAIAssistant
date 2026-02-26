@@ -36,6 +36,13 @@ class TestNoteParserAgent:
 
         response = await agent.execute(AgentInput(query=query)) 
         print(f"\n----\n{json.dumps(response.__dict__, indent=2, default=str)}\n----\n")
+        assert response.organization is not None
+        assert response.persons is not None
+        assert len(response.persons) == 1
+        assert response.persons[0].name == "Matt TheBuilder"
+        assert response.persons[0].role == "Confluent Champion"
+        assert response.persons[0].context == None
+
         
  
       

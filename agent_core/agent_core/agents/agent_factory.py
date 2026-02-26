@@ -13,6 +13,7 @@ import logging
 import os
 import httpx
 from pathlib import Path
+from pydantic import BaseModel
 from typing import Optional, Dict, Any, Type
 import yaml
 from agent_core.agents.agent_config import LOCAL_BASE_URL, LOCAL_MODEL, get_available_models, AgentConfig
@@ -21,6 +22,11 @@ from agent_core.agents.base_agent import BaseAgent
 
 
 logger = logging.getLogger(__name__)
+
+class AgentConfigReference(BaseModel):
+    agent_name: str
+    path_to_config: Path
+    default : bool = True
 
 class AgentFactory:
     """
@@ -48,35 +54,108 @@ class AgentFactory:
     # Special marker for resource-based agents
     RESOURCE_MARKER = Path("__resource__")
     
-    def __init__(self, config_dir: str = None, load_defaults: bool = True):
+    def __init__(self, config_dir: str = None):
         """
         Initialize the agent factory.
         
         Args:
             config_dir: Directory containing agent configurations.
                        If None, only default agents from package resources are loaded.
-            load_defaults: Whether to load default agents from package resources.
-                          Defaults to True.
         """
-        self._configs: Dict[str, AgentConfig] = {}
+        self._config_references =  self._load_agents_ref_from_resources_and_config_dir(config_dir)
+        self._configs: Dict[str, AgentConfig] = {}  # Lazy loading
+        self._config_dir = config_dir
         
-        # Step 1: Load default agents from package resources
-        local_definition = False
-        if config_dir is not None:
-            local_definition = config_dir.replace('/','.') in 'agent_core.agents.config'
-        if load_defaults and  not local_definition:
-            default_agents = self._load_default_agents_from_resources()
-            self._configs.update(default_agents)
-            logger.debug(f"Loaded {len(default_agents)} default agents from package resources")
+    def _load_agents_ref_from_resources_and_config_dir(self, config_dir) -> Dict[str, AgentConfigReference]:
+        """
+        Load agents references from package resources and config directory.
         
-        # Step 2: Load user-defined agents from config_dir (override defaults if same name)
-        if config_dir is not None and Path(config_dir).exists():
-            user_agents = self._discover_agents(Path(config_dir))
-            # User agents override defaults
-            self._configs.update(user_agents)
-            logger.debug(f"Loaded {len(user_agents)} user agents from {config_dir}")
+        Returns:
+            Dictionary mapping agent names to AgentConfigReference instances
+        """
+        agent_references: Dict[str, AgentConfigReference] = {}
+        
+        entries = self._list_resource_directories()
+        for entry in entries:
+            entry_name = entry.name
+            agent_references[entry_name] = AgentConfigReference(agent_name=entry_name, path_to_config=entry, default=True) 
+        if config_dir:
+            config_dir = Path(config_dir)
+            for agent_dir in config_dir.iterdir():
+                if not agent_dir.is_dir():
+                    continue
+                # Skip hidden files and __pycache__
+                agent_name = agent_dir.name
+                if agent_name.startswith('_') or agent_name.startswith('.'):
+                    continue
+                yaml_path = agent_dir / "agent.yaml"
+                if yaml_path.exists():
+                    agent_references[agent_name] = AgentConfigReference(agent_name=agent_name, path_to_config=agent_dir, default=False)
+
+        # Lazy loading
+        return agent_references
+   
     
-    def _load_resource_text(self, package: str, resource_path: str) -> str:
+    def _list_resource_directories(self) -> list[str]:
+        """
+        List entries in a package resource directory.
+        
+        Returns:
+            List of entry names (files and directories)
+        """
+        package = "agent_core.agents.config"
+        target_dir = importlib.resources.files(package)    
+        entries = []
+        for entry in target_dir.iterdir():
+            entries.append(entry)
+        return entries
+
+    
+    def _load_agent_config_from_resource(self, config_ref :  AgentConfigReference) -> AgentConfig:
+
+        yaml_path = config_ref.path_to_config / "agent.yaml"
+        prompt_path = config_ref.path_to_config / "prompt.md"
+        
+        yaml_content = self._load_resource_text(yaml_path)
+        prompt_content = self._load_resource_text(prompt_path)
+        # Parse YAML content
+        data = yaml.safe_load(yaml_content) or {}
+        
+        # Create AgentConfig from YAML data
+        known_fields = {
+            'name', 'description', 'class', 'model', 'provider',
+            'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
+            'timeout', 'response_format', 'use_rag', 'rag_top_k',
+            'tools', 'tool_choice'
+        }
+        extra = {k: v for k, v in data.items() if k not in known_fields}
+        base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
+        agent_name = data.get('name', config_ref.agent_name)
+        config = AgentConfig(
+            name=agent_name,
+            description=data.get('description', 'A general purpose agent.'),
+            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),
+            model=data.get('model', LOCAL_MODEL),
+            provider=data.get('provider', 'huggingface'),
+            api_key=data.get('api_key'),
+            base_url=base_url,
+
+            max_tokens=int(data.get('max_tokens', 10000)),
+            temperature=float(data.get('temperature', 0.7)),
+            timeout=float(data.get('timeout', 60.0)),
+            response_format=data.get('response_format'),
+            use_rag=data.get('use_rag', False),
+            rag_top_k=data.get('rag_top_k', 3),
+            tools=data.get('tools'),
+            tool_choice=data.get('tool_choice', 'auto'),
+            sys_prompt=prompt_content,
+            agent_dir=config_ref.path_to_config
+        )
+        
+        return config
+
+
+    def _load_resource_text(self, resource_path: str) -> str:
         """
         Load text content from a package resource.
         
@@ -90,129 +169,17 @@ class AgentFactory:
         Raises:
             FileNotFoundError: If resource doesn't exist
         """
-        try:
-            config_files = importlib.resources.files(package)
-            resource_file = config_files / resource_path
-            return resource_file.read_text(encoding="utf-8")
-        except (FileNotFoundError, ModuleNotFoundError, AttributeError) as e:
-            raise FileNotFoundError(f"Resource not found: {package}/{resource_path}") from e
-    
-    def _list_resource_directory(self, package: str, directory: str = "") -> list[str]:
-        """
-        List entries in a package resource directory.
-        
-        Args:
-            package: Package name (e.g., "agent_core.agents.config")
-            directory: Subdirectory path (empty string for root)
-            
-        Returns:
-            List of entry names (files and directories)
-        """
-        try:
-            config_files = importlib.resources.files(package)
-            if directory:
-                target_dir = config_files / directory
-            else:
-                target_dir = config_files
-            
-            entries = []
-            for entry in target_dir.iterdir():
-                entries.append(entry.name)
-            return entries
-        except (FileNotFoundError, ModuleNotFoundError, AttributeError) as e:
-            logger.warning(f"Could not list resource directory {package}/{directory}: {e}")
-            return []
-    
-    def _load_default_agents_from_resources(self) -> Dict[str, AgentConfig]:
-        """
-        Load default agent configurations from package resources.
-        
-        Returns:
-            Dictionary mapping agent names to AgentConfig instances
-        """
-        default_agents: Dict[str, AgentConfig] = {}
-        package = "agent_core.agents.config"
-        
-        try:
-            # List all entries in the config package
-            entries = self._list_resource_directory(package)
-            
-            for entry_name in entries:
-                # Skip hidden files and __pycache__
-                if entry_name.startswith('_') or entry_name.startswith('.'):
-                    continue
-                
-                # Check if it's a directory (agent folder)
-                try:
-                    config_files = importlib.resources.files(package)
-                    entry_path = config_files / entry_name
-                    
-                    # Try to access agent.yaml to verify it's an agent directory
-                    yaml_path = f"{entry_name}/agent.yaml"
-                    prompt_path = f"{entry_name}/prompt.md"
-                    try:
-                        yaml_content = self._load_resource_text(package, yaml_path)
-                        prompt_content = self._load_resource_text(package, prompt_path)
-                        # Parse YAML content
-                        data = yaml.safe_load(yaml_content) or {}
-                        
-                        # Create AgentConfig from YAML data
-                        known_fields = {
-                            'name', 'description', 'class', 'model', 'provider',
-                            'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
-                            'timeout', 'response_format', 'use_rag', 'rag_top_k',
-                            'tools', 'tool_choice'
-                        }
-                        extra = {k: v for k, v in data.items() if k not in known_fields}
-                        base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
-                        agent_name = data.get('name', entry_name)
-                        config = AgentConfig(
-                            name=agent_name,
-                            description=data.get('description', 'A general purpose agent.'),
-                            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),
-                            model=data.get('model', LOCAL_MODEL),
-                            provider=data.get('provider', 'huggingface'),
-                            api_key=data.get('api_key'),
-                            base_url=base_url,
-                            max_tokens=int(data.get('max_tokens', 10000)),
-                            temperature=float(data.get('temperature', 0.7)),
-                            timeout=float(data.get('timeout', 60.0)),
-                            response_format=data.get('response_format'),
-                            use_rag=data.get('use_rag', False),
-                            rag_top_k=data.get('rag_top_k', 3),
-                            tools=data.get('tools'),
-                            tool_choice=data.get('tool_choice'),
-                            extra=extra,
-                            sys_prompt=prompt_content,
-                            agent_dir=self.RESOURCE_MARKER  # Mark as resource-based
-                        )
-                        
-                        # Store resource path in extra for prompt loading
-                        config.extra['_resource_package'] = package
-                        config.extra['_resource_path'] = entry_name
-                        
-                        default_agents[agent_name] = config
-                        logger.debug(f"Loaded default agent from resources: {agent_name}")
-                        
-                    except FileNotFoundError:
-                        # Not an agent directory, skip
-                        continue
-                        
-                except Exception as e:
-                    logger.warning(f"Failed to process resource entry {entry_name}: {e}")
-                    continue
-                    
-        except Exception as e:
-            logger.error(f"Failed to load default agents from resources: {e}")
-        
-        return default_agents
-    
+        resource_path = Path(resource_path)
+        if resource_path.exists():
+            return resource_path.read_text(encoding="utf-8")
+        else:
+            return "You are a helpful assistant."
+
+
     def _discover_agents(self, config_dir: Path) -> Dict[str, AgentConfig]:
         """Scan config directory and load all agent configurations."""
         _configs: Dict[str, AgentConfig] = {}  
-        if not config_dir.exists():
-            logger.warning(f"Config directory not found: {config_dir}")
-            return
+
         
         for agent_dir in config_dir.iterdir():
             if not agent_dir.is_dir():
@@ -249,7 +216,7 @@ class AgentFactory:
         Returns:
             List of agent names found in config directory
         """
-        return list(self._configs.keys())
+        return list(self._config_references.keys())
 
     def get_config(self, agent_name: str) -> Optional[AgentConfig]:
         """
@@ -261,7 +228,12 @@ class AgentFactory:
         Returns:
             AgentConfig if found, None otherwise.
         """
-        return self._configs.get(agent_name)
+        config = self._configs.get(agent_name)
+        if config is None:
+            conf_ref = self._config_references[agent_name]
+            config = self._load_agent_config_from_resource(conf_ref)
+            self._configs[agent_name] = config
+        return config
 
     
     def create_agent(self, agent_name: Optional[str] = None, **kwargs) -> BaseAgent:
@@ -280,14 +252,13 @@ class AgentFactory:
         """
         if agent_name is None or agent_name == "":
             agent_name = "GeneralAgent"
-        config =  self._configs.get(agent_name)
+        config =  self.get_config(agent_name)
         if config is None:
             raise ValueError(f"Unknown agent: {agent_name}")
         # Resolve agent class
         agent_cls = self._resolve_agent_class(config.agent_class)
         
         # Build constructor arguments from AgentConfig
-        # provider is always "huggingface"
         constructor_kwargs = {
             'config': config,
             **kwargs

@@ -15,8 +15,7 @@ from agent_core.agents.query_classifier import (
     QueryIntent,
     ClassificationResult,
 )
-from agent_core.agents.base_agent import BaseAgent, AgentResponse
-from agent_core.agents.base_agent import AgentInput
+from agent_core.agents.base_agent import BaseAgent, AgentInput, AgentResponse
 
 class TestWorkflowState:
     """Tests for WorkflowState dataclass."""
@@ -161,7 +160,7 @@ class TestAgentRouter:
         async def mock_classifier_chat_async(messages, config):
             classifier_llm_called["called"] = True
             # Verify the query is in the messages
-            message_contents = " ".join([msg.get("content", "") for msg in messages])
+            message_contents = " ".join([msg.content for msg in messages if msg.role == "user"])
             assert "database" in message_contents.lower() or "migration" in message_contents.lower()
             
             # Return a JSON response that will be parsed into ClassificationResult
@@ -187,7 +186,7 @@ class TestAgentRouter:
             assert messages is not None
             assert isinstance(messages, list)
             # Verify the query about database migration is in the messages
-            message_contents = " ".join([msg.get("content", "") for msg in messages])
+            message_contents = " ".join([msg.content for msg in messages if msg.role == "user"])
             assert "database" in message_contents.lower() or "migration" in message_contents.lower()
             task_agent_llm_called["called"] = True
             

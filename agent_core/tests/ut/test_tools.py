@@ -90,7 +90,7 @@ class TestAgentConfigTools:
         
         assert config.name == "TestAgentNoTools"
         assert config.tools is None
-        assert config.tool_choice is None
+        assert config.tool_choice == "auto"
 
 class TestBaseAgentToolHandling:
     @pytest.fixture
@@ -128,7 +128,7 @@ class TestBaseAgentToolHandling:
 
     @pytest.mark.asyncio
     async def test_handle_tool_call(self, agent_with_tools):
-        tool_call = ToolCall(id="call_123", function_name="test_add", arguments={"a": 5, "b": 3})
+        tool_call = ToolCall(id="call_123", function_name="add", arguments={"a": 5, "b": 3})
         output = await agent_with_tools._handle_tool_call(tool_call)
         
         assert isinstance(output, ToolOutput)
@@ -157,10 +157,11 @@ class TestBaseAgentToolHandling:
         
         assert response.message == "The answer is 8."
         mock_llm_client.chat_async.assert_called_once()
-        args, kwargs = mock_llm_client.chat_async.call_args
+        _, kwargs = mock_llm_client.chat_async.call_args
         assert kwargs["tools"] is not None
         assert kwargs["tool_choice"] == "auto"
-        assert any(msg.content == "What is 5 + 3?" for msg in args[0])
+        messages = kwargs["messages"]
+        assert any(m.get("content") == "What is 5 + 3?" for m in messages)
 
     @pytest.mark.asyncio
     async def test_execute_with_llm_returning_tool_call(self, agent_with_tools, mock_llm_client):
@@ -171,7 +172,7 @@ class TestBaseAgentToolHandling:
                 model="mock-model",
                 provider="mock-provider",
                 tool_calls=[
-                    ToolCall(id="call_123", function_name="test_add", arguments={"a": 5, "b": 3})
+                    ToolCall(id="call_123", function_name="add", arguments={"a": 5, "b": 3})
                 ]
             ),
             # Second LLM call returns the final answer after tool execution
@@ -188,23 +189,24 @@ class TestBaseAgentToolHandling:
         assert response.message == "The sum of 5 and 3 is 8."
         assert mock_llm_client.chat_async.call_count == 2
         
-        # Verify first call arguments
-        first_call_args, first_call_kwargs = mock_llm_client.chat_async.call_args_list[0]
+        # Verify first call arguments (agent passes messages as kwargs, as list of dicts)
+        _, first_call_kwargs = mock_llm_client.chat_async.call_args_list[0]
         assert first_call_kwargs["tools"] is not None
         assert first_call_kwargs["tool_choice"] == "auto"
-        assert any(msg.content == "What is 5 + 3?" for msg in first_call_args[0])
+        first_messages = first_call_kwargs["messages"]
+        assert any(m.get("content") == "What is 5 + 3?" for m in first_messages)
         
         # Verify second call arguments (should include tool output)
-        second_call_args, second_call_kwargs = mock_llm_client.chat_async.call_args_list[1]
+        _, second_call_kwargs = mock_llm_client.chat_async.call_args_list[1]
         assert second_call_kwargs["tools"] is not None
         assert second_call_kwargs["tool_choice"] == "auto"
         
-        # Check for tool message in the second call's messages
-        tool_message_found = False
-        for msg in second_call_args[0]:
-            if msg.role == "tool" and msg.tool_call_id == "call_123" and msg.content == "8":
-                tool_message_found = True
-                break
+        # Check for tool message in the second call's messages (dicts from to_dict())
+        second_messages = second_call_kwargs["messages"]
+        tool_message_found = any(
+            m.get("role") == "tool" and m.get("tool_call_id") == "call_123" and m.get("content") == "8"
+            for m in second_messages
+        )
         assert tool_message_found, "Tool output message not found in second LLM call"
 
     @pytest.mark.asyncio

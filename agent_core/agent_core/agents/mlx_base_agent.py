@@ -24,8 +24,8 @@ class MLXBaseAgent(BaseAgent):
             {"role": "user", "content": input_data.query}
         ]
         print(f"Sending messages to LLM: {messages}",flush=True)
-        prompt =  self._tokenizer.apply_chat_template(messages=messages, add_generation_prompt=True)
-        text = generate(self.model, 
+        prompt =  self._tokenizer.apply_chat_template(conversation=messages, add_generation_prompt=True)
+        text = generate(self._model, 
                 self._tokenizer, 
                 prompt=prompt, 
                 verbose=True)

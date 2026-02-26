@@ -38,6 +38,7 @@ class QueryIntent(str, Enum):
     RESEARCH = "research"
     # Clarification needed
     UNCLEAR = "unclear"
+    ROUTING = "routing"
 
 
 @dataclass
@@ -137,7 +138,7 @@ class QueryClassifier(BaseAgent):
                 confidence=float(data.get("confidence", 0.7)),
                 reasoning=data.get("reasoning", ""),
                 entities=data.get("entities", {}),
-                suggested_context=data.get("suggested_context")
+                suggested_context=data.get("suggested_context","")
             )
         except json.JSONDecodeError as e:
             logger.warning(f"Failed to parse classification response: {e}")
