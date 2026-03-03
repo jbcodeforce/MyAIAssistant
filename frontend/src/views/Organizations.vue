@@ -11,9 +11,9 @@
         <span class="organization-count" v-if="!loading && !error">
           {{ totalCount }} organization{{ totalCount !== 1 ? 's' : '' }}
         </span>
-        <button class="btn-primary" @click="openCreateModal">
+        <router-link to="/organizations/new" class="btn-primary">
           + New Organization
-        </button>
+        </router-link>
       </div>
     </div>
 
@@ -44,6 +44,36 @@
       <span v-if="searchQuery && filteredOrganizations.length !== organizations.length" class="search-results-count">
         {{ filteredOrganizations.length }} of {{ organizations.length }} shown
       </span>
+      <div class="view-toggle">
+        <button
+          type="button"
+          :class="['toggle-btn', { active: viewMode === 'tiles' }]"
+          @click="setViewMode('tiles')"
+          title="Tile view"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect width="7" height="7" x="3" y="3" rx="1"/>
+            <rect width="7" height="7" x="14" y="3" rx="1"/>
+            <rect width="7" height="7" x="14" y="14" rx="1"/>
+            <rect width="7" height="7" x="3" y="14" rx="1"/>
+          </svg>
+          Tiles
+        </button>
+        <button
+          type="button"
+          :class="['toggle-btn', { active: viewMode === 'table' }]"
+          @click="setViewMode('table')"
+          title="Table view"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 3v18"/>
+            <rect width="18" height="18" x="3" y="3" rx="2"/>
+            <path d="M3 9h18"/>
+            <path d="M3 15h18"/>
+          </svg>
+          Table
+        </button>
+      </div>
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -70,7 +100,7 @@
         </p>
       </div>
 
-      <div v-else class="organizations-grid">
+      <div v-else-if="viewMode === 'tiles'" class="organizations-grid">
         <div 
           v-for="organization in filteredOrganizations" 
           :key="organization.id" 
@@ -95,7 +125,7 @@
                   <circle cx="12" cy="12" r="3"/>
                 </svg>
               </router-link>
-              <button class="btn-icon" @click="openEditModal(organization)" title="Edit">
+              <button class="btn-icon" @click="goToEdit(organization)" title="Edit">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                   <path d="m15 5 4 4"/>
@@ -191,6 +221,67 @@
         </div>
       </div>
 
+      <div v-else class="table-container">
+        <table class="organizations-table">
+          <thead>
+            <tr>
+              <th class="col-name">Name</th>
+              <th class="col-created">Created</th>
+              <th class="col-sections">Sections</th>
+              <th class="col-actions">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="organization in filteredOrganizations" :key="organization.id" class="org-row">
+              <td class="col-name">
+                <div class="table-org-name">
+                  <span class="organization-avatar table-avatar">{{ getInitials(organization.name) }}</span>
+                  <router-link :to="`/organizations/${organization.id}`" class="org-name-link">
+                    {{ organization.name }}
+                  </router-link>
+                </div>
+              </td>
+              <td class="col-created">{{ formatDate(organization.created_at) }}</td>
+              <td class="col-sections">
+                <span class="sections-summary">{{ getSectionsSummary(organization) }}</span>
+              </td>
+              <td class="col-actions">
+                <router-link :to="`/organizations/${organization.id}`" class="btn-icon" title="View">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                </router-link>
+                <button type="button" class="btn-icon" @click="goToEdit(organization)" title="Edit">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
+                    <path d="m15 5 4 4"/>
+                  </svg>
+                </button>
+                <button type="button" class="btn-icon danger" @click="handleDelete(organization)" title="Delete">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M3 6h18"/>
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                  </svg>
+                </button>
+                <router-link :to="{ path: '/projects', query: { organization: organization.id } }" class="btn-icon" title="View Projects">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                  </svg>
+                </router-link>
+                <router-link :to="`/organizations/${organization.id}/todos`" class="btn-icon" title="View Tasks">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
+                    <path d="M6 9.01V9"/>
+                  </svg>
+                </router-link>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
       <div v-if="hasMore" class="load-more">
         <button @click="loadMore" class="btn-secondary">
           Load More ({{ organizations.length }} of {{ totalCount }})
@@ -214,179 +305,17 @@
       </template>
     </Modal>
 
-    <!-- Create/Edit Modal -->
-    <Modal 
-      :show="showModal" 
-      :title="isEditing ? 'Edit Organization' : 'New Organization'" 
-      size="fullscreen" 
-      @close="closeModal"
-    >
-      <form @submit.prevent="handleSubmit" class="organization-form">
-        <div class="form-group">
-          <label for="name">Organization Name *</label>
-          <input 
-            id="name" 
-            v-model="formData.name" 
-            type="text" 
-            required 
-            placeholder="Enter organization or company name"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Stakeholders</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: stakeholdersTab === 'write' }]"
-                @click="stakeholdersTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: stakeholdersTab === 'preview' }]"
-                @click="stakeholdersTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="stakeholdersTab === 'write'"
-              v-model="formData.stakeholders" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Key Contacts
-- **John Doe** - CTO, decision maker
-- **Jane Smith** - PM, technical lead"
-            ></textarea>
-            <div v-else class="markdown-preview" v-html="renderedStakeholders"></div>
-          </div>
-          <span class="form-hint">Key decision makers and contacts (supports Markdown)</span>
-        </div>
-
-        <div class="form-group">
-          <label>Team</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: teamTab === 'write' }]"
-                @click="teamTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: teamTab === 'preview' }]"
-                @click="teamTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="teamTab === 'write'"
-              v-model="formData.team" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Internal Team
-- **Account Manager**: Alex Johnson
-- **Technical Lead**: Sarah Chen"
-            ></textarea>
-            <div v-else class="markdown-preview" v-html="renderedTeam"></div>
-          </div>
-          <span class="form-hint">Your team members assigned to this organization (supports Markdown)</span>
-        </div>
-
-        <div class="form-group">
-          <label>Strategy / Notes</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: descriptionTab === 'write' }]"
-                @click="descriptionTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: descriptionTab === 'preview' }]"
-                @click="descriptionTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="descriptionTab === 'write'"
-              v-model="formData.description" 
-              class="markdown-textarea"
-              rows="6"
-              placeholder="## Account Strategy
-
-### Goals
-- Expand platform adoption
-- Upsell enterprise features
-
-### Notes
-- Q1 budget approved
-- Decision timeline: March 2026"
-            ></textarea>
-            <div v-else class="markdown-preview" v-html="renderedDescription"></div>
-          </div>
-          <span class="form-hint">Overall strategy and relationship notes (supports Markdown)</span>
-        </div>
-
-        <div class="form-group">
-          <label>Related Products</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: productsTab === 'write' }]"
-                @click="productsTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: productsTab === 'preview' }]"
-                @click="productsTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="productsTab === 'write'"
-              v-model="formData.related_products" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Products in Use
-- **Flink SQL** - Production
-- **Kafka Streams** - Evaluation"
-            ></textarea>
-            <div v-else class="markdown-preview" v-html="renderedProducts"></div>
-          </div>
-          <span class="form-hint">Products, services, or solutions relevant to this organization (supports Markdown)</span>
-        </div>
-      </form>
-
-      <template #footer>
-        <button type="button" class="btn-secondary" @click="closeModal">Cancel</button>
-        <button type="button" class="btn-primary" @click="handleSubmit" :disabled="!isFormValid">
-          {{ isEditing ? 'Update' : 'Create' }}
-        </button>
-      </template>
-    </Modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
+
+const router = useRouter()
 
 const organizations = ref([])
 const totalCount = ref(0)
@@ -396,23 +325,14 @@ const loading = ref(false)
 const error = ref(null)
 const searchQuery = ref('')
 
-// Modal state
-const showModal = ref(false)
-const isEditing = ref(false)
-const editingId = ref(null)
-const formData = ref({
-  name: '',
-  stakeholders: '',
-  team: '',
-  description: '',
-  related_products: ''
-})
-
-// Editor tabs for each section
-const stakeholdersTab = ref('write')
-const teamTab = ref('write')
-const descriptionTab = ref('write')
-const productsTab = ref('write')
+const VIEW_MODE_KEY = 'organizations-view-mode'
+const viewMode = ref(
+  (typeof localStorage !== 'undefined' && localStorage.getItem(VIEW_MODE_KEY)) === 'table' ? 'table' : 'tiles'
+)
+function setViewMode(mode) {
+  viewMode.value = mode
+  try { localStorage.setItem(VIEW_MODE_KEY, mode) } catch (_) {}
+}
 
 // Section viewer modal state
 const showSectionViewer = ref(false)
@@ -424,24 +344,15 @@ const hasMore = computed(() => {
 })
 
 const filteredOrganizations = computed(() => {
-  if (!searchQuery.value.trim()) {
-    return organizations.value
-  }
-  const query = searchQuery.value.toLowerCase().trim()
-  return organizations.value.filter(org => 
-    org.name.toLowerCase().includes(query)
+  const list = !searchQuery.value.trim()
+    ? organizations.value
+    : organizations.value.filter(org =>
+        (org.name || '').toLowerCase().includes(searchQuery.value.toLowerCase().trim())
+      )
+  return [...list].sort((a, b) =>
+    (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' })
   )
 })
-
-const isFormValid = computed(() => {
-  return formData.value.name && formData.value.name.trim().length > 0
-})
-
-// Rendered markdown for form fields
-const renderedStakeholders = computed(() => marked(formData.value.stakeholders || ''))
-const renderedTeam = computed(() => marked(formData.value.team || ''))
-const renderedDescription = computed(() => marked(formData.value.description || ''))
-const renderedProducts = computed(() => marked(formData.value.related_products || ''))
 
 // Section viewer computeds
 const sectionLabels = {
@@ -501,79 +412,17 @@ function getInitials(name) {
   return (words[0][0] + words[1][0]).toUpperCase()
 }
 
-function openCreateModal() {
-  isEditing.value = false
-  editingId.value = null
-  formData.value = {
-    name: '',
-    stakeholders: `## Key Contacts
-- **Name** - Role, responsibilities
-- **Name** - Role, responsibilities`,
-    team: `## Internal Team
-- **Account Manager**: Name
-- **Technical Lead**: Name`,
-    description: `## Account Strategy
-
-### Goals
-- Goal 1
-- Goal 2
-
-### Current Status
-Brief overview of current engagement
-
-### Next Steps
-- Action item 1
-- Action item 2`,
-    related_products: `## Products in Use
-- **Product Name** - Status (Production/Evaluation/POC)
-- **Product Name** - Status`
-  }
-  resetTabs()
-  showModal.value = true
+function getSectionsSummary(organization) {
+  const parts = []
+  if (organization.stakeholders) parts.push('Stakeholders')
+  if (organization.team) parts.push('Team')
+  if (organization.description) parts.push('Strategy')
+  if (organization.related_products) parts.push('Products')
+  return parts.length ? parts.join(', ') : '—'
 }
 
-function openEditModal(organization) {
-  isEditing.value = true
-  editingId.value = organization.id
-  formData.value = {
-    name: organization.name,
-    stakeholders: organization.stakeholders || `## Key Contacts
-- **Name** - Role, responsibilities
-- **Name** - Role, responsibilities`,
-    team: organization.team || `## Internal Team
-- **Account Manager**: Name
-- **Technical Lead**: Name`,
-    description: organization.description || `## Account Strategy
-
-### Goals
-- Goal 1
-- Goal 2
-
-### Current Status
-Brief overview of current engagement
-
-### Next Steps
-- Action item 1
-- Action item 2`,
-    related_products: organization.related_products || `## Products in Use
-- **Product Name** - Status (Production/Evaluation/POC)
-- **Product Name** - Status`
-  }
-  resetTabs()
-  showModal.value = true
-}
-
-function resetTabs() {
-  stakeholdersTab.value = 'write'
-  teamTab.value = 'write'
-  descriptionTab.value = 'write'
-  productsTab.value = 'write'
-}
-
-function closeModal() {
-  showModal.value = false
-  isEditing.value = false
-  editingId.value = null
+function goToEdit(organization) {
+  router.push({ name: 'OrganizationEdit', params: { id: organization.id } })
 }
 
 function openSectionViewer(organization, section) {
@@ -592,29 +441,7 @@ function editFromViewer() {
   const org = viewingOrganization.value
   closeSectionViewer()
   if (org) {
-    openEditModal(org)
-  }
-}
-
-async function handleSubmit() {
-  if (!isFormValid.value) return
-  
-  try {
-    if (isEditing.value) {
-      const response = await organizationsApi.update(editingId.value, formData.value)
-      const index = organizations.value.findIndex(o => o.id === editingId.value)
-      if (index !== -1) {
-        organizations.value[index] = response.data
-      }
-    } else {
-      const response = await organizationsApi.create(formData.value)
-      organizations.value.unshift(response.data)
-      totalCount.value++
-    }
-    closeModal()
-  } catch (err) {
-    console.error('Failed to save organization:', err)
-    alert(err.response?.data?.detail || 'Failed to save organization')
+    router.push({ name: 'OrganizationEdit', params: { id: org.id } })
   }
 }
 
@@ -777,6 +604,53 @@ function formatDate(dateString) {
   white-space: nowrap;
 }
 
+.view-toggle {
+  display: flex;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  overflow: hidden;
+  background: white;
+}
+
+:global(.dark) .view-toggle {
+  border-color: #334155;
+  background: #1e293b;
+}
+
+.toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.toggle-btn:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+:global(.dark) .toggle-btn:hover {
+  background: #334155;
+  color: #f1f5f9;
+}
+
+.toggle-btn.active {
+  background: #e0e7ff;
+  color: #3730a3;
+}
+
+:global(.dark) .toggle-btn.active {
+  background: #312e81;
+  color: #a5b4fc;
+}
+
 .loading-state,
 .error-state {
   display: flex;
@@ -826,6 +700,124 @@ function formatDate(dateString) {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 1rem;
+}
+
+.table-container {
+  overflow-x: auto;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e5e7eb;
+}
+
+:global(.dark) .table-container {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+.organizations-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9375rem;
+}
+
+.organizations-table th,
+.organizations-table td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .organizations-table th,
+:global(.dark) .organizations-table td {
+  border-bottom-color: #334155;
+}
+
+.organizations-table th {
+  font-weight: 600;
+  color: #374151;
+  background: #f9fafb;
+}
+
+:global(.dark) .organizations-table th {
+  color: #94a3b8;
+  background: #0f172a;
+}
+
+.organizations-table tbody tr:hover {
+  background: #f9fafb;
+}
+
+:global(.dark) .organizations-table tbody tr:hover {
+  background: #334155;
+}
+
+.col-name {
+  min-width: 180px;
+}
+
+.col-created {
+  white-space: nowrap;
+  color: #6b7280;
+}
+
+:global(.dark) .col-created {
+  color: #94a3b8;
+}
+
+.col-sections {
+  max-width: 220px;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+:global(.dark) .col-sections {
+  color: #94a3b8;
+}
+
+.col-actions {
+  white-space: nowrap;
+}
+
+.col-actions .btn-icon {
+  margin-right: 0.125rem;
+}
+
+.table-org-name {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.table-avatar {
+  width: 28px;
+  height: 28px;
+  font-size: 0.6875rem;
+}
+
+.org-name-link {
+  font-weight: 600;
+  color: #111827;
+  text-decoration: none;
+}
+
+.org-name-link:hover {
+  text-decoration: underline;
+  color: #2563eb;
+}
+
+:global(.dark) .org-name-link {
+  color: #f1f5f9;
+}
+
+:global(.dark) .org-name-link:hover {
+  color: #60a5fa;
+}
+
+.sections-summary {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .organization-card {

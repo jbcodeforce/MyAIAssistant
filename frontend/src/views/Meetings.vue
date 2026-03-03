@@ -11,9 +11,9 @@
         <div class="header-stats" v-if="!loading && !error">
           <span class="stat-badge total">{{ items.length }} meetings</span>
         </div>
-        <button class="btn-primary" @click="openCreateModal">
+        <router-link to="/meetings/new" class="btn-primary">
           + New Meeting Note
-        </button>
+        </router-link>
       </div>
     </div>
 
@@ -109,7 +109,7 @@
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                   </svg>
                 </button>
-                <button class="btn-icon" @click="openEditModal(item)" title="Edit">
+                <button class="btn-icon" @click="goToEdit(item)" title="Edit">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
                     <path d="m15 5 4 4"/>
@@ -135,115 +135,13 @@
       </div>
     </div>
 
-    <!-- Create Modal -->
-    <Modal :show="showCreateModal" title="New Meeting Note" size="fullscreen" @close="closeCreateModal">
-      <form @submit.prevent="handleCreate" class="meeting-form">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="meeting_id">Meeting ID *</label>
-            <input 
-              id="meeting_id" 
-              v-model="createFormData.meeting_id" 
-              type="text" 
-              required 
-              placeholder="e.g., mtg-2026-01-05-kickoff"
-            />
-            <span class="form-hint">Unique identifier for this meeting</span>
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label for="org_id">Organization</label>
-            <select id="org_id" v-model="createFormData.org_id">
-              <option :value="null">None</option>
-              <option v-for="org in organizations" :key="org.id" :value="org.id">
-                {{ org.name }}
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="project_id">Project</label>
-            <select id="project_id" v-model="createFormData.project_id">
-              <option :value="null">None</option>
-              <option v-for="project in createFilteredProjects" :key="project.id" :value="project.id">
-                {{ project.name }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="presents">Attendees</label>
-          <input 
-            id="presents" 
-            v-model="createFormData.presents" 
-            type="text" 
-            placeholder="e.g., John Doe, Jane Smith, Bob Wilson"
-          />
-          <span class="form-hint">Comma or semicolon separated list of meeting attendees</span>
-        </div>
-
-        <div class="form-group">
-          <label>Meeting Notes (Markdown) *</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: editorTab === 'write' }]"
-                @click="editorTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: editorTab === 'preview' }]"
-                @click="editorTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="editorTab === 'write'"
-              v-model="createFormData.content" 
-              class="markdown-textarea"
-              rows="15"
-              required
-              placeholder="# Meeting Title
-
-## Agenda
-1. Topic 1
-2. Topic 2
-
-## Notes
-...
-
-## Action Items
-- [ ] Action 1
-- [ ] Action 2
-"
-            ></textarea>
-            <div v-else class="markdown-preview" v-html="renderedCreateContent"></div>
-          </div>
-        </div>
-      </form>
-
-      <template #footer>
-        <button type="button" class="btn-secondary" @click="closeCreateModal">Cancel</button>
-        <button type="button" class="btn-primary" @click="handleCreate" :disabled="!isCreateFormValid">
-          Create Meeting Note
-        </button>
-      </template>
-    </Modal>
-
-    <!-- View/Edit Modal -->
-    <Modal :show="showEditModal" :title="isEditing ? 'Edit Meeting Note' : 'View Meeting Note'" size="fullscreen" @close="closeEditModal">
+    <!-- View Modal (view-only; use Edit page to edit) -->
+    <Modal :show="showEditModal" title="View Meeting Note" size="fullscreen" @close="closeEditModal">
       <div v-if="loadingContent" class="loading-content">
         <p>Loading content...</p>
       </div>
       <div v-else>
-        <div class="view-header-info" v-if="!isEditing">
+        <div class="view-header-info">
           <div class="info-row">
             <span class="info-label">Meeting ID:</span>
             <span class="info-value">{{ editingItem?.meeting_id }}</span>
@@ -269,86 +167,21 @@
             <span class="info-value file-path">{{ editingItem?.file_ref }}</span>
           </div>
         </div>
-
-        <form v-if="isEditing" @submit.prevent="handleUpdate" class="meeting-form">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="edit_org_id">Organization</label>
-              <select id="edit_org_id" v-model="editFormData.org_id">
-                <option :value="null">None</option>
-                <option v-for="org in organizations" :key="org.id" :value="org.id">
-                  {{ org.name }}
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group">
-              <label for="edit_project_id">Project</label>
-              <select id="edit_project_id" v-model="editFormData.project_id">
-                <option :value="null">None</option>
-                <option v-for="project in editFilteredProjects" :key="project.id" :value="project.id">
-                  {{ project.name }}
-                </option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="edit_presents">Attendees</label>
-            <input 
-              id="edit_presents" 
-              v-model="editFormData.presents" 
-              type="text" 
-              placeholder="e.g., John Doe, Jane Smith, Bob Wilson"
-            />
-            <span class="form-hint">Comma or semicolon separated list of meeting attendees</span>
-          </div>
-
-          <div class="form-group">
-            <label>Meeting Notes (Markdown)</label>
-            <div class="markdown-editor-container">
-              <div class="editor-tabs">
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: editEditorTab === 'write' }]"
-                  @click="editEditorTab = 'write'"
-                >
-                  Write
-                </button>
-                <button 
-                  type="button" 
-                  :class="['tab-btn', { active: editEditorTab === 'preview' }]"
-                  @click="editEditorTab = 'preview'"
-                >
-                  Preview
-                </button>
-              </div>
-              <textarea 
-                v-if="editEditorTab === 'write'"
-                v-model="editFormData.content" 
-                class="markdown-textarea"
-                rows="15"
-              ></textarea>
-              <div v-else class="markdown-preview" v-html="renderedEditContent"></div>
-            </div>
-          </div>
-        </form>
-
-        <div v-else class="content-view">
+        <div class="content-view">
           <div class="markdown-preview view-mode" v-html="renderedViewContent"></div>
         </div>
       </div>
 
       <template #footer>
-        <button type="button" class="btn-secondary" @click="closeEditModal">
-          {{ isEditing ? 'Cancel' : 'Close' }}
-        </button>
-        <button v-if="!isEditing" type="button" class="btn-primary" @click="startEditing">
+        <button type="button" class="btn-secondary" @click="closeEditModal">Close</button>
+        <router-link
+          v-if="editingItem"
+          :to="{ name: 'MeetingEdit', params: { id: editingItem.id } }"
+          class="btn-primary"
+          @click="closeEditModal"
+        >
           Edit
-        </button>
-        <button v-else type="button" class="btn-primary" @click="handleUpdate">
-          Save Changes
-        </button>
+        </router-link>
       </template>
     </Modal>
 
@@ -434,11 +267,13 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
 import Modal from '@/components/common/Modal.vue'
 
+const router = useRouter()
 const store = useMeetingRefStore()
 
 const items = ref([])
@@ -453,29 +288,10 @@ const loadingContent = ref(false)
 const filterOrgId = ref('')
 const filterProjectId = ref('')
 
-// Create modal state
-const showCreateModal = ref(false)
-const editorTab = ref('write')
-const createFormData = ref({
-  meeting_id: '',
-  org_id: null,
-  project_id: null,
-  presents: '',
-  content: ''
-})
-
-// Edit/View modal state
+// View modal state
 const showEditModal = ref(false)
-const isEditing = ref(false)
-const editEditorTab = ref('write')
 const editingItem = ref(null)
 const viewContent = ref('')
-const editFormData = ref({
-  org_id: null,
-  project_id: null,
-  presents: '',
-  content: ''
-})
 
 // AI Extraction modal state
 const showExtractModal = ref(false)
@@ -491,16 +307,6 @@ const filteredProjects = computed(() => {
   return projects.value.filter(p => p.organization_id === parseInt(filterOrgId.value))
 })
 
-const createFilteredProjects = computed(() => {
-  if (!createFormData.value.org_id) return projects.value
-  return projects.value.filter(p => p.organization_id === createFormData.value.org_id)
-})
-
-const editFilteredProjects = computed(() => {
-  if (!editFormData.value.org_id) return projects.value
-  return projects.value.filter(p => p.organization_id === editFormData.value.org_id)
-})
-
 const sortedItems = computed(() => {
   return [...items.value].sort((a, b) => {
     const dateA = new Date(a.created_at)
@@ -513,29 +319,8 @@ const hasMore = computed(() => {
   return items.value.length < totalCount.value
 })
 
-const isCreateFormValid = computed(() => {
-  return createFormData.value.meeting_id && createFormData.value.content
-})
-
-const renderedCreateContent = computed(() => {
-  return marked(createFormData.value.content || '')
-})
-
-const renderedEditContent = computed(() => {
-  return marked(editFormData.value.content || '')
-})
-
 const renderedViewContent = computed(() => {
   return marked(viewContent.value || '')
-})
-
-// Watch for org changes to reset project
-watch(() => createFormData.value.org_id, () => {
-  createFormData.value.project_id = null
-})
-
-watch(() => editFormData.value.org_id, () => {
-  editFormData.value.project_id = null
 })
 
 // Lifecycle
@@ -590,39 +375,8 @@ function getProjectName(projectId) {
   return store.getProjectName(projectId)
 }
 
-function openCreateModal() {
-  createFormData.value = {
-    meeting_id: '',
-    org_id: null,
-    project_id: null,
-    presents: '',
-    content: ''
-  }
-  editorTab.value = 'write'
-  showCreateModal.value = true
-}
-
-function closeCreateModal() {
-  showCreateModal.value = false
-}
-
-async function handleCreate() {
-  if (!isCreateFormValid.value) return
-  
-  try {
-    const created = await store.createItem(createFormData.value)
-    items.value.unshift(created)
-    totalCount.value++
-    closeCreateModal()
-  } catch (err) {
-    console.error('Failed to create meeting note:', err)
-    alert('Failed to create meeting note: ' + (err.response?.data?.detail || err.message))
-  }
-}
-
 async function openViewModal(item) {
   editingItem.value = item
-  isEditing.value = false
   showEditModal.value = true
   loadingContent.value = true
   
@@ -637,64 +391,14 @@ async function openViewModal(item) {
   }
 }
 
-async function openEditModal(item) {
-  editingItem.value = item
-  isEditing.value = true
-  editEditorTab.value = 'write'
-  showEditModal.value = true
-  loadingContent.value = true
-  
-  try {
-    const result = await store.getContent(item.id)
-    editFormData.value = {
-      org_id: item.org_id,
-      project_id: item.project_id,
-      presents: item.presents || '',
-      content: result.content
-    }
-  } catch (err) {
-    console.error('Failed to load content:', err)
-    editFormData.value = {
-      org_id: item.org_id,
-      project_id: item.project_id,
-      presents: item.presents || '',
-      content: ''
-    }
-  } finally {
-    loadingContent.value = false
-  }
-}
-
-function startEditing() {
-  isEditing.value = true
-  editEditorTab.value = 'write'
-  editFormData.value = {
-    org_id: editingItem.value.org_id,
-    project_id: editingItem.value.project_id,
-    presents: editingItem.value.presents || '',
-    content: viewContent.value
-  }
+function goToEdit(item) {
+  router.push({ name: 'MeetingEdit', params: { id: item.id } })
 }
 
 function closeEditModal() {
   showEditModal.value = false
   editingItem.value = null
-  isEditing.value = false
   viewContent.value = ''
-}
-
-async function handleUpdate() {
-  try {
-    const updated = await store.updateItem(editingItem.value.id, editFormData.value)
-    const index = items.value.findIndex(i => i.id === editingItem.value.id)
-    if (index !== -1) {
-      items.value[index] = updated
-    }
-    closeEditModal()
-  } catch (err) {
-    console.error('Failed to update meeting note:', err)
-    alert('Failed to update meeting note: ' + (err.response?.data?.detail || err.message))
-  }
 }
 
 async function handleDelete(item) {

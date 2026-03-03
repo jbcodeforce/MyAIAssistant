@@ -162,6 +162,14 @@ export const organizationsApi = {
 
   getTodos(organizationId, params = {}) {
     return api.get(`/organizations/${organizationId}/todos`, { params })
+  },
+
+  /**
+   * Export organization content, projects, and meeting notes to a markdown file
+   * in the workspace docs folder. Returns { path, absolute_path }.
+   */
+  export(id) {
+    return api.post(`/organizations/${id}/export`)
   }
 }
 

@@ -110,6 +110,9 @@ class Settings(BaseSettings):
     # Agent configuration directory
     agent_config_dir: Optional[str] = None  # Path to agent config directory (defaults to agent_core/agent_core/agents/config)
 
+    # Agent service (Agno/AgentOS microservice). When set, chat/knowledge/rag are proxied to this URL.
+    agent_service_url: Optional[str] = None  # e.g. http://localhost:8100
+
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",

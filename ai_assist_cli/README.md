@@ -59,7 +59,7 @@ ai_assist workspace clean
 
 The `run` command starts both backend and frontend services. It supports two modes:
 
-#### Production mode (Docker)
+#### With Docker
 
 Runs services using Docker Compose with pre-built images:
 

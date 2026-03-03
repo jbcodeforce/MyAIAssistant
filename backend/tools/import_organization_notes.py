@@ -2,7 +2,7 @@
 """
 Tool to import organization and project data from markdown files using local LLM.
 
-This script scans a folder containing organization markdown files, uses Ollama
+This script scans a folder containing organization markdown files, uses llm/Osaurus
 to extract structured data (stakeholders, team, description, products),
 and creates/updates organization and project records via the backend REST API.
 
@@ -23,6 +23,9 @@ from typing import Optional
 
 import httpx
 from pydantic import BaseModel, Field
+
+from agent_core.agents.agent_config import AgentConfig
+from agent_core.agents._llm_default import DefaultHFAdapter
 
 # Configure logging
 logging.basicConfig(
@@ -103,20 +106,44 @@ class ExtractedData(BaseModel):
     project: Optional[ExtractedProjectData] = None
 
 
+def _use_v1_endpoint(url: str) -> bool:
+    """True if URL ends with /v1 (use HF InferenceClient); else use direct /chat/completions."""
+    return url.rstrip("/").endswith("/v1")
+
+
 class OrganizationNotesImporter:
     """Imports organization notes from markdown files into the database via REST API."""
 
     def __init__(
         self,
-        ollama_base_url: str = "http://localhost:11434",
+        llm_base_url: str = "http://localhost:1337",
         backend_base_url: str = "http://localhost:8000",
-        model: str = "gpt-oss:20b",
+        model: str = "gpt-oss-20b-mlx-8bit",
         temperature: float = 0.1
     ):
-        self.ollama_base_url = ollama_base_url
+        self.llm_base_url = llm_base_url.rstrip("/")
+        self._use_v1 = _use_v1_endpoint(llm_base_url)
+        if self._use_v1:
+            base_url = self.llm_base_url if self.llm_base_url.endswith("/v1") else f"{self.llm_base_url}/v1"
+            self._llm_config = AgentConfig(
+                base_url=base_url,
+                model=model,
+                temperature=temperature,
+                max_tokens=4096,
+                timeout=180.0,
+            )
+            self._llm_client = DefaultHFAdapter()
+        else:
+            self._llm_config = AgentConfig(
+                base_url=self.llm_base_url,
+                model=model,
+                temperature=temperature,
+                max_tokens=4096,
+                timeout=180.0,
+            )
         self.backend_base_url = backend_base_url.rstrip("/")
         self.model = model
-        self.temperature = temperature
+        self._temperature = temperature
 
     async def _check_backend_health(self) -> bool:
         """Check if the backend API is reachable."""
@@ -131,28 +158,48 @@ class OrganizationNotesImporter:
             logger.error(f"Backend health check failed: {e}")
             return False
 
-    async def _call_ollama(self, messages: list[dict], response_format: dict = None) -> str:
-        """Call Ollama API for LLM inference."""
-        request_body = {
-            "model": self.model,
-            "messages": messages,
-            "stream": False,
-            "options": {
-                "temperature": self.temperature
-            }
-        }
+    async def _call_llm_direct(self, messages: list[dict], response_format: Optional[dict] = None) -> str:
+        """Call LLM via direct HTTP to base_url/chat/completions (no /v1). Handles OpenAI and Ollama-style responses."""
+        url = f"{self.llm_base_url}/chat/completions"
 
-        if response_format:
-            request_body["format"] = response_format
+        def make_body(fmt: Optional[dict]) -> dict:
+            b = {
+                "model": self.model,
+                "messages": messages,
+                "stream": False,
+                "temperature": self._temperature,
+                "max_tokens": self._llm_config.max_tokens,
+            }
+            if fmt is not None:
+                b["response_format"] = fmt
+            return b
 
         async with httpx.AsyncClient(timeout=180.0) as client:
-            response = await client.post(
-                f"{self.ollama_base_url}/api/chat",
-                json=request_body
-            )
-            response.raise_for_status()
-            data = response.json()
-            return data["message"]["content"]
+            body = make_body(response_format)
+            resp = await client.post(url, json=body)
+            if resp.status_code == 500 and response_format is not None:
+                logger.debug("500 with response_format, retrying without")
+                body = make_body(None)
+                resp = await client.post(url, json=body)
+            resp.raise_for_status()
+            data = resp.json()
+            print("data", data)
+        if "choices" in data and data["choices"]:
+            return (data["choices"][0].get("message") or {}).get("content") or ""
+        if "message" in data:
+            return (data["message"].get("content") if isinstance(data["message"], dict) else str(data["message"])) or ""
+        raise ValueError(f"Unexpected response shape: {list(data.keys())}")
+
+    async def _call_llm(self, messages: list[dict], response_format: Optional[dict] = None) -> str:
+        """Call LLM: agent_core DefaultHFAdapter when URL has /v1, else direct /chat/completions."""
+        if self._use_v1:
+            config = self._llm_config
+            if response_format is not None:
+                config = self._llm_config.model_copy(update={"response_format": response_format})
+            response = await self._llm_client.chat_async(messages=messages, config=config)
+            print("response", response)
+            return response.content or ""
+        return await self._call_llm_direct(messages, response_format)
 
     async def _get_organization_by_name(self, client: httpx.AsyncClient, name: str) -> Optional[dict]:
         """Get organization by name via API."""
@@ -291,23 +338,37 @@ Return a JSON object with "organization" and "project" fields."""
             {"role": "user", "content": user_prompt}
         ]
 
+        import json
+        import re
+
+        def extract_json(text: str) -> Optional[dict]:
+            """Strip model tokens (e.g. <|channel|>) and extract JSON object from response."""
+            if not text or not text.strip():
+                return None
+            stripped = re.sub(r"<\|[^|]*\|>", "", text).strip()
+            match = re.search(r"\{[\s\S]*\}", stripped)
+            if match:
+                try:
+                    return json.loads(match.group())
+                except json.JSONDecodeError:
+                    pass
+            return None
+
         try:
-            response_text = await self._call_ollama(
+            response_text = await self._call_llm(
                 messages,
                 response_format=ExtractedData.model_json_schema()
             )
+            cleaned = extract_json(response_text)
+            if cleaned is not None:
+                return ExtractedData.model_validate(cleaned)
             return ExtractedData.model_validate_json(response_text)
         except Exception as e:
             logger.warning(f"Failed to parse structured response, trying without schema: {e}")
-            # Fallback: try without strict schema
-            response_text = await self._call_ollama(messages)
-            # Try to extract JSON from the response
-            import json
-            import re
-            json_match = re.search(r'\{[\s\S]*\}', response_text)
-            if json_match:
-                data = json.loads(json_match.group())
-                return ExtractedData.model_validate(data)
+            response_text = await self._call_llm(messages)
+            cleaned = extract_json(response_text)
+            if cleaned is not None:
+                return ExtractedData.model_validate(cleaned)
             raise ValueError(f"Could not extract JSON from response: {response_text[:500]}")
 
     async def import_organization_folder(
@@ -418,7 +479,7 @@ Return a JSON object with "organization" and "project" fields."""
                 if org_data.sources_of_information:
                     sections.append(f"## Sources of Information\n\n{org_data.sources_of_information}")
                 
-                return "\n\n".join(sections) if sections else None
+                return "\n\n".join(sections) if sections else ""
 
             combined_description = build_combined_description(extracted.organization)
 
@@ -521,7 +582,7 @@ Return a JSON object with "organization" and "project" fields."""
         self,
         base_folder: Path,
         dry_run: bool = False,
-        filter_organizations: list[str] = None
+        filter_organizations: Optional[list[str]] = None
     ) -> dict:
         """
         Import all organization folders from a base directory.
@@ -612,7 +673,7 @@ Return a JSON object with "organization" and "project" fields."""
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="Import organization and project data from markdown files using Ollama",
+        description="Import organization and project data from markdown files using local llm",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -625,7 +686,7 @@ Examples:
     # Dry run (show what would be imported without making changes)
     python -m tools.import_organization_notes /path/to/organizations --dry-run
 
-    # Use a specific Ollama model
+    # Use a specific local LLM model
     python -m tools.import_organization_notes /path/to/organizations --model llama3.1:8b
 
     # Use a different backend URL
@@ -642,15 +703,15 @@ Examples:
     parser.add_argument(
         "--model", "-m",
         type=str,
-        default="mistral:7b-instruct",
-        help="Ollama model to use (default: mistral:7b-instruct)"
+        default="gpt-oss-20b-mlx-8bit",
+        help="Local model to use (default: gpt-oss-20b-mlx-8bit)"
     )
 
     parser.add_argument(
-        "--ollama-url",
+        "--llm-url",
         type=str,
-        default="http://localhost:11434",
-        help="Ollama API base URL (default: http://localhost:11434)"
+        default="http://localhost:1337",
+        help="LLM API base URL. If URL has no /v1 path, uses /chat/completions (default: http://localhost:1337)"
     )
 
     parser.add_argument(
@@ -685,7 +746,7 @@ Examples:
 
     logger.info("Initializing importer...")
     importer = OrganizationNotesImporter(
-        ollama_base_url=args.ollama_url,
+        llm_base_url=args.llm_url,
         backend_base_url=args.backend_url,
         model=args.model
     )
@@ -696,7 +757,7 @@ Examples:
     print("=" * 60)
     print(f"Source folder:  {args.folder}")
     print(f"LLM model:      {importer.model}")
-    print(f"Ollama URL:     {importer.ollama_base_url}")
+    print(f"LLM URL:     {importer.llm_base_url}")
     print(f"Backend API:    {importer.backend_base_url}")
     if args.dry_run:
         print("Mode:           DRY RUN (no database changes)")

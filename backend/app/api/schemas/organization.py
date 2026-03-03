@@ -60,3 +60,8 @@ class OrganizationListResponse(BaseModel):
     skip: int
     limit: int
 
+
+class OrganizationExportResponse(BaseModel):
+    path: str = Field(..., description="Relative path to the exported file, e.g. docs/org-name/index.md")
+    absolute_path: Optional[str] = Field(None, description="Absolute path on the server (if available)")
+

@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings, get_config_info, setup_logging
 from app.db.database import init_db
-from app.chat.service import get_chat_service
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
@@ -27,8 +26,10 @@ from app.api.weekly_todos import router as weekly_todos_router
 async def lifespan(app: FastAPI):
     # Startup: Initialize database
     await init_db()
-    # Create chat service singleton so agents are not recreated per request
-    app.state.chat_service = get_chat_service()
+    # Chat service is created lazily on first use so the server can start even if
+    # agent_core/LLM is slow or unavailable (see app.api.chat get_chat dependency).
+    app.state.chat_service = None
+    app.state._chat_service_error = None
     yield
     # Shutdown: cleanup if needed
 

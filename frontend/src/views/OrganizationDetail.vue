@@ -12,13 +12,16 @@
         <h2 v-else-if="loading">Loading...</h2>
       </div>
       <div class="header-actions" v-if="organization">
-        <button class="btn-secondary" @click="editOrganization">
+        <router-link
+          :to="{ name: 'OrganizationEdit', params: { id: organization.id } }"
+          class="btn-secondary"
+        >
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>
             <path d="m15 5 4 4"/>
           </svg>
           Edit
-        </button>
+        </router-link>
         <router-link 
           :to="{ path: '/projects', query: { organization: organization.id } }" 
           class="btn-primary"
@@ -38,7 +41,24 @@
           </svg>
           View Tasks
         </router-link>
+        <button
+          type="button"
+          class="btn-secondary"
+          :disabled="exporting"
+          @click="handleExport"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          {{ exporting ? 'Exporting...' : 'Export' }}
+        </button>
       </div>
+    </div>
+
+    <div v-if="exportMessage" class="export-message" :class="exportError ? 'error' : 'success'">
+      {{ exportMessage }}
     </div>
 
     <div v-if="loading" class="loading-state">
@@ -124,199 +144,31 @@
 
       <div class="empty-content" v-if="!hasContent">
         <p>No content has been added to this organization yet.</p>
-        <button class="btn-primary" @click="editOrganization">Add Content</button>
+        <router-link
+          :to="{ name: 'OrganizationEdit', params: { id: organization.id } }"
+          class="btn-primary"
+        >
+          Add Content
+        </router-link>
       </div>
     </div>
-
-    <!-- Edit Modal -->
-    <Modal 
-      :show="showEditModal" 
-      title="Edit Organization" 
-      size="fullscreen" 
-      @close="closeEditModal"
-    >
-      <form @submit.prevent="handleSubmit" class="organization-form">
-        <div class="form-group">
-          <label for="name">Organization Name *</label>
-          <input 
-            id="name" 
-            v-model="formData.name" 
-            type="text" 
-            required 
-            placeholder="Enter organization or company name"
-          />
-        </div>
-
-        <div class="form-group">
-          <label>Stakeholders</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: stakeholdersTab === 'write' }]"
-                @click="stakeholdersTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: stakeholdersTab === 'preview' }]"
-                @click="stakeholdersTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="stakeholdersTab === 'write'"
-              v-model="formData.stakeholders" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Key Contacts
-- **John Doe** - CTO, decision maker
-- **Jane Smith** - PM, technical lead"
-            ></textarea>
-            <div v-else class="markdown-preview form-preview" v-html="formRenderedStakeholders"></div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Team</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: teamTab === 'write' }]"
-                @click="teamTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: teamTab === 'preview' }]"
-                @click="teamTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="teamTab === 'write'"
-              v-model="formData.team" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Internal Team
-- **Account Manager**: Alex Johnson
-- **Technical Lead**: Sarah Chen"
-            ></textarea>
-            <div v-else class="markdown-preview form-preview" v-html="formRenderedTeam"></div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Strategy / Notes</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: descriptionTab === 'write' }]"
-                @click="descriptionTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: descriptionTab === 'preview' }]"
-                @click="descriptionTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="descriptionTab === 'write'"
-              v-model="formData.description" 
-              class="markdown-textarea"
-              rows="6"
-              placeholder="## Account Strategy
-
-### Goals
-- Expand platform adoption
-- Upsell enterprise features"
-            ></textarea>
-            <div v-else class="markdown-preview form-preview" v-html="formRenderedDescription"></div>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label>Related Products</label>
-          <div class="markdown-editor-container">
-            <div class="editor-tabs">
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: productsTab === 'write' }]"
-                @click="productsTab = 'write'"
-              >
-                Write
-              </button>
-              <button 
-                type="button" 
-                :class="['tab-btn', { active: productsTab === 'preview' }]"
-                @click="productsTab = 'preview'"
-              >
-                Preview
-              </button>
-            </div>
-            <textarea 
-              v-if="productsTab === 'write'"
-              v-model="formData.related_products" 
-              class="markdown-textarea"
-              rows="4"
-              placeholder="## Products in Use
-- **Flink SQL** - Production
-- **Kafka Streams** - Evaluation"
-            ></textarea>
-            <div v-else class="markdown-preview form-preview" v-html="formRenderedProducts"></div>
-          </div>
-        </div>
-      </form>
-
-      <template #footer>
-        <button type="button" class="btn-secondary" @click="closeEditModal">Cancel</button>
-        <button type="button" class="btn-primary" @click="handleSubmit" :disabled="!isFormValid">
-          Update
-        </button>
-      </template>
-    </Modal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
-import Modal from '@/components/common/Modal.vue'
 
 const route = useRoute()
-const router = useRouter()
 
 const organization = ref(null)
 const loading = ref(false)
 const error = ref(null)
-
-// Edit modal state
-const showEditModal = ref(false)
-const formData = ref({
-  name: '',
-  stakeholders: '',
-  team: '',
-  description: '',
-  related_products: ''
-})
-
-// Editor tabs
-const stakeholdersTab = ref('write')
-const teamTab = ref('write')
-const descriptionTab = ref('write')
-const productsTab = ref('write')
+const exporting = ref(false)
+const exportMessage = ref('')
+const exportError = ref(false)
 
 // Computed for rendered markdown (view mode)
 const renderedStakeholders = computed(() => marked(organization.value?.stakeholders || ''))
@@ -324,22 +176,12 @@ const renderedTeam = computed(() => marked(organization.value?.team || ''))
 const renderedDescription = computed(() => marked(organization.value?.description || ''))
 const renderedProducts = computed(() => marked(organization.value?.related_products || ''))
 
-// Computed for form rendered markdown
-const formRenderedStakeholders = computed(() => marked(formData.value.stakeholders || ''))
-const formRenderedTeam = computed(() => marked(formData.value.team || ''))
-const formRenderedDescription = computed(() => marked(formData.value.description || ''))
-const formRenderedProducts = computed(() => marked(formData.value.related_products || ''))
-
 const hasContent = computed(() => {
   if (!organization.value) return false
   return organization.value.stakeholders || 
          organization.value.team || 
          organization.value.description || 
          organization.value.related_products
-})
-
-const isFormValid = computed(() => {
-  return formData.value.name && formData.value.name.trim().length > 0
 })
 
 onMounted(async () => {
@@ -370,56 +212,23 @@ async function loadOrganization() {
   }
 }
 
-function editOrganization() {
-  formData.value = {
-    name: organization.value.name,
-    stakeholders: organization.value.stakeholders || `## Key Contacts
-- **Name** - Role, responsibilities
-- **Name** - Role, responsibilities`,
-    team: organization.value.team || `## Internal Team
-- **Account Manager**: Name
-- **Technical Lead**: Name`,
-    description: organization.value.description || `## Account Strategy
-
-### Goals
-- Goal 1
-- Goal 2
-
-### Current Status
-Brief overview of current engagement
-
-### Next Steps
-- Action item 1
-- Action item 2`,
-    related_products: organization.value.related_products || `## Products in Use
-- **Product Name** - Status (Production/Evaluation/POC)
-- **Product Name** - Status`
-  }
-  resetTabs()
-  showEditModal.value = true
-}
-
-function resetTabs() {
-  stakeholdersTab.value = 'write'
-  teamTab.value = 'write'
-  descriptionTab.value = 'write'
-  productsTab.value = 'write'
-}
-
-function closeEditModal() {
-  showEditModal.value = false
-}
-
-async function handleSubmit() {
-  if (!isFormValid.value) return
-  
+async function handleExport() {
+  if (!organization.value || exporting.value) return
+  exporting.value = true
+  exportMessage.value = ''
+  exportError.value = false
   try {
-    const response = await organizationsApi.update(organization.value.id, formData.value)
-    organization.value = response.data
-    closeEditModal()
+    const response = await organizationsApi.export(organization.value.id)
+    const path = response.data?.path || 'docs/.../index.md'
+    exportMessage.value = `Exported to ${path}`
+    exportError.value = false
+    setTimeout(() => { exportMessage.value = '' }, 5000)
   } catch (err) {
-    console.error('Failed to update organization:', err)
-    alert(err.response?.data?.detail || 'Failed to update organization')
+    exportMessage.value = err.response?.data?.detail || 'Export failed'
+    exportError.value = true
+    setTimeout(() => { exportMessage.value = '' }, 5000)
+  } finally {
+    exporting.value = false
   }
 }
 
@@ -534,6 +343,33 @@ function formatDate(dateString) {
 .error-state p {
   font-size: 1.125rem;
   color: #6b7280;
+}
+
+.export-message {
+  margin-bottom: 1rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.export-message.success {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.export-message.error {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+:global(.dark) .export-message.success {
+  background: #064e3b;
+  color: #6ee7b7;
+}
+
+:global(.dark) .export-message.error {
+  background: #7f1d1d;
+  color: #fca5a5;
 }
 
 .organization-content {
@@ -758,141 +594,6 @@ function formatDate(dateString) {
 
 :global(.dark) .markdown-preview :deep(blockquote) {
   color: #94a3b8;
-}
-
-/* Form styles */
-.organization-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.25rem;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.form-group label {
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: #374151;
-}
-
-:global(.dark) .form-group label {
-  color: #94a3b8;
-}
-
-.form-group input {
-  padding: 0.625rem 0.75rem;
-  border: 1px solid #d1d5db;
-  border-radius: 6px;
-  font-size: 0.9375rem;
-  transition: border-color 0.15s, box-shadow 0.15s;
-}
-
-:global(.dark) .form-group input {
-  background: #1e293b;
-  border-color: #334155;
-  color: #f1f5f9;
-}
-
-.form-group input:focus {
-  outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-}
-
-/* Markdown Editor */
-.markdown-editor-container {
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-:global(.dark) .markdown-editor-container {
-  border-color: #334155;
-}
-
-.editor-tabs {
-  display: flex;
-  background: #f9fafb;
-  border-bottom: 1px solid #e5e7eb;
-}
-
-:global(.dark) .editor-tabs {
-  background: #0f172a;
-  border-bottom-color: #334155;
-}
-
-.tab-btn {
-  padding: 0.5rem 0.875rem;
-  border: none;
-  background: transparent;
-  color: #6b7280;
-  font-size: 0.8125rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s;
-  border-bottom: 2px solid transparent;
-}
-
-.tab-btn:hover {
-  color: #374151;
-  background: rgba(0, 0, 0, 0.02);
-}
-
-:global(.dark) .tab-btn:hover {
-  color: #f1f5f9;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.tab-btn.active {
-  color: #2563eb;
-  border-bottom-color: #2563eb;
-  background: white;
-}
-
-:global(.dark) .tab-btn.active {
-  background: #1e293b;
-  color: #60a5fa;
-}
-
-.markdown-textarea {
-  width: 100%;
-  padding: 0.75rem;
-  border: none;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.8125rem;
-  line-height: 1.6;
-  resize: vertical;
-  min-height: 100px;
-  background: white;
-}
-
-:global(.dark) .markdown-textarea {
-  background: #1e293b;
-  color: #f1f5f9;
-}
-
-.markdown-textarea:focus {
-  outline: none;
-}
-
-.markdown-textarea::placeholder {
-  color: #9ca3af;
-}
-
-.markdown-preview.form-preview {
-  padding: 0.75rem;
-  min-height: 100px;
-  max-height: 300px;
-  overflow-y: auto;
-  background: white;
-}
-
-:global(.dark) .markdown-preview.form-preview {
-  background: #1e293b;
 }
 
 @media (max-width: 768px) {

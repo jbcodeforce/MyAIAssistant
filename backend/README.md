@@ -72,6 +72,9 @@ curl http://localhost:8000/debug/config
 | `database_url` | PostgreSQL connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant` |
 | `chroma_persist_directory` | ChromaDB storage path | `./data/chroma` |
 | `chroma_collection_name` | Vector store collection name | `knowledge_base` |
+| `AGENT_SERVICE_URL` | Agent microservice base URL (chat, RAG, extract, tag proxied here) | unset (in-process) |
+
+When `AGENT_SERVICE_URL` is set (e.g. `http://localhost:8100`), the backend proxies chat, knowledge index/search, RAG, meeting extract, and task tagging to that service. See `agent_service/README.md` for running the agent-service.
 
 Note: For Docker Compose deployments, use `postgres` as the hostname (the service name).
 

@@ -2,6 +2,7 @@
 
 ???- info "Versions"
     Creation Dec 2025: tasks management, org, project, meeting management.
+    
     Update 02/2026: User Guide, agents management, workspace management, CLI
 
 

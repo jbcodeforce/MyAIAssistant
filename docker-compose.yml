@@ -1,5 +1,6 @@
 # Default Docker Compose configuration using SQLite
 # For PostgreSQL, use: docker compose -f docker-compose.yml -f docker-compose.postgres.yml up
+# To use the AI agent microservice, set AGENT_SERVICE_URL=http://agent-service:8100 on the backend.
 
 services:
   backend:
@@ -9,6 +10,23 @@ services:
       - "8000:8000"
     environment:
       - CONFIG_FILE=/workspace/config.yaml
+      # Optional: proxy chat, RAG, knowledge, extract, tag to agent-service
+      # - AGENT_SERVICE_URL=http://agent-service:8100
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+
+  agent-service:
+    build:
+      context: ./agent_service
+      dockerfile: Dockerfile
+    container_name: myaiassistant-agent-service
+    ports:
+      - "8100:8100"
+    environment:
+      - LOCAL_LLM_BASE_URL=http://host.docker.internal:1337/v1
+      - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:
       - ./data:/app/data
     restart: unless-stopped

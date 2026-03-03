@@ -7,9 +7,13 @@ import ProjectDetail from '@/views/ProjectDetail.vue'
 import ProjectTodos from '@/views/ProjectTodos.vue'
 import Organizations from '@/views/Organizations.vue'
 import OrganizationDetail from '@/views/OrganizationDetail.vue'
+import OrganizationCreate from '@/views/OrganizationCreate.vue'
+import OrganizationEdit from '@/views/OrganizationEdit.vue'
 import Knowledge from '@/views/Knowledge.vue'
 import Assistant from '@/views/Assistant.vue'
 import Meetings from '@/views/Meetings.vue'
+import MeetingCreate from '@/views/MeetingCreate.vue'
+import MeetingEdit from '@/views/MeetingEdit.vue'
 import Assets from '@/views/Assets.vue'
 import Metrics from '@/views/Metrics.vue'
 import SLPAssessments from '@/views/SLPAssessments.vue'
@@ -83,6 +87,22 @@ const routes = [
     }
   },
   {
+    path: '/organizations/new',
+    name: 'OrganizationCreate',
+    component: OrganizationCreate,
+    meta: {
+      title: 'New Organization - MyAIAssistant'
+    }
+  },
+  {
+    path: '/organizations/:id/edit',
+    name: 'OrganizationEdit',
+    component: OrganizationEdit,
+    meta: {
+      title: 'Edit Organization - MyAIAssistant'
+    }
+  },
+  {
     path: '/organizations/:id',
     name: 'OrganizationDetail',
     component: OrganizationDetail,
@@ -128,6 +148,22 @@ const routes = [
     component: Meetings,
     meta: {
       title: 'Meeting Notes - MyAIAssistant'
+    }
+  },
+  {
+    path: '/meetings/new',
+    name: 'MeetingCreate',
+    component: MeetingCreate,
+    meta: {
+      title: 'New Meeting Note - MyAIAssistant'
+    }
+  },
+  {
+    path: '/meetings/:id/edit',
+    name: 'MeetingEdit',
+    component: MeetingEdit,
+    meta: {
+      title: 'Edit Meeting Note - MyAIAssistant'
     }
   },
   {

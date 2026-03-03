@@ -1,0 +1,1 @@
+# AgentOS config (optional). Override via env: OLLAMA_BASE_URL, LOCAL_LLM_MODEL, CHROMA_PERSIST_DIRECTORY
