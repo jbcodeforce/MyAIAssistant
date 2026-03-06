@@ -18,6 +18,7 @@ from app.api.meeting_refs import router as meeting_refs_router
 from app.api.assets import router as assets_router
 from app.api.persons import router as persons_router
 from app.api.agents import router as agents_router
+from app.api.config import router as config_router
 from app.api.tags import router as tags_router
 from app.api.weekly_todos import router as weekly_todos_router
 
@@ -26,10 +27,6 @@ from app.api.weekly_todos import router as weekly_todos_router
 async def lifespan(app: FastAPI):
     # Startup: Initialize database
     await init_db()
-    # Chat service is created lazily on first use so the server can start even if
-    # agent_core/LLM is slow or unavailable (see app.api.chat get_chat dependency).
-    app.state.chat_service = None
-    app.state._chat_service_error = None
     yield
     # Shutdown: cleanup if needed
 
@@ -60,8 +57,8 @@ def create_app() -> FastAPI:
     # Include routers
     application.include_router(todos_router, prefix="/api")
     application.include_router(knowledge_router, prefix="/api")
-    application.include_router(rag_router, prefix="/api")
-    application.include_router(chat_router, prefix="/api")
+    #application.include_router(rag_router, prefix="/api")
+    #application.include_router(chat_router, prefix="/api")
     application.include_router(organizations_router, prefix="/api")
     application.include_router(projects_router, prefix="/api")
     application.include_router(metrics_router, prefix="/api")
@@ -69,7 +66,8 @@ def create_app() -> FastAPI:
     application.include_router(meeting_refs_router, prefix="/api")
     application.include_router(assets_router, prefix="/api")
     application.include_router(persons_router, prefix="/api")
-    application.include_router(agents_router, prefix="/api")
+    #application.include_router(agents_router, prefix="/api")
+    application.include_router(config_router, prefix="/api")
     application.include_router(tags_router, prefix="/api")
     application.include_router(weekly_todos_router, prefix="/api")
 

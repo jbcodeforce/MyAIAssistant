@@ -929,14 +929,41 @@ function truncate(text, maxLength) {
   margin: 0 0 0.75rem 0;
 }
 
-.markdown-preview :deep(ul),
+.markdown-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin: 0 0 1rem 0;
+}
+
 .markdown-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
   padding-left: 1.5rem;
   margin: 0 0 1rem 0;
 }
 
 .markdown-preview :deep(li) {
+  display: list-item;
   margin: 0.25rem 0;
+}
+
+.markdown-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview :deep(a:hover) {
+  color: #93c5fd;
 }
 
 .markdown-preview :deep(code) {

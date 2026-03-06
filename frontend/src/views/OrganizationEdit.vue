@@ -673,7 +673,39 @@ function formatTime(date) {
 .markdown-preview.form-preview :deep(h1) { font-size: 1.25rem; margin: 0 0 0.5rem 0; }
 .markdown-preview.form-preview :deep(h2) { font-size: 1.125rem; margin: 0.75rem 0 0.375rem 0; }
 .markdown-preview.form-preview :deep(h3) { font-size: 1rem; margin: 0.5rem 0 0.25rem 0; }
-.markdown-preview.form-preview :deep(ul), .markdown-preview.form-preview :deep(ol) { padding-left: 1.25rem; margin: 0 0 0.5rem 0; }
+.markdown-preview.form-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem 0;
+}
+.markdown-preview.form-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem 0;
+}
+.markdown-preview.form-preview :deep(li) {
+  display: list-item;
+}
+
+.markdown-preview.form-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview.form-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(a:hover) {
+  color: #93c5fd;
+}
 
 .btn-primary {
   display: inline-flex;

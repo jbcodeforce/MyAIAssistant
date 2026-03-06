@@ -1,20 +1,17 @@
 # Agent Service
 
-Agno + AgentOS microservice for MyAIAssistant: chat, knowledge, RAG, meeting extract, and task tagging. The backend proxies `/api/chat/*`, `/api/rag/*`, `/extract/meeting`, and `/tag/task` here when `AGENT_SERVICE_URL` is set.
+Agno + AgentOS microservice for MyAIAssistant: chat, knowledge, RAG, meeting extract, and task tagging. When the backend sets `AGENT_SERVICE_URL`, the frontend calls this service directly for chat and RAG search/stats/delete; the backend still proxies RAG index, meeting extract, and task tag.
+
+The choice of using AgentOS is that it deliver a powerful REST API to be usable by any clients and the frontend.
 
 ## Run locally
 
 ```bash
 cd agent_service
-uv sync   # If slow: uv sync --verbose. If "Waiting to acquire exclusive lock": another uv is running here, or remove /var/folders/.../T/uv-*.lock if stale.
-uv run uvicorn agent_service.main:app --host 0.0.0.0 --port 8100
+./start_dev_mode.sh
 ```
 
-Requires:
-
-- Ollama (e.g. `http://127.0.0.1:11434`) for both chat and RAG embeddings. Set `OLLAMA_BASE_URL`. Chat model via `LOCAL_LLM_MODEL` (default `llama3.2`). Embedder via `KNOWLEDGE_EMBEDDER_MODEL` (default `nomic-embed-text`).
-
-## Endpoints (for backend proxy)
+## Endpoints (frontend direct or backend proxy)
 
 - `GET /health` – liveness
 - `POST /chat/todo` – task-specific chat (body: message, conversation_history, task_title, task_description, use_rag)
@@ -25,6 +22,10 @@ Requires:
 - `GET /rag/stats`, `DELETE /rag/index/{knowledge_id}` – RAG stats and remove index
 - `POST /extract/meeting` – extract attendees, next_steps, key_points, cleaned_notes (body: content, organization?, project?, attendees?)
 - `POST /tag/task` – suggest tags for a task (body: task_title, task_description)
+
+### CORS
+
+When the frontend calls the agent-service directly (same as when `AGENT_SERVICE_URL` is set), the browser requires CORS. The agent-service allows origins from `CORS_ORIGINS` (default `http://localhost:3000,http://127.0.0.1:3000`). For production, set `CORS_ORIGINS` to your frontend origin(s), e.g. `https://app.example.com`.
 
 ## Docker
 
@@ -48,7 +49,8 @@ Backend: set `AGENT_SERVICE_URL=http://localhost:8100` (or `http://agent-service
 Integration tests live under `tests/it/` and assert the HTTP contract (paths, request/response shapes, validation).
 
 - **Default (no env):** Tests run against a stub app (no Ollama/Chroma). Fast, no external services.
-- **Live:** Set `AGENT_SERVICE_LIVE=1` to use the real app (requires LLM and optionally Ollama for RAG).
+- **Running server:** Set `AGENT_SERVICE_URL=http://localhost:8100` to hit a running agent-service (no stub).
+- **Live (in-process):** Set `AGENT_SERVICE_LIVE=1` to use the real app inside the test process (requires LLM and optionally Ollama for RAG).
 
 ```bash
 uv sync --extra dev
@@ -65,3 +67,4 @@ uv run pytest tests/it -v
 | `CHROMA_PERSIST_DIRECTORY` | `data/chroma` | Chroma path for RAG |
 | `KNOWLEDGE_EMBEDDER_MODEL` | `nomic-embed-text` | Embedder model id |
 | `AGENT_DB_PATH` | `data/agents.db` | Sqlite path for agent history |
+| `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated origins allowed for browser requests (frontend-direct mode). |

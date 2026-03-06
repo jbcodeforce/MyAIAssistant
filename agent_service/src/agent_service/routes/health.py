@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter
 
-from agent_service.config import get_llm_model
+from agent_service.agents.agent_config import get_llm_base_url
 
 router = APIRouter(tags=["health"])
 
@@ -11,6 +11,6 @@ router = APIRouter(tags=["health"])
 async def health():
     return {
         "status": "ready",
-        "model": get_llm_model(),
+        "model": get_llm_base_url(),
         "message": "Agent service is running.",
     }

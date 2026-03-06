@@ -10,24 +10,25 @@ from agno.knowledge.reader.text_reader import TextReader
 from agno.vectordb.chroma import ChromaDb
 from agno.vectordb.search import SearchType
 from agno.db.sqlite.sqlite import SqliteDb
-from agent_service.config import get_chroma_path
+from agent_service.agents.agent_config import get_llm_base_url, get_vstore_path
+from httpx import get
 
 logger = logging.getLogger("agent_service.knowledge")
 
 
 def get_embedder():
     """Ollama embedder; set OLLAMA_BASE_URL and embedder model id if needed."""
-    base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    base_url = get_llm_base_url()
     model = os.getenv("KNOWLEDGE_EMBEDDER_MODEL", "nomic-embed-text")
     return OllamaEmbedder(id=model)
 
 
 def build_knowledge() -> Knowledge:
     """Build the main knowledge base for RAG (Chroma + Ollama embedder)."""
-    chroma_path = get_chroma_path()
+    chroma_path = get_vstore_path()
     logger.info("Building knowledge base: chroma_path=%s", chroma_path)
     Path(chroma_path).mkdir(parents=True, exist_ok=True)
-    base_url = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+    base_url = get_llm_base_url()
     model = os.getenv("KNOWLEDGE_EMBEDDER_MODEL", "nomic-embed-text")
     logger.info("Creating Ollama embedder: base_url=%s model=%s", base_url, model)
     logger.info("Creating ChromaDb (may block on first connection)...")

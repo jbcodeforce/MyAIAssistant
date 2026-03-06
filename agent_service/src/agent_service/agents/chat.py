@@ -8,7 +8,7 @@ from agno.agent import Agent
 from agno.models.openai.like import OpenAILike
 from agno.db.sqlite import SqliteDb
 
-from agent_service.config import get_llm_base_url, get_llm_model
+from agent_service.agents.agent_config import get_llm_base_url, get_llm_model
 from agent_service.knowledge import get_knowledge
 
 logger = logging.getLogger("agent_service.agents.chat")

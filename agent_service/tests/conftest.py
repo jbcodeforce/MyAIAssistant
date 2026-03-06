@@ -7,11 +7,12 @@ import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 from fastapi import FastAPI
 
-# Avoid importing agent_service (slow Chroma/Ollama) unless live tests requested
+# Hit a running server when AGENT_SERVICE_URL is set (e.g. http://localhost:8100). No stub.
+_BASE_URL = os.environ.get("AGENT_SERVICE_URL", "").rstrip("/")
+# When BASE_URL unset: AGENT_SERVICE_LIVE=1 uses real app in-process; else use stub for fast CI.
 _LIVE = os.environ.get("AGENT_SERVICE_LIVE") == "1"
 
-# Use the real app only when AGENT_SERVICE_LIVE=1 so CI can run fast by default.
-# When unset, use a minimal app that matches the same HTTP contract (paths, shapes).
+
 def _make_app():
     if _LIVE:
         from agent_service.main import app
@@ -25,6 +26,10 @@ def _make_app():
     @app.get("/health")
     async def health():
         return {"status": "ready", "model": "test-model", "message": "Agent service is running."}
+
+    @app.get("/agents")
+    async def list_agents():
+        return []
 
     @app.post("/chat/todo")
     async def chat_todo(request: dict):
@@ -86,7 +91,11 @@ def _make_app():
 
 @pytest_asyncio.fixture
 async def client():
-    """Async HTTP client against the agent_service (or contract-equivalent test) app."""
+    """Async HTTP client. With AGENT_SERVICE_URL set, hits that running server; else in-process (live or stub)."""
+    if _BASE_URL:
+        async with AsyncClient(base_url=_BASE_URL, timeout=30.0) as ac:
+            yield ac
+        return
     app = _make_app()
     transport = ASGITransport(app=app)
     async with AsyncClient(

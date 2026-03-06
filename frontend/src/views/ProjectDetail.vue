@@ -86,7 +86,7 @@
             </svg>
             <h3>Description</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedDescription"></div>
+          <div class="section-content markdown-preview view-mode" v-html="renderedDescription"></div>
         </div>
 
         <div class="section-card full-width" v-if="project.tasks">
@@ -97,7 +97,7 @@
             </svg>
             <h3>Notes</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedTasks"></div>
+          <div class="section-content markdown-preview view-mode" v-html="renderedTasks"></div>
         </div>
 
         <div class="section-card" v-if="project.past_steps && project.past_steps.length > 0">
@@ -1103,11 +1103,17 @@ function formatDate(dateString) {
   background-color: #334155;
 }
 
-/* Markdown Preview */
+/* Markdown Preview (same pattern as OrganizationDetail / Organizations.vue) */
 .markdown-preview {
   line-height: 1.6;
   font-size: 0.9375rem;
   color: #374151;
+}
+
+.markdown-preview.view-mode {
+  min-height: 150px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 :global(.dark) .markdown-preview {
@@ -1147,18 +1153,45 @@ function formatDate(dateString) {
   margin: 0 0 0.75rem 0;
 }
 
-.markdown-preview :deep(ul),
+.markdown-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin: 0 0 1rem 0;
+}
+
 .markdown-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
   padding-left: 1.5rem;
   margin: 0 0 1rem 0;
 }
 
 .markdown-preview :deep(li) {
+  display: list-item;
   margin: 0.25rem 0;
 }
 
 .markdown-preview :deep(strong) {
   font-weight: 600;
+}
+
+.markdown-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview :deep(a:hover) {
+  color: #93c5fd;
 }
 
 .markdown-preview :deep(code) {

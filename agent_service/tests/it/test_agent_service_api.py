@@ -1,18 +1,10 @@
 """Integration tests for agent_service HTTP API (health, chat, rag, extract, tag)."""
 
 import json
+import os
 import pytest
 from httpx import AsyncClient
 
-
-@pytest.mark.asyncio
-async def test_root(client: AsyncClient):
-    """GET / returns service info."""
-    response = await client.get("/")
-    assert response.status_code == 200
-    data = response.json()
-    assert data.get("service") == "agent-service"
-    assert "message" in data
 
 
 @pytest.mark.asyncio

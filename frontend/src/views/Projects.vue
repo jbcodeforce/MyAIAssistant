@@ -1144,37 +1144,32 @@ function formatDate(dateString) {
   align-items: center;
   gap: 0.25rem;
   margin: 0 0 0.625rem 0;
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
   transition: color 0.15s;
 }
 
 .project-organization:hover {
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 :global(.dark) .project-organization {
-  color: #94a3b8;
+  color: #60a5fa;
 }
 
 :global(.dark) .project-organization:hover {
-  color: #60a5fa;
+  color: #93c5fd;
 }
 
 .project-organization svg {
-  color: #9ca3af;
-  width: 12px;
-  height: 12px;
+  color: inherit;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   transition: color 0.15s;
-}
-
-.project-organization:hover svg {
-  color: #2563eb;
-}
-
-:global(.dark) .project-organization:hover svg {
-  color: #60a5fa;
 }
 
 .project-sections {
@@ -1521,18 +1516,45 @@ function formatDate(dateString) {
   margin: 0 0 0.5rem 0;
 }
 
-.markdown-preview :deep(ul),
+.markdown-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+
 .markdown-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
   padding-left: 1.25rem;
   margin: 0 0 0.75rem 0;
 }
 
 .markdown-preview :deep(li) {
+  display: list-item;
   margin: 0.125rem 0;
 }
 
 .markdown-preview :deep(strong) {
   font-weight: 600;
+}
+
+.markdown-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview :deep(a:hover) {
+  color: #93c5fd;
 }
 
 .markdown-preview :deep(code) {

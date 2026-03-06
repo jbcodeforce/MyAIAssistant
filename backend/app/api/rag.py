@@ -253,16 +253,10 @@ async def remove_knowledge_index(
     db: AsyncSession = Depends(get_db),
     rag: RAGService = Depends(get_rag),
 ):
-    """Remove a knowledge item from the index. Proxied to agent-service when AGENT_SERVICE_URL is set."""
+    """Remove a knowledge item from the index. Frontend calls agent-service directly when agent_service_url is set."""
     knowledge = await get_knowledge(db, knowledge_id)
     if not knowledge:
         raise HTTPException(status_code=404, detail="Knowledge item not found")
-    if get_settings().agent_service_url:
-        try:
-            await agent_service_client.rag_remove_index(knowledge_id)
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        return {"message": f"Successfully removed index for knowledge item {knowledge_id}"}
     success = await rag.remove_knowledge(knowledge_id)
     if success:
         return {"message": f"Successfully removed index for knowledge item {knowledge_id}"}
@@ -274,32 +268,7 @@ async def search_knowledge(
     request: SearchRequest,
     rag: RAGService = Depends(get_rag),
 ):
-    """Semantic search. Proxied to agent-service when AGENT_SERVICE_URL is set."""
-    if get_settings().agent_service_url:
-        try:
-            data = await agent_service_client.rag_search(
-                query=request.query,
-                n_results=request.n_results,
-                category=request.category,
-                tags=request.tags,
-            )
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        return SearchResponse(
-            query=data.get("query", request.query),
-            results=[
-                SearchResultItem(
-                    content=r.get("content", ""),
-                    knowledge_id=r.get("knowledge_id", 0),
-                    title=r.get("title", ""),
-                    uri=r.get("uri", ""),
-                    score=r.get("score", 0.0),
-                    chunk_index=r.get("chunk_index", i),
-                )
-                for i, r in enumerate(data.get("results", []))
-            ],
-            total_results=data.get("total_results", 0),
-        )
+    """Semantic search. Frontend calls agent-service directly when agent_service_url is set."""
     results = await rag.search(
         query=request.query,
         n_results=request.n_results,
@@ -330,27 +299,7 @@ async def search_knowledge_get(
     category: Optional[str] = Query(None, description="Filter by category"),
     rag: RAGService = Depends(get_rag),
 ):
-    """GET search. Proxied to agent-service when AGENT_SERVICE_URL is set."""
-    if get_settings().agent_service_url:
-        try:
-            data = await agent_service_client.rag_search_get(q=q, n=n, category=category)
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        return SearchResponse(
-            query=data.get("query", q),
-            results=[
-                SearchResultItem(
-                    content=r.get("content", ""),
-                    knowledge_id=r.get("knowledge_id", 0),
-                    title=r.get("title", ""),
-                    uri=r.get("uri", ""),
-                    score=r.get("score", 0.0),
-                    chunk_index=r.get("chunk_index", i),
-                )
-                for i, r in enumerate(data.get("results", []))
-            ],
-            total_results=data.get("total_results", 0),
-        )
+    """GET search. Frontend calls agent-service directly when agent_service_url is set."""
     results = await rag.search(query=q, n_results=n, category=category)
     return SearchResponse(
         query=q,
@@ -371,13 +320,7 @@ async def search_knowledge_get(
 
 @router.get("/stats", response_model=RAGStatsResponse)
 async def get_rag_stats(rag: RAGService = Depends(get_rag)):
-    """RAG stats. Proxied to agent-service when AGENT_SERVICE_URL is set."""
-    if get_settings().agent_service_url:
-        try:
-            stats = await agent_service_client.rag_stats()
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        return RAGStatsResponse(**stats)
+    """RAG stats. Frontend calls agent-service directly when agent_service_url is set."""
     stats = rag.get_collection_stats()
     return RAGStatsResponse(**stats)
 

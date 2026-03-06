@@ -24,7 +24,6 @@ services:
     ports:
       - "8100:8100"
     environment:
-      - LOCAL_LLM_BASE_URL=http://host.docker.internal:1337/v1
       - CHROMA_PERSIST_DIRECTORY=/app/data/chroma
       - OLLAMA_BASE_URL=http://host.docker.internal:11434
     volumes:

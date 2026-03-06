@@ -10,8 +10,6 @@ agent-specific settings and LLM configuration.
 import importlib
 import importlib.resources
 import logging
-import os
-import httpx
 from pathlib import Path
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Type

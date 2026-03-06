@@ -4,11 +4,22 @@ from pathlib import Path
 import yaml
 import os
 import httpx
-LOCAL_BASE_URL = os.getenv("LOCAL_LLM_BASE_URL", "http://localhost:1337/v1")
-LOCAL_MODEL = os.getenv("LOCAL_LLM_MODEL", "lfm2.5-1.2b-thinking-mlx-8bit") 
-REMOTE_MODEL = os.getenv("HF_REMOTE_MODEL", "mistralai/Mistral-7B-Instruct-v0.3")
+
+def get_llm_base_url() -> str:
+    return os.getenv("LLM_BASE_URL") or os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434").rstrip("/") + "/v1"
 
 
+def get_llm_model() -> str:
+    return os.getenv("LLM_MODEL", "llama3.2")
+
+def get_vstore_path() -> str:
+    return os.getenv("VSTORE_PERSIST_DIRECTORY", "data/chroma")
+
+def get_llm_api_key() -> str:
+    return os.getenv("LLM_API_KEY", "no-key")
+
+def get_agent_config_path() -> str | None:
+    return os.environ.get("AGENT_CONFIG_DIR")
 
 class AgentConfig(BaseModel):
     """
@@ -39,21 +50,18 @@ class AgentConfig(BaseModel):
     # Agent-specific fields
     name: str = ""
     description: str = ""
-    agent_class: Optional[str] = None
+    agent_class: str = "agent_service.agent_router.AgentRouter"
     
     # LLM configuration fields (provider is always "huggingface")
     model: str = "gpt-4o-mini"
     api_key: Optional[str] = None
-    base_url: Optional[str] = LOCAL_BASE_URL
+    base_url: Optional[str] = get_llm_base_url()
     max_tokens: int = 2048
     temperature: float = 0.7
     timeout: float = 60.0
     response_format: Optional[dict] = None
     agent_dir: Optional[Path] = None
     sys_prompt: str = "You are a helpful assistant."
-    # Extra fields from YAML
-    extra: Dict[str, Any] = Field(default_factory=dict)
-    provider: str = "huggingface"
     # RAG configuration
     use_rag: bool = False
     rag_category: str = "default"
@@ -82,18 +90,17 @@ class AgentConfig(BaseModel):
         
         # Extract known fields (provider is ignored, always "huggingface")
         known_fields = {
-            'name', 'description', 'class', 'model', 'provider',
+            'name', 'description', 'class', 'model', 
             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
             'timeout', 'response_format', 'tools', 'tool_choice', 'tool_prompt',
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
-        base_url = data.get('llm_url') or data.get('base_url', LOCAL_BASE_URL)
+        base_url = data.get('llm_url') or data.get('base_url', get_llm_base_url())
         return cls(
             name=data.get('name', yaml_path.parent.name),
             description=data.get('description', 'A general purpose agent.'),
             agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
-            model=data.get('model', LOCAL_MODEL),
-            provider=data.get('provider', 'huggingface'),
+            model=data.get('model', get_llm_model()),
             api_key=data.get('api_key'),
             base_url=base_url,
             max_tokens=int(data.get('max_tokens', 10000)),
@@ -109,15 +116,3 @@ class AgentConfig(BaseModel):
         )
     
     
-
-def get_available_models() -> list[str]:
-    """Get list of available models in local server (OpenAI-compatible /v1/models)."""
-    try:
-        url = f"{LOCAL_BASE_URL.rstrip('/')}/models"
-        response = httpx.get(url, timeout=5.0)
-        if response.status_code == 200:
-            data = response.json().get("data", [])
-            return [m.get("id", "") for m in data if m.get("id")]
-        return []
-    except (httpx.ConnectError, httpx.TimeoutException):
-        return []
