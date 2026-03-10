@@ -149,11 +149,54 @@ class TestYamlConfigOverrides:
                 settings = config_module.Settings()
                 
                 assert settings.database_url == custom_config["database_url"]
-                assert settings.llm_provider == custom_config["llm_provider"]
-                assert settings.llm_model == custom_config["llm_model"]
-                assert settings.llm_temperature == custom_config["llm_temperature"]
         finally:
             os.unlink(tmp_file_path)
+
+    def test_yaml_config_loads_user_name_and_email(self):
+        """Test that CONFIG_FILE yaml loads user_name and email and they appear in get_config_info()."""
+        custom_config = {
+            "user_name": "Test User",
+            "email": "test@example.com",
+        }
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False
+        ) as tmp_file:
+            yaml.dump(custom_config, tmp_file)
+            tmp_file_path = tmp_file.name
+
+        try:
+            with patch.dict(os.environ, {"CONFIG_FILE": tmp_file_path}):
+                from importlib import reload
+                import app.core.config as config_module
+
+                reload(config_module)
+                config_module.reset_settings()
+                settings = config_module.get_settings()
+
+                assert settings.user_name == "Test User"
+                assert settings.email == "test@example.com"
+
+                info = config_module.get_config_info()
+                assert info["user_name"] == "Test User"
+                assert info["email"] == "test@example.com"
+        finally:
+            os.unlink(tmp_file_path)
+
+    def test_user_name_and_email_default_to_none(self):
+        """Test that user_name and email are None when not set in config."""
+        with patch.dict(os.environ, {}, clear=False):
+            if "CONFIG_FILE" in os.environ:
+                del os.environ["CONFIG_FILE"]
+            from importlib import reload
+            import app.core.config as config_module
+            reload(config_module)
+            config_module.reset_settings()
+            settings = config_module.get_settings()
+            assert settings.user_name is None
+            assert settings.email is None
+            info = config_module.get_config_info()
+            assert info["user_name"] is None
+            assert info["email"] is None
 
 
 class TestYamlLoading:
@@ -225,9 +268,7 @@ class TestSettingsDefaults:
             assert settings.app_name == "MyAIAssistant Backend"
             assert settings.app_version == "0.1.0"
             assert settings.database_url == "sqlite+aiosqlite:///./data/app.db"
-            assert settings.llm_provider == "ollama"
-            assert settings.llm_max_tokens == 2048
-            assert settings.llm_temperature == 0.1
+
 
     def test_cors_origins_is_list(self):
         """Test that cors_origins is properly loaded as a list."""

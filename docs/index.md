@@ -8,7 +8,7 @@
 
 ## Project Goals
 
-MyAIAssistant helps users organize tasks, projects, organizations, persons, reference subject-matter knowledge, by leverage AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work by using AI help. It is also including an agent management and definition, so tasks can be automated, like getting news of the days, get Slack channel summary...
+MyAIAssistant helps users organize tasks, projects, organizations, persons, and use subject-matter knowledge to support task execution. The application leverages AI for semantic search, note summarization, task extraction and recommendations. The tool links knowledge artifacts to tasks to provide better context when addressing work by using AI help. It is also including an agent management and definition, so tasks can be automated, like getting news of the days, get Slack channel summary...
 
 For task management, the approach is based on [Stephen Covey's "7 Habits of Highly Effective People"](https://jbcodeforce.github.io/leadership/7_habits/) the system helps manage priorities efficiently using the Eisenhower Matrix (Urgent/Important classification).
 
@@ -16,15 +16,12 @@ For task management, the approach is based on [Stephen Covey's "7 Habits of High
 
 ## Project Principles
 
-1. **Run locally** - All core features work without external LLM API dependencies. Still it is possible to use remote service, but the approach is to define prompt, tools, specific context and run local models.
-3. **Privacy-first** - Data stays on local infrastructure
-4. **Efficient prioritization** - Eisenhower Matrix helps focus on high-impact work, and tasj integrated to project and organization user may work with. This tool applies well to solution engineers, or consultants who have to manage lot of small engagements.
+1. **Run locally** - All core features work without external LLM API dependencies. Still it is possible to use remote services, but the approach is to define prompt, tools, specific context and run local models. 
+2. **Isolation**: Knowledge, project database, vector store can be isolated in a workspace. Application is started within a workspace. One command to create a workspace. Global settings can be done to get some knowledge, skills, ... for cross workspace.  Data stays on local infrastructure
+3. **Agentic solution**: Agents, tools, teams, workflows are declared with config file, but can be extended by custom classes. Predefined agents are used to do research, summarization, task recommendations. 
+4. **Efficient prioritization** - Eisenhower Matrix helps focus on high-impact work, and tasj integrated to project and organization user may work with. This tool applies well to solution engineers, or consultants who have to manage lot of small engagements. With a drag-and-drop user interface it is easy to continuously re-prioritize tasks. With AI assistant, the tool helps to better run a working day, query what was done last wee, last month, last quarter...
 
-With a drag-and-drop user interface it is easy to continuously re-prioritize tasks. With AI assistant, the tool helps to better run a working day, query what was done last wee, last month, last quarter...
-
-The goal is to run locally, with local or remote LLM, and using isolate environment or workspace to separate works, from learning or home work.
-
-[Access the webApp local once started](http://localhost:80).
+[Access the webApp local once started](http://localhost:8000).
 
 ## Why I built this?
 
@@ -48,7 +45,6 @@ There are ton of to do apps, why a new one? The main drivers for creating this a
 | Organization Management | Completed | Track organizations with stakeholders, team, strategy, and related products |
 | Project Management | Completed | Manage projects with status lifecycle (Draft, Active, On Hold, Completed, Cancelled) linked to organizations |
 | Knowledge Base | Completed | Metadata storage referencing documents, notes, and website links |
-| Semantic Search (RAG) | Completed | AI-powered search across the knowledge base using embeddings |
 |Agents and  LLM Chat Support | Completed | AI chat for task planning and knowledge base queries, and agents catalog for different expertize |
 | Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
 

@@ -67,7 +67,6 @@ export const useAssetStore = defineStore('asset', () => {
     error.value = null
     try {
       const response = await assetsApi.create(asset)
-      items.value.unshift(response.data)
       return response.data
     } catch (err) {
       error.value = err.response?.data?.detail || 'Failed to create asset'

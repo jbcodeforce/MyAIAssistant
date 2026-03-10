@@ -1,5 +1,0 @@
-chat:
-  quick_prompts:
-    generic-agent:
-      - "What's the current price of AAPL?"
-      - "analyze NVDIA"

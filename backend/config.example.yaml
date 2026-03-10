@@ -20,6 +20,10 @@ database_url: "sqlite+aiosqlite:///./data/app.db"
 chroma_persist_directory: "/absolute/path/to/my_knowledge_base"
 chroma_collection_name: "my_documents"
 
+# Optional: user identity for UI and future AI tools (e.g. send email)
+# user_name: "Your Name"       # Display name in UI
+# email: "you@example.com"     # For future AI tools (e.g. sending email)
+
 # LLM settings (uncomment and modify as needed)
 # llm_provider: "openai"
 # llm_model: "gpt-4"

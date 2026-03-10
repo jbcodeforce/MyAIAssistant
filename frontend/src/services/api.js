@@ -27,6 +27,15 @@ export async function getAgentServiceUrl() {
   return c.agent_service_url || null
 }
 
+/** User context from config (user_name, email) for chat request bodies. */
+async function getUserContext() {
+  const c = await getConfig()
+  const out = {}
+  if (c.user_name != null && c.user_name !== '') out.user_name = c.user_name
+  if (c.email != null && c.email !== '') out.email = c.email
+  return out
+}
+
 async function agentFetch(baseUrl, path, options = {}) {
   const url = `${baseUrl.replace(/\/$/, '')}${path}`
   const res = await fetch(url, {
@@ -250,13 +259,15 @@ export const projectsApi = {
 
 export const chatApi = {
   /**
-   * Send a message to chat about a specific todo task. When agent_service_url is set, fetches todo from backend then POSTs to agent-service /chat/todo.
+   * Send a message to chat about a specific todo task. When agent_service_url is set, 
+   * fetches todo from backend then POSTs to agent-service /chat/todo.
    */
   async sendMessage(todoId, message, conversationHistory = [], useRag = true) {
     const base = await getAgentServiceUrl()
     if (base) {
       const todoRes = await api.get(`/todos/${todoId}`)
       const todo = todoRes.data
+      const userCtx = await getUserContext()
       const data = await agentFetch(base, '/chat/todo', {
         method: 'POST',
         body: JSON.stringify({
@@ -264,7 +275,8 @@ export const chatApi = {
           conversation_history: conversationHistory,
           use_rag: useRag,
           task_title: todo.title,
-          task_description: todo.description ?? null
+          task_description: todo.description ?? null,
+          ...userCtx
         })
       })
       return { data }
@@ -277,16 +289,28 @@ export const chatApi = {
   },
 
   /**
-   * Send a message to the generic chat agent (POST /chat/generic). Uses agent-service when agent_service_url is set.
+   * Send a message to a chat agent. When agentUrl (exposed_url) is set, POST to that URL; else when agent_service_url is set, POST to /agents/<agentName>/runs.
+   * @param {string} [agentName='MainAgent'] - Agent name for the runs endpoint
+   * @param {string} [agentUrl] - Optional exposed_url of the selected agent (takes precedence)
    */
-  async genericChat(message, conversationHistory = [], nResults = 5) {
+  async genericChat(message, conversationHistory = [], nResults = 5, agentName = 'MainAgent', agentUrl = null) {
+    if (agentUrl) {
+      const data = await agentFetch(agentUrl, '', {
+        method: 'POST',
+        body: JSON.stringify({ message, conversation_history: conversationHistory })
+      })
+      return { data }
+    }
     const base = await getAgentServiceUrl()
     if (base) {
-      const data = await agentFetch(base, '/chat/generic', {
+      const userCtx = await getUserContext()
+      const path = `/agents/${encodeURIComponent(agentName)}/runs`
+      const data = await agentFetch(base, path, {
         method: 'POST',
         body: JSON.stringify({
           message,
-          conversation_history: conversationHistory
+          conversation_history: conversationHistory,
+          ...userCtx
         })
       })
       return { data }
@@ -299,19 +323,28 @@ export const chatApi = {
   },
 
   /**
-   * Stream generic chat response (POST /chat/generic/stream). Uses agent-service when agent_service_url is set.
+   * Stream generic chat response. When agentUrl (exposed_url) is set, POST to agentUrl/stream; else uses agent_service or backend.
+   * @param {string} [agentName='MainAgent'] - Agent name (passed in body when using agent service)
+   * @param {string} [agentUrl] - Optional exposed_url of the selected agent (takes precedence)
    */
-  async genericChatStream(message, conversationHistory = [], onChunk, onDone, onError) {
+  async genericChatStream(message, conversationHistory = [], onChunk, onDone, onError, agentName = 'MainAgent', agentUrl = null) {
     let url
     let body
     try {
-      const base = await getAgentServiceUrl()
-      if (base) {
-        url = `${base.replace(/\/$/, '')}/chat/generic/stream`
-        body = { message, conversation_history: conversationHistory }
+      const userCtx = await getUserContext()
+      if (agentUrl) {
+        const streamUrl = agentUrl.replace(/\/$/, '') + '/stream'
+        url = streamUrl
+        body = { message, conversation_history: conversationHistory, agent_name: agentName, ...userCtx }
       } else {
-        url = `${api.defaults.baseURL || ''}/chat/generic/stream`
-        body = { message, conversation_history: conversationHistory, n_results: 5 }
+        const base = await getAgentServiceUrl()
+        if (base) {
+          url = `${base.replace(/\/$/, '')}/chat/generic/stream`
+          body = { message, conversation_history: conversationHistory, agent_name: agentName, ...userCtx }
+        } else {
+          url = `${api.defaults.baseURL || ''}/chat/generic/stream`
+          body = { message, conversation_history: conversationHistory, n_results: 5 }
+        }
       }
       const response = await fetch(url, {
         method: 'POST',
@@ -374,13 +407,15 @@ export const chatApi = {
   async kbChat(message, conversationHistory = [], nResults = 5) {
     const base = await getAgentServiceUrl()
     if (base) {
+      const userCtx = await getUserContext()
       const data = await agentFetch(base, '/chat/generic', {
         method: 'POST',
         body: JSON.stringify({
           message,
           conversation_history: conversationHistory,
           context: {},
-          force_intent: null
+          force_intent: null,
+          ...userCtx
         })
       })
       return { data }
@@ -393,19 +428,28 @@ export const chatApi = {
   },
 
   /**
-   * Stream knowledge-base / Assistant chat. Uses agent-service when agent_service_url is set.
+   * Stream knowledge-base / Assistant chat. When agentUrl is set, POST to agentUrl/stream; else uses agent_service or backend.
+   * @param {string} [agentName='MainAgent'] - Agent name (in body when using agent service)
+   * @param {string} [agentUrl] - Optional exposed_url of the selected agent (takes precedence)
    */
-  async kbChatStream(message, conversationHistory = [], onChunk, onDone, onError) {
+  async kbChatStream(message, conversationHistory = [], onChunk, onDone, onError, agentName = 'MainAgent', agentUrl = null) {
     let url
     let body
     try {
-      const base = await getAgentServiceUrl()
-      if (base) {
-        url = `${base.replace(/\/$/, '')}/chat/generic/stream`
-        body = { message, conversation_history: conversationHistory, force_intent: 'knowledge_search' }
+      const userCtx = await getUserContext()
+      if (agentUrl) {
+        const streamUrl = agentUrl.replace(/\/$/, '') + '/stream'
+        url = streamUrl
+        body = { message, conversation_history: conversationHistory, force_intent: 'knowledge_search', agent_name: agentName, ...userCtx }
       } else {
-        url = `${api.defaults.baseURL || ''}/chat/generic/stream`
-        body = { message, conversation_history: conversationHistory, n_results: 5, force_intent: 'knowledge_search' }
+        const base = await getAgentServiceUrl()
+        if (base) {
+          url = `${base.replace(/\/$/, '')}/chat/generic/stream`
+          body = { message, conversation_history: conversationHistory, force_intent: 'knowledge_search', agent_name: agentName, ...userCtx }
+        } else {
+          url = `${api.defaults.baseURL || ''}/chat/generic/stream`
+          body = { message, conversation_history: conversationHistory, n_results: 5, force_intent: 'knowledge_search' }
+        }
       }
       const response = await fetch(url, {
         method: 'POST',
@@ -574,24 +618,18 @@ export const personsApi = {
 
 export const agentsApi = {
   /**
-   * List configured agents (read-only). Data from agent config directory.
+   * List configured agents from agent service (GET myai/agents).
+   * Returns array of { agent_name, description, path_to_config, default }.
+   * Uses agent_service_url when set; otherwise returns empty array.
    */
-  list() {
-    return api.get('/agents/')
-  },
-
-  /**
-   * Get one agent's full detail including sys_prompt (for edit form).
-   */
-  get(name) {
-    return api.get(`/agents/${encodeURIComponent(name)}`)
-  },
-
-  /**
-   * Save agent prompt to workspace agents folder. Body: { prompt: string }.
-   */
-  savePrompt(name, prompt) {
-    return api.put(`/agents/${encodeURIComponent(name)}/prompt`, { prompt })
+  async list() {
+    const base = await getAgentServiceUrl()
+    if (base) {
+      const data = await agentFetch(base, '/myai/agents', { method: 'GET' })
+      const list = Array.isArray(data) ? data : (data?.data ?? [])
+      return { data: list }
+    }
+    return { data: [] }
   }
 }
 

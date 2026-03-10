@@ -1,19 +1,17 @@
 from agno.agent import Agent
 from agno.knowledge.knowledge import Knowledge
-from agno.vectordb.chroma import ChromaDb
+from agno.vectordb.lancedb import LanceDb
 from agno.db.sqlite.sqlite import SqliteDb
 from agno.models.ollama import Ollama
-from agno.knowledge.embedder.ollama import OllamaEmbedder
 
-contents_db = SqliteDb(db_file="data/contents.db",
-        knowledge_table= "flink-km"
-        )
+contents_db = SqliteDb(
+    db_file="data/contents.db",
+    knowledge_table="flink-km",
+)
 
-vector_db = ChromaDb(
-    name="test_vector_db",
-    collection="test_collection",
-    path="data/chroma",
-    embedder=OllamaEmbedder(id="llama3.2", dimensions=3072),
+vector_db = LanceDb(
+    table_name="test_collection",
+    uri="data/vs.db",
 )
 
 

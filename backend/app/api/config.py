@@ -14,4 +14,8 @@ async def get_config():
     should call the agent-service directly for chat and RAG search/stats/delete.
     """
     settings = get_settings()
-    return {"agent_service_url": settings.agent_service_url}
+    return {
+        "agent_service_url": settings.agent_service_url,
+        "user_name": settings.user_name,
+        "email": settings.email,
+    }

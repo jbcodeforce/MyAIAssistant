@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 BACKEND_DIR="$PROJECT_ROOT/backend"
 FRONTEND_DIR="$PROJECT_ROOT/frontend"
+AGENT_SERVICE_DIR="$PROJECT_ROOT/agent_service"
 WORKSPACE_DIR="$SCRIPT_DIR"
 
 # Colors for output
@@ -30,20 +31,27 @@ echo -e "  Config File:   $WORKSPACE_DIR/config.yaml"
 echo -e "  Database:      $WORKSPACE_DIR/data/biz-assistant.db"
 echo -e "  ChromaDB:      $WORKSPACE_DIR/data/chroma/"
 
-# Export config file for backend
+# Export config for backend and agent service URL when running agent_service in this script
 export CONFIG_FILE="$WORKSPACE_DIR/config.yaml"
+export AGENT_SERVICE_URL="http://localhost:8100"
 
 # Ensure data directory exists
 mkdir -p "$WORKSPACE_DIR/data"
 
-# Function to cleanup on exit
+# Function to cleanup on exit (only kills processes we started)
 cleanup() {
     echo -e "\n${YELLOW}Shutting down services...${NC}"
+    if [ -n "$AGENT_SERVICE_PID" ]; then
+        kill $AGENT_SERVICE_PID 2>/dev/null && echo -e "${GREEN}Agent service stopped${NC}"
+    fi
     if [ -n "$BACKEND_PID" ]; then
         kill $BACKEND_PID 2>/dev/null && echo -e "${GREEN}Backend stopped${NC}"
     fi
     if [ -n "$FRONTEND_PID" ]; then
         kill $FRONTEND_PID 2>/dev/null && echo -e "${GREEN}Frontend stopped${NC}"
+    fi
+    if [ -n "$OLLAMA_PID" ]; then
+        kill $OLLAMA_PID 2>/dev/null && echo -e "${GREEN}Ollama stopped${NC}"
     fi
     exit 0
 }
@@ -73,6 +81,61 @@ check_requirements() {
     if [ $missing -eq 1 ]; then
         exit 1
     fi
+}
+
+# Start Ollama if not already running (agent_service needs it for chat and RAG embeddings)
+ensure_ollama() {
+    local url="${OLLAMA_BASE_URL:-http://127.0.0.1:11434}"
+    if curl -s -f "$url/api/tags" > /dev/null 2>&1; then
+        echo -e "\n${GREEN}Ollama already running${NC} ($url)"
+        return
+    fi
+    if ! command -v ollama &> /dev/null; then
+        echo -e "\n${YELLOW}Ollama not installed or not in PATH; agent_service chat/RAG may fail.${NC}"
+        echo -e "  Install: https://ollama.com or run \`ollama serve\` in another terminal."
+        return
+    fi
+    echo -e "\n${GREEN}Starting Ollama...${NC}"
+    echo -e "  URL: $url"
+    ollama serve &
+    OLLAMA_PID=$!
+    echo -e "  PID: $OLLAMA_PID"
+    echo -e "  ${YELLOW}Waiting for Ollama to start...${NC}"
+    for i in {1..30}; do
+        if curl -s -f "$url/api/tags" > /dev/null 2>&1; then
+            echo -e "  ${GREEN}Ollama is ready!${NC}"
+            return
+        fi
+        sleep 1
+    done
+    echo -e "  ${YELLOW}Ollama may still be starting; continuing.${NC}"
+}
+
+# Start agent_service only if not already running (Ollama-backed chat, RAG, extract, tag)
+ensure_agent_service() {
+    if curl -s http://localhost:8100/health > /dev/null 2>&1; then
+        echo -e "\n${GREEN}Agent service already running${NC} (http://localhost:8100)"
+        return
+    fi
+    echo -e "\n${GREEN}Starting Agent Service...${NC}"
+    echo -e "  Port: 8100"
+    echo -e "  Project: $AGENT_SERVICE_DIR"
+    
+    cd "$AGENT_SERVICE_DIR"
+    
+    uv run  python  agent_service/main.py &
+    
+    AGENT_SERVICE_PID=$!
+    echo -e "  PID: $AGENT_SERVICE_PID"
+    
+    echo -e "  ${YELLOW}Waiting for agent service to start...${NC}"
+    for i in {1..30}; do
+        if curl -s http://localhost:8100/health > /dev/null 2>&1; then
+            echo -e "  ${GREEN}Agent service is ready!${NC}"
+            break
+        fi
+        sleep 1
+    done
 }
 
 # Start backend
@@ -135,6 +198,8 @@ start_frontend() {
 
 # Main execution
 check_requirements
+ensure_ollama
+ensure_agent_service
 start_backend
 start_frontend
 
@@ -142,10 +207,12 @@ echo -e "\n${BLUE}━━━━━━━━━━━━━━━━━━━━�
 echo -e "${GREEN}Development environment is running!${NC}"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
 echo -e ""
-echo -e "  ${YELLOW}Frontend:${NC}  http://localhost:3000"
-echo -e "  ${YELLOW}Backend:${NC}   http://localhost:8000"
-echo -e "  ${YELLOW}API Docs:${NC}  http://localhost:8000/docs"
-echo -e "  ${YELLOW}Config:${NC}    http://localhost:8000/debug/config"
+echo -e "  ${YELLOW}Frontend:${NC}       http://localhost:3000"
+echo -e "  ${YELLOW}Backend:${NC}        http://localhost:8000"
+echo -e "  ${YELLOW}Agent Service:${NC}  http://localhost:8100 (backend proxies chat/RAG to it)"
+echo -e "  ${YELLOW}Ollama:${NC}         ${OLLAMA_BASE_URL:-http://127.0.0.1:11434} (chat + embeddings; started by script if not running)"
+echo -e "  ${YELLOW}API Docs:${NC}       http://localhost:8000/docs"
+echo -e "  ${YELLOW}Config:${NC}         http://localhost:8000/debug/config"
 echo -e ""
 echo -e "  Press ${RED}Ctrl+C${NC} to stop all services"
 echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"

@@ -225,23 +225,11 @@ async def chat_health_check():
     """
     settings = get_settings()
     out = {
-        "agent_service_url": settings.agent_service_url,
-        "provider": settings.llm_provider,
-        "model": settings.llm_model,
+        "agent_service_url": settings.agent_service_url
     }
     if settings.agent_service_url:
         out["status"] = "agent_service"
         out["message"] = "Frontend should call agent_service_url for chat and RAG search/stats."
         return out
-    has_api_key = settings.llm_api_key is not None
-    if settings.llm_provider == "ollama":
-        out["status"] = "ready"
-        out["message"] = "Ollama is configured. Make sure Ollama is running locally."
-        return out
-    if has_api_key:
-        out["status"] = "ready"
-        out["message"] = f"{settings.llm_provider.capitalize()} API is configured."
-        return out
     out["status"] = "not_configured"
-    out["message"] = f"LLM_API_KEY environment variable is not set for {settings.llm_provider}."
     return out

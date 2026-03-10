@@ -1,8 +1,11 @@
 <template>
   <aside class="sidebar" :class="{ collapsed: collapsed }">
     <div class="sidebar-header">
-      <div class="logo" v-show="!collapsed">
-        <span class="logo-text">MyAIAssistant</span>
+      <div class="sidebar-header-left" v-show="!collapsed">
+        <div class="logo">
+          <span class="logo-text">MyAIAssistant</span>
+        </div>
+        <div v-if="user_name" class="sidebar-user">Hi, {{ user_name }}</div>
       </div>
       <button class="collapse-btn" @click="emit('toggle')" :title="collapsed ? 'Expand' : 'Collapse'">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -174,8 +177,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { getConfig } from '@/services/api'
 
 const props = defineProps({
   collapsed: {
@@ -186,8 +190,16 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle'])
 const route = useRoute()
+const user_name = ref(null)
 
 const tasksExpanded = ref(true)
+
+onMounted(async () => {
+  try {
+    const c = await getConfig()
+    if (c.user_name) user_name.value = c.user_name
+  } catch (_) {}
+})
 
 const isTasksActive = computed(() => {
   return route.path === '/unclassified' || route.path === '/archived' || route.path === '/projects' || route.path === '/weekly-todo'
@@ -224,6 +236,13 @@ const isTasksActive = computed(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.sidebar-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -237,6 +256,12 @@ const isTasksActive = computed(() => {
   font-weight: 600;
   color: #f1f5f9;
   white-space: nowrap;
+}
+
+.sidebar-user {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
 }
 
 .collapse-btn {

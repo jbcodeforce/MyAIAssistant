@@ -82,7 +82,7 @@ Note: For Docker Compose deployments, use `postgres` as the hostname (the servic
 
 Logging is configured in `app/core/config.py` from settings. By default:
 
-- **Console and file**: Logs go to stdout and to `./logs/app.log`.
+- **Console and file**: Logs go to stdout and to a date-stamped file. When `CONFIG_FILE` is set (e.g. workspace), the log file is created under that directory’s `logs/` (e.g. `workspace/logs/app_2025-03-09.log`); otherwise under the process cwd’s `logs/`.
 - **Request logging**: Each HTTP request is logged at INFO: method, path, query, status code, and duration (logger name `app.request`).
 - **Application logs**: Use `logging.getLogger(__name__)` in modules; log at DEBUG for trace, INFO for normal, WARNING/ERROR for issues.
 

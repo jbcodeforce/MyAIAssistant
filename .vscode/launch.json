@@ -5,16 +5,16 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "AgentCore Debugger: Current File",
+            "name": "Agent Debugger: Current File",
             "type": "debugpy",
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
-            "cwd": "${workspaceFolder}/agent_core",
+            "cwd": "${workspaceFolder}/agent_service",
             "env": {
-                "PYTHONPATH": "${fileWorkspaceFolder}/agent_core/src:${fileWorkspaceFolder}/agent_core/tests"
+                "PYTHONPATH": "${fileWorkspaceFolder}/agent_service/:${fileWorkspaceFolder}/agent_services/tests"
             },
-            "python": "${workspaceFolder}/agent_core/.venv/bin/python"
+            "python": "${workspaceFolder}/agent_service/.venv/bin/python"
         },
         {
             "name": "Pytest: Current Test File",

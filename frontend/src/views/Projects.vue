@@ -822,9 +822,8 @@ async function handleSubmit() {
         projects.value[index] = response.data
       }
     } else {
-      const response = await projectsApi.create(payload)
-      projects.value.unshift(response.data)
-      totalCount.value++
+      await projectsApi.create(payload)
+      await loadProjects()
     }
     closeModal()
   } catch (err) {

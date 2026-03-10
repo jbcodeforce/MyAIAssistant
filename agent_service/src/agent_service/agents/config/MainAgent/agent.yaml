@@ -1,6 +1,0 @@
-name: MainAgent
-description: A specific agent that classifies queries and routes to specialized agents.
-class: agent_service.agents.agent_router.AgentRouter
-model: mistral:7b-instruct
-temperature: 0.2
-max_tokens: 10000

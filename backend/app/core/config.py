@@ -14,6 +14,7 @@ Usage:
     print(settings.database_url)
 """
 
+from datetime import datetime
 import os
 from pathlib import Path
 from typing import Any, ClassVar, Optional
@@ -91,17 +92,10 @@ class Settings(BaseSettings):
     # CORS settings
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
-    # LLM settings
-    llm_provider: str = "osaurus"
-    llm_model: str = "gpt-4o-mini"
-    llm_api_key: Optional[str] = None
-    llm_base_url: Optional[str] = "http://localhost:11434"
-    llm_max_tokens: int = 2048
-    llm_temperature: float = 0.1
 
     # Logging settings
     log_level: str = "INFO"
-    log_file: Optional[str] = None  # None = console only, or path like "./logs/app.log"
+    log_file: Optional[str] = None  # None = {CONFIG_FILE parent or cwd}/logs/app_YYYY-MM-DD.log, or path (date appended)
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
     # Meeting notes storage
@@ -111,7 +105,11 @@ class Settings(BaseSettings):
     agent_config_dir: Optional[str] = None  # Path to agent config directory (defaults to agent_core/agent_core/agents/config)
 
     # Agent service (Agno/AgentOS microservice). When set, chat/knowledge/rag are proxied to this URL.
-    agent_service_url: Optional[str] = None  # e.g. http://localhost:8100
+    agent_service_url: Optional[str] = "http://localhost:8100"  # e.g. http://localhost:8100
+
+    # Optional: user identity for UI and future AI tools (e.g. send email)
+    user_name: Optional[str] = None  # Display name in UI
+    email: Optional[str] = None  # For future AI tools (e.g. sending email)
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -188,41 +186,58 @@ def reset_settings() -> None:
     Settings._yaml_cache = None
 
 
+def _log_path_with_date(base_path: Path) -> Path:
+    """Build a log file path with the current date: stem_YYYY-MM-DD.suffix."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    parent = base_path.parent
+    stem = base_path.stem
+    suffix = base_path.suffix or ""
+    return parent / f"{stem}_{today}{suffix}"
+
+
 def setup_logging() -> None:
     """
     Configure logging based on settings.
-    
-    Creates file handler if log_file is specified, otherwise logs to console.
-    Automatically creates ./logs/app.log if log_file is None.
+
+    Creates a log file with the execution date in the filename (e.g. app_2025-03-09.log).
     Call this early in application startup.
     """
     settings = get_settings()
-    
+
     # Get the root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(getattr(logging, settings.log_level.upper(), logging.INFO))
-    
+
     # Clear existing handlers to avoid duplicates on reload
     root_logger.handlers.clear()
-    
+
     formatter = logging.Formatter(settings.log_format)
-    
+
     # Always add console handler
     console_handler = logging.StreamHandler()
     console_handler.setFormatter(formatter)
     root_logger.addHandler(console_handler)
-    
-    # Determine log file path: use explicit setting or default to ./logs/app.log
+
+    # Determine log file path: use explicit setting or default to {workspace_or_cwd}/logs/app.log; add date to filename
     log_file_path = settings.log_file
     if log_file_path is None:
-        # Default to ./logs/app.log relative to current working directory
-        log_path = Path.cwd() / "logs" / "app.log"
+        # When CONFIG_FILE is set (e.g. by start_dev_mode.sh), put logs in that directory (workspace), not backend/
+        config_file = os.environ.get("CONFIG_FILE")
+        if config_file:
+            config_path = Path(config_file).resolve()
+            if config_path.exists():
+                log_root = config_path.parent
+            else:
+                log_root = Path.cwd()
+        else:
+            log_root = Path.cwd()
+        base_path = log_root / "logs" / "app.log"
     else:
-        log_path = Path(log_file_path)
-        # If path is relative, resolve it relative to current working directory
-        if not log_path.is_absolute():
-            log_path = Path.cwd() / log_path
-    
+        base_path = Path(log_file_path)
+        if not base_path.is_absolute():
+            base_path = Path.cwd() / base_path
+    log_path = _log_path_with_date(base_path)
+
     # Add file handler (always create log file for persistence)
     log_path.parent.mkdir(parents=True, exist_ok=True)
     file_handler = logging.FileHandler(log_path)
@@ -283,12 +298,11 @@ def get_config_info() -> dict[str, Any]:
     return {
         "app_name": settings.app_name,
         "app_version": settings.app_version,
-        "llm_provider": settings.llm_provider,
-        "llm_model": settings.llm_model,
-        "llm_api_key": settings.llm_api_key,
-        "llm_base_url": settings.llm_base_url,
+        "agent_service_url": settings.agent_service_url,
         "notes_root": settings.notes_root,
         "agent_config_dir": settings.agent_config_dir,
+        "user_name": settings.user_name,
+        "email": settings.email,
         "config_file": _loaded_config_file,
         "database_url": settings.database_url,
         "resolved_database_path": resolved_db_path,

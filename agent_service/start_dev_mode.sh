@@ -20,7 +20,7 @@ NC='\033[0m' # No Color
 echo -e "\n${YELLOW}Configuration:${NC}"
 echo -e "  Project Root:  $PROJECT_ROOT"
 echo -e "  Database:      $AGENT_SERVICE_DIR/data/content.db"
-echo -e "  ChromaDB:      $AGENT_SERVICE_DIR/data/chroma/"
+echo -e "  LanceDB:       $AGENT_SERVICE_DIR/data/vs.db"
 
 # Export config for backend and agent service URL when running agent_service in this script
 export CONFIG_FILE="$AGENT_SERVICE_DIR/config.yaml"
@@ -96,10 +96,7 @@ ensure_agent_service() {
     
     cd "$AGENT_SERVICE_DIR"
     
-    uv run uvicorn agent_service.main:app \
-        --reload \
-        --host 0.0.0.0 \
-        --port 8100 &
+    uv run  python  agent_service/main.py
     
     AGENT_SERVICE_PID=$!
     echo -e "  PID: $AGENT_SERVICE_PID"
