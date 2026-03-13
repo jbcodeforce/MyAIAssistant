@@ -196,7 +196,14 @@ async function handleCreate() {
   if (!isFormValid.value) return
   submitting.value = true
   try {
-    const created = await store.createItem(formData.value)
+    const payload = {
+      meeting_id: formData.value.meeting_id,
+      org_id: formData.value.org_id,
+      project_id: formData.value.project_id,
+      content: formData.value.content,
+      attendees: formData.value.presents?.trim() || null
+    }
+    const created = await store.createItem(payload)
     router.push({ name: 'MeetingEdit', params: { id: created.id } })
   } catch (err) {
     console.error('Failed to create meeting note:', err)

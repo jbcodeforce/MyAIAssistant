@@ -15,6 +15,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger("agent_service")
 
+# Trace prompt sent to LLM: set TRACE_LLM_PROMPT=1 or AGNO_DEBUG=1 to log each request's messages at DEBUG
+if os.environ.get("TRACE_LLM_PROMPT", "").strip() in ("1", "true", "yes") or os.environ.get("AGNO_DEBUG", "").strip() in ("1", "true", "yes"):
+    from agno.debug import enable_debug_mode
+    enable_debug_mode()
+    logger.info("LLM prompt tracing enabled (agno debug mode)")
+
 logger.info("Loading agent_service.main...")
 
 from fastapi.middleware.cors import CORSMiddleware

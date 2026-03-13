@@ -86,8 +86,8 @@
                 <span v-else class="no-value">-</span>
               </td>
               <td class="col-presents">
-                <span v-if="item.presents" class="presents-text" :title="item.presents">
-                  {{ truncate(item.presents, 30) }}
+                <span v-if="item.attendees" class="presents-text" :title="item.attendees">
+                  {{ truncate(item.attendees, 30) }}
                 </span>
                 <span v-else class="no-value">-</span>
               </td>
@@ -156,7 +156,7 @@
           </div>
           <div class="info-row">
             <span class="info-label">Attendees:</span>
-            <span class="info-value">{{ editingItem?.presents || '-' }}</span>
+            <span class="info-value">{{ editingItem?.attendees || '-' }}</span>
           </div>
           <div class="info-row">
             <span class="info-label">Meeting Date:</span>
@@ -267,13 +267,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { marked } from 'marked'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
 import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
+const route = useRoute()
 const store = useMeetingRefStore()
 
 const items = ref([])
@@ -329,8 +330,21 @@ onMounted(async () => {
     store.fetchOrganizations(),
     store.fetchProjects()
   ])
+  if (route.query.organization) {
+    filterOrgId.value = route.query.organization
+  }
   await loadMeetings()
 })
+
+watch(
+  () => route.query.organization,
+  (newOrgId) => {
+    if (newOrgId !== undefined) {
+      filterOrgId.value = newOrgId || ''
+      loadMeetings()
+    }
+  }
+)
 
 // Methods
 async function loadMeetings() {

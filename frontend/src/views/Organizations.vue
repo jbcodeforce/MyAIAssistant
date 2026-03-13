@@ -217,6 +217,18 @@
               </svg>
               View Tasks
             </router-link>
+            <router-link 
+              :to="{ path: '/meetings', query: { organization: organization.id } }" 
+              class="view-projects-link"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                <path d="M16 2v4"/>
+                <path d="M8 2v4"/>
+                <path d="M3 10h18"/>
+              </svg>
+              View Meetings
+            </router-link>
           </div>
         </div>
       </div>
@@ -274,6 +286,14 @@
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M9 5H2v7l6.29 6.29c.94.94 2.48.94 3.42 0l3.58-3.58c.94-.94.94-2.48 0-3.42L9 5Z"/>
                     <path d="M6 9.01V9"/>
+                  </svg>
+                </router-link>
+                <router-link :to="{ path: '/meetings', query: { organization: organization.id } }" class="btn-icon" title="View Meetings">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                    <path d="M16 2v4"/>
+                    <path d="M8 2v4"/>
+                    <path d="M3 10h18"/>
                   </svg>
                 </router-link>
               </td>

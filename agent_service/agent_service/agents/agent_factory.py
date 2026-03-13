@@ -111,7 +111,7 @@ class AgentFactory():
             'name', 'description', 'class', 'model', 'provider',
             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
             'timeout', 'response_format', 'use_rag', 'rag_top_k',
-            'tools', 'tool_choice', 'knowledge_name'
+            'tools', 'tool_choice', 'knowledge_name', 'reasoning',
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
         base_url = data.get('llm_url') or data.get('base_url', get_llm_base_url())
@@ -135,6 +135,7 @@ class AgentFactory():
             tools=data.get('tools'),
             tool_choice=data.get('tool_choice', 'auto'),
             knowledge_name=knowledge_name,
+            reasoning=data.get('reasoning', True),
             sys_prompt=prompt_content,
             agent_dir=config_ref.path_to_config
         )

@@ -1,8 +1,12 @@
 name: TaskAgent
 description: Task planning and management agent that helps users plan, organize, and break down tasks into actionable steps.
-class: agent_service.agents.base_ai_agent.AIAgent
+class: agent_service.agents.task_agent.TaskAgent
 model: mistral:7b-instruct
 knowledge_name: task_knowledge
 temperature: 0.6
 max_tokens: 4096
-exposed_url: http://localhost:8000/api/chat/generic
+reasoning: false
+tools:
+  - create_task
+  - create_project
+

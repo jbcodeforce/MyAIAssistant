@@ -205,7 +205,7 @@ async function loadMeeting() {
     formData.value = {
       org_id: item.org_id ?? null,
       project_id: item.project_id ?? null,
-      presents: item.presents || '',
+      presents: item.attendees || '',
       content: contentResult.content || ''
     }
     initialLoadDone.value = true
@@ -225,7 +225,7 @@ function performSave() {
     .updateItem(meeting.value.id, {
       org_id: formData.value.org_id,
       project_id: formData.value.project_id,
-      presents: formData.value.presents || null,
+      attendees: formData.value.presents?.trim() || null,
       content: formData.value.content
     })
     .then(() => {

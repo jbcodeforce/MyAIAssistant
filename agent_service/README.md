@@ -44,4 +44,5 @@ uv run pytest tests/it -v
 | `KNOWLEDGE_EMBEDDER_MODEL` | `nomic-embed-text` | Embedder model id |
 | `AGENT_DB_PATH` | `data/agents.db` | Sqlite path for agent history |
 | `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated origins allowed for browser requests (frontend-direct mode). |
+| `TRACE_LLM_PROMPT` or `AGNO_DEBUG` | unset | Set to `1`, `true`, or `yes` to log the prompt (messages) sent to the LLM at DEBUG level. Uses agno debug mode; output appears in the agent_service process stdout. |
 

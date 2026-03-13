@@ -25,6 +25,8 @@ echo -e "  LanceDB:       $AGENT_SERVICE_DIR/data/vs.db"
 # Export config for backend and agent service URL when running agent_service in this script
 export CONFIG_FILE="$AGENT_SERVICE_DIR/config.yaml"
 export AGENT_SERVICE_URL="http://localhost:8100"
+export AGNO_DEBUG=1
+export TRACE_LLM_PROMPT=1
 
 
 # Function to cleanup on exit (only kills processes we started)

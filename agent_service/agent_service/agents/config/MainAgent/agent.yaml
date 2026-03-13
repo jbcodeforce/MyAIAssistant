@@ -3,5 +3,6 @@ description: A specific agent that classifies queries and routes to specialized 
 class: agent_service.agents.base_ai_agent.AIAgent
 # model: mistral:7b-instruct
 model: qwq:32b
-temperature: 0.2
+temperature: 0.4
 max_tokens: 10000
+reasoning: true

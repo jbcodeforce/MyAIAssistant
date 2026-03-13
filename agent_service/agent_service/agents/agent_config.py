@@ -70,6 +70,7 @@ class AgentConfig(BaseModel):
     tools: Optional[List[Union[str, dict]]] = None
     tool_choice: str = "auto"
     tool_prompt: Optional[str] = None
+    reasoning: bool = True
 
     @classmethod
     def from_yaml(cls, yaml_path: Path) -> "AgentConfig":
@@ -94,6 +95,7 @@ class AgentConfig(BaseModel):
             'name', 'description', 'class', 'model', 
             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
             'timeout', 'response_format', 'tools', 'tool_choice', 'tool_prompt',
+            'reasoning',
         }
         extra = {k: v for k, v in data.items() if k not in known_fields}
         base_url = data.get('llm_url') or data.get('base_url', get_llm_base_url())
@@ -113,6 +115,7 @@ class AgentConfig(BaseModel):
             tools=data.get('tools'),
             tool_choice=data.get('tool_choice', 'auto'),
             tool_prompt=data.get('tool_prompt'),
+            reasoning=data.get('reasoning', True),
             agent_dir=yaml_path.parent
         )
     

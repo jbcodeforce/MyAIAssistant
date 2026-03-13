@@ -4,13 +4,29 @@ knowledge.
 """
 
 import logging
+from typing import List, Optional
+
 from agent_service.agents.agent_config import AgentConfig, get_llm_base_url, get_llm_model, get_vstore_path, get_llm_api_key
+from agent_service.tools.backend_tools import TASK_PROJECT_TOOL_REGISTRY
 from agno.agent import Agent
 from agno.models.openai.like import OpenAILike
 from textwrap import dedent
 from agent_service.ai_db import get_ai_db, create_knowledge
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_tools(tool_names: Optional[List]) -> Optional[List]:
+    """Resolve tool names from config to callables. Returns None if no tools."""
+    if not tool_names or not isinstance(tool_names, list):
+        return None
+    resolved = []
+    for name in tool_names:
+        if isinstance(name, str) and name in TASK_PROJECT_TOOL_REGISTRY:
+            resolved.append(TASK_PROJECT_TOOL_REGISTRY[name])
+        elif callable(name):
+            resolved.append(name)
+    return resolved if resolved else None
 
 def  _load_system_prompt(config):
     prompt_path = config.agent_dir / "prompt.md"
@@ -41,7 +57,8 @@ class AIAgent:
         self._config = config
         self._system_prompt = _load_system_prompt(self._config)
         self._knowledge = create_knowledge(self._config.knowledge_name, self._config.knowledge_name)
-        self._agent = Agent(
+        tools = _resolve_tools(getattr(self._config, "tools", None))
+        agent_kwargs = dict(
             id=self._config.name,
             name=self._config.name,
             model=_build_model(),
@@ -53,9 +70,12 @@ class AIAgent:
             add_history_to_context=True,
             num_history_runs=3,
             markdown=True,
-            reasoning=True,
-            telemetry=False
+            reasoning=getattr(self._config, "reasoning", True),
+            telemetry=False,
         )
+        if tools:
+            agent_kwargs["tools"] = tools
+        self._agent = Agent(**agent_kwargs)
 
 
     def get_agent(self):
