@@ -10,6 +10,7 @@ class OrganizationBase(BaseModel):
     team: Optional[str] = Field(None, description="Team members working with this organization")
     description: Optional[str] = Field(None, description="Organization strategy and notes")
     related_products: Optional[str] = Field(None, description="Products related to this organization")
+    is_top_active: bool = Field(False, description="Mark as top-active organization")
 
 
 class OrganizationCreate(OrganizationBase):
@@ -34,6 +35,7 @@ class OrganizationUpdate(BaseModel):
     team: Optional[str] = None
     description: Optional[str] = None
     related_products: Optional[str] = None
+    is_top_active: Optional[bool] = None
 
     model_config = ConfigDict(
         json_schema_extra={

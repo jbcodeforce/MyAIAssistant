@@ -63,12 +63,15 @@ async def create_organization(
 async def list_organizations(
     skip: int = Query(0, ge=0, description="Number of records to skip"),
     limit: int = Query(100, ge=1, le=500, description="Maximum number of records to return"),
+    top_active: Optional[bool] = Query(None, description="Filter by top-active flag"),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Retrieve a list of organizations with pagination.
     """
-    organizations, total = await crud.get_organizations(db=db, skip=skip, limit=limit)
+    organizations, total = await crud.get_organizations(
+        db=db, skip=skip, limit=limit, top_active=top_active
+    )
     return OrganizationListResponse(organizations=organizations, total=total, skip=skip, limit=limit)
 
 

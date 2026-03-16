@@ -21,6 +21,7 @@ from app.api.agents import router as agents_router
 from app.api.config import router as config_router
 from app.api.tags import router as tags_router
 from app.api.weekly_todos import router as weekly_todos_router
+from app.api.notes_files import router as notes_files_router
 
 
 @asynccontextmanager
@@ -42,10 +43,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    # Configure CORS
+    # Configure CORS (include frontend_origin if set, e.g. when frontend runs on custom port)
+    cors_origins = list(settings.cors_origins)
+    if settings.frontend_origin and settings.frontend_origin not in cors_origins:
+        cors_origins.append(settings.frontend_origin)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -70,6 +74,7 @@ def create_app() -> FastAPI:
     application.include_router(config_router, prefix="/api")
     application.include_router(tags_router, prefix="/api")
     application.include_router(weekly_todos_router, prefix="/api")
+    application.include_router(notes_files_router, prefix="/api")
 
     return application
 
@@ -101,4 +106,5 @@ async def debug_config():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    settings = get_settings()
+    uvicorn.run(app, host=settings.backend_host, port=settings.backend_port)

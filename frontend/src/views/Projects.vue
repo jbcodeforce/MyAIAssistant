@@ -280,7 +280,7 @@
               v-if="descriptionTab === 'write'"
               v-model="formData.description" 
               class="markdown-textarea"
-              rows="8"
+              rows="12"
               placeholder="## Project Overview
 
 Describe the project goals, scope, and key deliverables.
@@ -291,7 +291,10 @@ Describe the project goals, scope, and key deliverables.
 
 ### Timeline
 - **Phase 1**: Discovery (2 weeks)
-- **Phase 2**: Implementation (4 weeks)"
+- **Phase 2**: Implementation (4 weeks)
+
+## Architecture
+"
             ></textarea>
             <div v-else class="markdown-preview" v-html="renderedDescription"></div>
           </div>
@@ -497,8 +500,8 @@ Describe the project goals, scope, and key deliverables.
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
-import { projectsApi, organizationsApi } from '@/services/api'
+import { projectsApi, organizationsApi, uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const route = useRoute()
@@ -559,9 +562,19 @@ const isFormValid = computed(() => {
   return formData.value.name && formData.value.name.trim().length > 0
 })
 
+const notesImagesContextBase = computed(() => {
+  const orgId = showSectionViewer.value ? viewingProject.value?.organization_id : formData.value.organization_id
+  if (!orgId) return ''
+  const org = organizations.value.find(o => o.id === orgId)
+  return org?.name ? sanitizeOrgNameForPath(org.name) : ''
+})
 // Rendered markdown for form fields
-const renderedDescription = computed(() => marked(formData.value.description || ''))
-const renderedTasks = computed(() => marked(formData.value.tasks || ''))
+const renderedDescription = computed(() =>
+  renderMarkdownForNotes(formData.value.description || '', notesImagesContextBase.value)
+)
+const renderedTasks = computed(() =>
+  renderMarkdownForNotes(formData.value.tasks || '', notesImagesContextBase.value)
+)
 
 // Section viewer computeds
 const sectionLabels = {
@@ -579,7 +592,7 @@ const sectionViewerTitle = computed(() => {
 const renderedSectionContent = computed(() => {
   if (!viewingProject.value || !viewingSection.value) return ''
   const content = viewingProject.value[viewingSection.value] || ''
-  return marked(content)
+  return renderMarkdownForNotes(content, notesImagesContextBase.value)
 })
 
 const viewingSectionSteps = computed(() => {

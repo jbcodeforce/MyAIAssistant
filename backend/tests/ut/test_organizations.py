@@ -177,3 +177,37 @@ async def test_delete_organization_not_found(client: AsyncClient):
     response = await client.delete("/api/organizations/999")
     assert response.status_code == 404
 
+
+@pytest.mark.asyncio
+async def test_organization_is_top_active(client: AsyncClient):
+    # Create organization (default is_top_active false)
+    create_response = await client.post(
+        "/api/organizations/",
+        json={"name": "Top Active Org"}
+    )
+    assert create_response.status_code == 201
+    data = create_response.json()
+    assert data.get("is_top_active") is False or data.get("is_top_active") == 0
+    organization_id = data["id"]
+
+    # Update to set is_top_active true
+    update_response = await client.put(
+        f"/api/organizations/{organization_id}",
+        json={"is_top_active": True}
+    )
+    assert update_response.status_code == 200
+    assert update_response.json().get("is_top_active") is True or update_response.json().get("is_top_active") == 1
+
+    # List with top_active filter
+    list_all = await client.get("/api/organizations/")
+    assert list_all.status_code == 200
+    list_active = await client.get("/api/organizations/?top_active=true")
+    assert list_active.status_code == 200
+    assert len(list_active.json()["organizations"]) >= 1
+    assert any(o["id"] == organization_id for o in list_active.json()["organizations"])
+
+    # Remove from top active
+    await client.put(f"/api/organizations/{organization_id}", json={"is_top_active": False})
+    list_active_after = await client.get("/api/organizations/?top_active=true")
+    assert not any(o["id"] == organization_id for o in list_active_after.json()["organizations"])
+

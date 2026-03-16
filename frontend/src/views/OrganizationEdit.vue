@@ -100,11 +100,15 @@
           <div class="editor-tabs">
             <button type="button" :class="['tab-btn', { active: stakeholdersTab === 'write' }]" @click="stakeholdersTab = 'write'">Write</button>
             <button type="button" :class="['tab-btn', { active: stakeholdersTab === 'preview' }]" @click="stakeholdersTab = 'preview'">Preview</button>
+            <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('stakeholders')" title="Insert image">Image</button>
           </div>
+          <input ref="imageFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden-file-input" @change="onImageFileSelected" />
           <textarea
             v-if="stakeholdersTab === 'write'"
+            ref="stakeholdersInput"
             v-model="formData.stakeholders"
             class="markdown-textarea"
+            @keydown="(e) => handleTabInTextarea(e, 'stakeholders')"
             rows="3"
             placeholder="## Key Contacts
 - **John Doe** - CTO, decision maker
@@ -120,11 +124,14 @@
           <div class="editor-tabs">
             <button type="button" :class="['tab-btn', { active: teamTab === 'write' }]" @click="teamTab = 'write'">Write</button>
             <button type="button" :class="['tab-btn', { active: teamTab === 'preview' }]" @click="teamTab = 'preview'">Preview</button>
+            <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('team')" title="Insert image">Image</button>
           </div>
           <textarea
             v-if="teamTab === 'write'"
+            ref="teamInput"
             v-model="formData.team"
             class="markdown-textarea"
+            @keydown="(e) => handleTabInTextarea(e, 'team')"
             rows="3"
             placeholder="## Internal Team
 - **Account Manager**: Alex Johnson
@@ -140,17 +147,20 @@
           <div class="editor-tabs">
             <button type="button" :class="['tab-btn', { active: descriptionTab === 'write' }]" @click="descriptionTab = 'write'">Write</button>
             <button type="button" :class="['tab-btn', { active: descriptionTab === 'preview' }]" @click="descriptionTab = 'preview'">Preview</button>
+            <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('description')" title="Insert image">Image</button>
           </div>
           <textarea
             v-if="descriptionTab === 'write'"
+            ref="descriptionInput"
             v-model="formData.description"
             class="markdown-textarea"
-            rows="15"
+            rows="25"
             placeholder="## Account Strategy
 
 ### Goals
 - Expand platform adoption
 - Upsell enterprise features"
+            @keydown="(e) => handleTabInTextarea(e, 'description')"
           />
           <div v-else class="markdown-preview form-preview" v-html="formRenderedDescription"></div>
         </div>
@@ -162,11 +172,14 @@
           <div class="editor-tabs">
             <button type="button" :class="['tab-btn', { active: productsTab === 'write' }]" @click="productsTab = 'write'">Write</button>
             <button type="button" :class="['tab-btn', { active: productsTab === 'preview' }]" @click="productsTab = 'preview'">Preview</button>
+            <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('related_products')" title="Insert image">Image</button>
           </div>
           <textarea
             v-if="productsTab === 'write'"
+            ref="productsInput"
             v-model="formData.related_products"
             class="markdown-textarea"
+            @keydown="(e) => handleTabInTextarea(e, 'related_products')"
             rows="2"
             placeholder="## Products in Use
 - **Flink SQL** - Production
@@ -180,10 +193,10 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
-import { organizationsApi } from '@/services/api'
+import { organizationsApi, uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 
 const route = useRoute()
 
@@ -209,6 +222,12 @@ const saving = ref(false)
 const lastSaveError = ref(null)
 const lastSavedAt = ref(null)
 const initialLoadDone = ref(false)
+const imageFileInput = ref(null)
+const activeImageField = ref(null)
+const stakeholdersInput = ref(null)
+const teamInput = ref(null)
+const descriptionInput = ref(null)
+const productsInput = ref(null)
 
 const DEBOUNCE_MS = 2500
 let debounceTimer = null
@@ -218,10 +237,21 @@ const backLink = computed(() => (orgId.value ? { name: 'OrganizationDetail', par
 
 const isFormValid = computed(() => formData.value.name && formData.value.name.trim().length > 0)
 
-const formRenderedStakeholders = computed(() => marked(formData.value.stakeholders || ''))
-const formRenderedTeam = computed(() => marked(formData.value.team || ''))
-const formRenderedDescription = computed(() => marked(formData.value.description || ''))
-const formRenderedProducts = computed(() => marked(formData.value.related_products || ''))
+const notesImagesContextBase = computed(() =>
+  organization.value?.name ? sanitizeOrgNameForPath(organization.value.name) : ''
+)
+const formRenderedStakeholders = computed(() =>
+  renderMarkdownForNotes(formData.value.stakeholders || '', notesImagesContextBase.value)
+)
+const formRenderedTeam = computed(() =>
+  renderMarkdownForNotes(formData.value.team || '', notesImagesContextBase.value)
+)
+const formRenderedDescription = computed(() =>
+  renderMarkdownForNotes(formData.value.description || '', notesImagesContextBase.value)
+)
+const formRenderedProducts = computed(() =>
+  renderMarkdownForNotes(formData.value.related_products || '', notesImagesContextBase.value)
+)
 
 const defaultStakeholders = `## Key Contacts
 - **Name** - Role, responsibilities
@@ -244,6 +274,46 @@ Brief overview of current engagement
 const defaultProducts = `## Products in Use
 - **Product Name** - Status (Production/Evaluation/POC)
 - **Product Name** - Status`
+
+function handleTabInTextarea(event, field) {
+  if (event.key !== 'Tab') return
+  event.preventDefault()
+  const el = event.target
+  const start = el.selectionStart
+  const end = el.selectionEnd
+  const value = formData.value[field] ?? ''
+  const newValue = value.slice(0, start) + '\t' + value.slice(end)
+  formData.value[field] = newValue
+  nextTick(() => {
+    el.selectionStart = el.selectionEnd = start + 1
+  })
+}
+
+function triggerImageUpload(field) {
+  if (!organization.value?.id) return
+  activeImageField.value = field
+  imageFileInput.value?.click()
+}
+
+async function onImageFileSelected(event) {
+  const file = event.target?.files?.[0]
+  event.target.value = ''
+  const field = activeImageField.value
+  activeImageField.value = null
+  if (!file || !organization.value?.id || !field) return
+  const refMap = { stakeholders: stakeholdersInput, team: teamInput, description: descriptionInput, related_products: productsInput }
+  const textareaRef = refMap[field]
+  try {
+    const result = await uploadNotesImage(file, 'organization', { organization_id: organization.value.id })
+    const insert = `![](${result.path})`
+    const el = textareaRef?.value
+    const setValue = (v) => { formData.value[field] = v }
+    if (el) insertMarkdownAtCursor(el, insert, setValue)
+    else formData.value[field] = (formData.value[field] || '') + insert
+  } catch (err) {
+    console.error('Image upload failed:', err)
+  }
+}
 
 function fillFormFromOrg(org) {
   formData.value = {
@@ -632,6 +702,18 @@ function formatTime(date) {
 :global(.dark) .tab-btn.active {
   background: #1e293b;
   color: #60a5fa;
+}
+
+.insert-image-btn {
+  margin-left: auto;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .markdown-textarea {

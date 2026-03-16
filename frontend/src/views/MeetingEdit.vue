@@ -126,9 +126,12 @@
           <div class="editor-tabs">
             <button type="button" :class="['tab-btn', { active: editorTab === 'write' }]" @click="editorTab = 'write'">Write</button>
             <button type="button" :class="['tab-btn', { active: editorTab === 'preview' }]" @click="editorTab = 'preview'">Preview</button>
+            <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload" title="Insert image">Image</button>
           </div>
+          <input ref="imageFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden-file-input" @change="onImageFileSelected" />
           <textarea
             v-if="editorTab === 'write'"
+            ref="contentInput"
             v-model="formData.content"
             class="markdown-textarea"
             rows="15"
@@ -144,8 +147,9 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
+import { uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, meetingNotesContextBaseFromFileRef } from '@/utils/markdownNotes'
 
 const route = useRoute()
 const store = useMeetingRefStore()
@@ -167,6 +171,8 @@ const saving = ref(false)
 const lastSaveError = ref(null)
 const lastSavedAt = ref(null)
 const initialLoadDone = ref(false)
+const imageFileInput = ref(null)
+const contentInput = ref(null)
 
 const DEBOUNCE_MS = 2500
 let debounceTimer = null
@@ -179,7 +185,12 @@ const filteredProjects = computed(() => {
   return store.projects.filter(p => p.organization_id === formData.value.org_id)
 })
 
-const formRenderedContent = computed(() => marked(formData.value.content || ''))
+const notesImagesContextBase = computed(() =>
+  meeting.value?.file_ref ? meetingNotesContextBaseFromFileRef(meeting.value.file_ref) : ''
+)
+const formRenderedContent = computed(() =>
+  renderMarkdownForNotes(formData.value.content || '', notesImagesContextBase.value)
+)
 
 function getOrganizationName(orgId) {
   return store.getOrganizationName(orgId)
@@ -187,6 +198,27 @@ function getOrganizationName(orgId) {
 
 function getProjectName(projectId) {
   return store.getProjectName(projectId)
+}
+
+function triggerImageUpload() {
+  if (!meeting.value?.file_ref) return
+  imageFileInput.value?.click()
+}
+
+async function onImageFileSelected(event) {
+  const file = event.target?.files?.[0]
+  event.target.value = ''
+  if (!file || !meeting.value?.file_ref) return
+  try {
+    const result = await uploadNotesImage(file, 'meeting', { file_ref: meeting.value.file_ref })
+    const insert = `![](${result.path})`
+    const el = contentInput.value
+    const setValue = (v) => { formData.value.content = v }
+    if (el) insertMarkdownAtCursor(el, insert, setValue)
+    else formData.value.content = (formData.value.content || '') + insert
+  } catch (err) {
+    console.error('Image upload failed:', err)
+  }
 }
 
 async function loadMeeting() {
@@ -574,6 +606,18 @@ function formatTime(date) {
 :global(.dark) .tab-btn.active {
   background: #1e293b;
   color: #60a5fa;
+}
+
+.insert-image-btn {
+  margin-left: auto;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .markdown-textarea {

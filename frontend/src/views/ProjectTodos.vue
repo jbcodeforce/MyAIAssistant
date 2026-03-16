@@ -82,7 +82,6 @@
               v-for="todo in sortedTodos" 
               :key="todo.id" 
               :class="['todo-row', todo.status.toLowerCase(), { 'highlighted': todo.id === highlightTodoId }]"
-              :ref="todo.id === highlightTodoId ? 'highlightedRow' : null"
               role="button"
               tabindex="0"
               @click="openEditModal(todo)"

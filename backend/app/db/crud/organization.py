@@ -26,20 +26,23 @@ async def get_organizations(
     db: AsyncSession,
     skip: int = 0,
     limit: int = 100,
+    top_active: Optional[bool] = None,
 ) -> tuple[list[Organization], int]:
-    """Get all organizations with pagination."""
+    """Get all organizations with pagination. Optionally filter by top_active."""
     query = select(Organization)
-    
+    if top_active is not None:
+        query = query.where(Organization.is_top_active == (1 if top_active else 0))
+
     # Get total count
     count_query = select(func.count()).select_from(query.subquery())
     total_result = await db.execute(count_query)
     total = total_result.scalar_one()
-    
+
     # Get paginated results
     query = query.order_by(Organization.created_at.desc()).offset(skip).limit(limit)
     result = await db.execute(query)
     organizations = list(result.scalars().all())
-    
+
     return organizations, total
 
 

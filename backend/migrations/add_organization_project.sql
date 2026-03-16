@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS organizations (
     team TEXT,
     description TEXT,
     related_products TEXT,
+    is_top_active INTEGER NOT NULL DEFAULT 0,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -92,6 +92,13 @@ class Settings(BaseSettings):
     # CORS settings
     cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
+    # Server bind (when running via `python -m app.main`). For `uvicorn` CLI use --host/--port or set env.
+    backend_host: str = "0.0.0.0"
+    backend_port: int = 8000
+
+    # Optional origin to add to CORS when frontend runs on a custom port (e.g. FRONTEND_ORIGIN=http://localhost:3001).
+    frontend_origin: Optional[str] = None
+
 
     # Logging settings
     log_level: str = "INFO"

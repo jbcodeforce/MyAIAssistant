@@ -26,10 +26,11 @@ export default defineConfig({
     }
   },
   server: {
-    port: 3000,
+    port: parseInt(process.env.FRONTEND_PORT || '3000', 10),
+    host: process.env.FRONTEND_HOST !== undefined ? process.env.FRONTEND_HOST : true,
     proxy: {
       '/api': {
-        target: 'http://localhost:8000',
+        target: process.env.BACKEND_URL || 'http://localhost:8000',
         changeOrigin: true
       }
     }

@@ -269,7 +269,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { marked } from 'marked'
+import { renderMarkdownForNotes, meetingNotesContextBaseFromFileRef } from '@/utils/markdownNotes'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
 import Modal from '@/components/common/Modal.vue'
 
@@ -320,9 +320,12 @@ const hasMore = computed(() => {
   return items.value.length < totalCount.value
 })
 
-const renderedViewContent = computed(() => {
-  return marked(viewContent.value || '')
-})
+const meetingNotesContextBase = computed(() =>
+  editingItem.value?.file_ref ? meetingNotesContextBaseFromFileRef(editingItem.value.file_ref) : ''
+)
+const renderedViewContent = computed(() =>
+  renderMarkdownForNotes(viewContent.value || '', meetingNotesContextBase.value)
+)
 
 // Lifecycle
 onMounted(async () => {

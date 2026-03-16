@@ -257,9 +257,12 @@
               >
                 Preview
               </button>
+              <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('context')" title="Insert image">Image</button>
             </div>
+            <input ref="imageFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden-file-input" @change="onImageFileSelected" />
             <textarea 
               v-if="contextTab === 'write'"
+              ref="contextInput"
               v-model="formData.context" 
               class="markdown-textarea"
               rows="5"
@@ -294,9 +297,11 @@ How you know this person, their responsibilities, key topics discussed.
               >
                 Preview
               </button>
+              <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('next_step')" title="Insert image">Image</button>
             </div>
             <textarea 
               v-if="nextStepTab === 'write'"
+              ref="nextStepInput"
               v-model="formData.next_step" 
               class="markdown-textarea"
               rows="4"
@@ -322,8 +327,8 @@ How you know this person, their responsibilities, key topics discussed.
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { marked } from 'marked'
-import { personsApi, projectsApi, organizationsApi } from '@/services/api'
+import { personsApi, projectsApi, organizationsApi, uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const persons = ref([])
@@ -356,6 +361,10 @@ const formData = ref({
 // Editor tabs
 const contextTab = ref('write')
 const nextStepTab = ref('write')
+const imageFileInput = ref(null)
+const activeImageField = ref(null)
+const contextInput = ref(null)
+const nextStepInput = ref(null)
 
 // Section viewer modal state
 const showSectionViewer = ref(false)
@@ -370,9 +379,19 @@ const isFormValid = computed(() => {
   return formData.value.name && formData.value.name.trim().length > 0
 })
 
+const notesImagesContextBase = computed(() => {
+  const orgId = showSectionViewer.value ? viewingPerson.value?.organization_id : formData.value.organization_id
+  if (!orgId) return ''
+  const org = organizations.value.find(o => o.id === orgId)
+  return org?.name ? sanitizeOrgNameForPath(org.name) : ''
+})
 // Rendered markdown for form fields
-const renderedContext = computed(() => marked(formData.value.context || ''))
-const renderedNextStep = computed(() => marked(formData.value.next_step || ''))
+const renderedContext = computed(() =>
+  renderMarkdownForNotes(formData.value.context || '', notesImagesContextBase.value)
+)
+const renderedNextStep = computed(() =>
+  renderMarkdownForNotes(formData.value.next_step || '', notesImagesContextBase.value)
+)
 
 // Section viewer computeds
 const sectionLabels = {
@@ -388,8 +407,34 @@ const sectionViewerTitle = computed(() => {
 const renderedSectionContent = computed(() => {
   if (!viewingPerson.value || !viewingSection.value) return ''
   const content = viewingPerson.value[viewingSection.value] || ''
-  return marked(content)
+  return renderMarkdownForNotes(content, notesImagesContextBase.value)
 })
+
+function triggerImageUpload(field) {
+  if (!formData.value.organization_id) return
+  activeImageField.value = field
+  imageFileInput.value?.click()
+}
+
+async function onImageFileSelected(event) {
+  const file = event.target?.files?.[0]
+  event.target.value = ''
+  const field = activeImageField.value
+  activeImageField.value = null
+  if (!file || !formData.value.organization_id || !field) return
+  const refMap = { context: contextInput, next_step: nextStepInput }
+  const textareaRef = refMap[field]
+  try {
+    const result = await uploadNotesImage(file, 'organization', { organization_id: formData.value.organization_id })
+    const insert = `![](${result.path})`
+    const el = textareaRef?.value
+    const setValue = (v) => { formData.value[field] = v }
+    if (el) insertMarkdownAtCursor(el, insert, setValue)
+    else formData.value[field] = (formData.value[field] || '') + insert
+  } catch (err) {
+    console.error('Image upload failed:', err)
+  }
+}
 
 onMounted(async () => {
   await Promise.all([
@@ -1141,6 +1186,18 @@ function formatDateTimeLocal(dateString) {
 :global(.dark) .tab-btn.active {
   background: #1e293b;
   color: #fbbf24;
+}
+
+.insert-image-btn {
+  margin-left: auto;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .markdown-textarea {

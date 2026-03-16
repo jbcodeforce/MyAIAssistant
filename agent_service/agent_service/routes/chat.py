@@ -150,22 +150,22 @@ def _get_agent_for_request(body: ChatGenericRequest):
 
 @router.post("/generic/stream")
 async def chat_generic_stream(body: ChatGenericRequest):
-    """Stream generic chat as NDJSON. Uses agent_name from body when provided."""
+    """Stream generic chat as NDJSON. True streaming from agno agent (stream=True)."""
+
+    from fastapi.responses import StreamingResponse
+
     async def generate():
         try:
             agent = _get_agent_for_request(body)
             user_message = _format_message(body)
-            run_output = await agent.arun(user_message)
-            content = run_output.content if run_output else ""
-            message = content if isinstance(content, str) else (str(content) if content else "")
-            chunk_size = 80
-            for i in range(0, len(message), chunk_size):
-                yield json.dumps({"content": message[i : i + chunk_size]}) + "\n"
+            response_stream = agent.arun(user_message, stream=True)
+            async for event in response_stream:
+                if hasattr(event, "content") and event.content:
+                    yield json.dumps({"content": event.content}) + "\n"
             yield json.dumps({"done": True, "context_used": []}) + "\n"
         except Exception as e:
             yield json.dumps({"content": f"Error: {e}", "done": True}) + "\n"
 
-    from fastapi.responses import StreamingResponse
     return StreamingResponse(
         generate(),
         media_type="application/x-ndjson",

@@ -538,6 +538,48 @@ export const slpAssessmentsApi = {
   }
 }
 
+/**
+ * Notes-files: upload images for markdown notes and resolve serve URLs.
+ * context_type: 'meeting' | 'organization'
+ * - meeting: contextPayload = { file_ref: 'acme/proj/2026-01-10-mtg.md' }
+ * - organization: contextPayload = { organization_id: 5 }
+ * Returns { path: './images/filename', context_base: '...' } for markdown insertion.
+ */
+export async function uploadNotesImage(file, contextType, contextPayload) {
+  const form = new FormData()
+  form.append('file', file)
+  form.append('context_type', contextType)
+  if (contextType === 'meeting' && contextPayload?.file_ref != null) {
+    form.append('file_ref', contextPayload.file_ref)
+  }
+  if (contextType === 'organization' && contextPayload?.organization_id != null) {
+    form.append('organization_id', String(contextPayload.organization_id))
+  }
+  const base = api.defaults.baseURL || '/api'
+  const res = await fetch(`${base}/notes-files/upload`, {
+    method: 'POST',
+    body: form
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || res.statusText)
+  }
+  return res.json()
+}
+
+/**
+ * Build in-app URL for a note image so the browser can load it.
+ * contextBase is from upload response (e.g. 'meetings/acme/proj' or 'my-org').
+ * relativePath is the path stored in markdown (e.g. './images/name.png').
+ */
+export function getNotesFileUrl(contextBase, relativePath) {
+  if (!contextBase || !relativePath) return relativePath || ''
+  const path = relativePath.replace(/^\.\//, '')
+  const base = api.defaults.baseURL || '/api'
+  const full = [base, 'notes-files', contextBase, path].filter(Boolean).join('/')
+  return full.replace(/([^:]\/)\/+/g, '$1')
+}
+
 export const meetingRefsApi = {
   list(params = {}) {
     return api.get('/meeting-refs/', { params })

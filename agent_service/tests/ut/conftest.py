@@ -42,8 +42,9 @@ def _make_app():
     @app.post("/chat/generic/stream")
     async def chat_generic_stream(request: dict):
         def gen():
-            yield json.dumps({"content": "Test"}) + "\n"
-            yield json.dumps({"done": True}) + "\n"
+            for chunk in ["Hello", " ", "world"]:
+                yield json.dumps({"content": chunk}) + "\n"
+            yield json.dumps({"done": True, "context_used": []}) + "\n"
         from fastapi.responses import StreamingResponse
         return StreamingResponse(
             (line.encode("utf-8") for line in gen()),

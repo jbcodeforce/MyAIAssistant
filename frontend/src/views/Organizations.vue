@@ -4,7 +4,7 @@
       <div>
         <h2>Organizations</h2>
         <p class="view-description">
-          Manage organization profiles, stakeholders, and strategy information
+          Manage organization profiles, stakeholders, and strategy information. (Drag&Drop to Top active section)
         </p>
       </div>
       <div class="header-actions">
@@ -105,6 +105,8 @@
           v-for="organization in filteredOrganizations" 
           :key="organization.id" 
           class="organization-card"
+          draggable="true"
+          @dragstart="onOrgDragStart($event, organization)"
         >
           <div class="organization-header">
             <div class="organization-avatar">
@@ -244,7 +246,13 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="organization in filteredOrganizations" :key="organization.id" class="org-row">
+            <tr
+              v-for="organization in filteredOrganizations"
+              :key="organization.id"
+              class="org-row"
+              draggable="true"
+              @dragstart="onOrgDragStart($event, organization)"
+            >
               <td class="col-name">
                 <div class="table-org-name">
                   <span class="organization-avatar table-avatar">{{ getInitials(organization.name) }}</span>
@@ -307,6 +315,55 @@
           Load More ({{ organizations.length }} of {{ totalCount }})
         </button>
       </div>
+
+      <!-- Top active organizations -->
+      <section v-if="!loading && !error" class="top-active-section">
+        <h3 class="top-active-heading">Top active organizations</h3>
+        <div
+          class="top-active-drop-zone"
+          :class="{ 'drag-over': topActiveDragOver }"
+          @dragover.prevent="topActiveDragOver = true"
+          @dragleave.prevent="topActiveDragOver = false"
+          @drop.prevent="onTopActiveDrop"
+        >
+          <table v-if="topActiveOrganizations.length > 0" class="top-active-table">
+            <thead>
+              <tr>
+                <th class="col-name">Name</th>
+                <th class="col-actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="org in topActiveOrganizations" :key="org.id">
+                <td class="col-name">
+                  <span class="organization-avatar table-avatar">{{ getInitials(org.name) }}</span>
+                  <router-link :to="`/organizations/${org.id}`" class="org-name-link">{{ org.name }}</router-link>
+                </td>
+                <td class="col-actions">
+                  <router-link :to="`/organizations/${org.id}`" class="btn-icon" title="View">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                  </router-link>
+                  <button
+                    type="button"
+                    class="btn-icon"
+                    title="Remove from top active"
+                    @click="removeFromTopActive(org)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M18 6 6 18"/>
+                      <path d="m6 6 12 12"/>
+                    </svg>
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-else class="top-active-empty">Drag an organization here to mark it as top active</p>
+        </div>
+      </section>
     </div>
 
     <!-- Section Viewer Modal -->
@@ -331,8 +388,8 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
+import { renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
@@ -374,6 +431,16 @@ const filteredOrganizations = computed(() => {
   )
 })
 
+function isTopActive(org) {
+  return org && (org.is_top_active === true || org.is_top_active === 1)
+}
+const topActiveOrganizations = computed(() =>
+  organizations.value.filter(o => isTopActive(o))
+    .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }))
+)
+
+const topActiveDragOver = ref(false)
+
 // Section viewer computeds
 const sectionLabels = {
   stakeholders: 'Stakeholders',
@@ -387,10 +454,13 @@ const sectionViewerTitle = computed(() => {
   return `${viewingOrganization.value.name} - ${sectionLabels[viewingSection.value] || ''}`
 })
 
+const notesImagesContextBase = computed(() =>
+  viewingOrganization.value?.name ? sanitizeOrgNameForPath(viewingOrganization.value.name) : ''
+)
 const renderedSectionContent = computed(() => {
   if (!viewingOrganization.value || !viewingSection.value) return ''
   const content = viewingOrganization.value[viewingSection.value] || ''
-  return marked(content)
+  return renderMarkdownForNotes(content, notesImagesContextBase.value)
 })
 
 onMounted(async () => {
@@ -485,6 +555,57 @@ function formatDate(dateString) {
     month: 'short',
     day: 'numeric'
   })
+}
+
+function onOrgDragStart(event, organization) {
+  event.dataTransfer.effectAllowed = 'move'
+  event.dataTransfer.setData('application/json', JSON.stringify({ organizationId: organization.id }))
+}
+
+async function onTopActiveDrop(event) {
+  topActiveDragOver.value = false
+  let data
+  try {
+    const raw = event.dataTransfer.getData('application/json')
+    data = raw ? JSON.parse(raw) : null
+  } catch {
+    return
+  }
+  const id = data?.organizationId
+  if (!id) return
+  const org = organizations.value.find(o => o.id === id)
+  if (!org || isTopActive(org)) return
+  try {
+    const response = await organizationsApi.update(id, { is_top_active: true })
+    const idx = organizations.value.findIndex(o => o.id === id)
+    if (idx !== -1) {
+      organizations.value = [
+        ...organizations.value.slice(0, idx),
+        { ...organizations.value[idx], ...response.data },
+        ...organizations.value.slice(idx + 1)
+      ]
+    }
+  } catch (err) {
+    console.error('Failed to set top active:', err)
+    alert(err.response?.data?.detail || 'Failed to update organization')
+  }
+}
+
+async function removeFromTopActive(org) {
+  try {
+    const response = await organizationsApi.update(org.id, { is_top_active: false })
+    const idx = organizations.value.findIndex(o => o.id === org.id)
+    if (idx !== -1) {
+      organizations.value = [
+        ...organizations.value.slice(0, idx),
+        { ...organizations.value[idx], ...response.data },
+        ...organizations.value.slice(idx + 1)
+      ]
+    }
+  } catch (err) {
+    console.error('Failed to remove from top active:', err)
+    alert(err.response?.data?.detail || 'Failed to update organization')
+  }
 }
 </script>
 
@@ -1020,6 +1141,99 @@ function formatDate(dateString) {
   display: flex;
   justify-content: center;
   margin-top: 1.5rem;
+}
+
+.top-active-section {
+  margin-top: 2.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+:global(.dark) .top-active-section {
+  border-top-color: #334155;
+}
+
+.top-active-heading {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+:global(.dark) .top-active-heading {
+  color: #f1f5f9;
+}
+
+.top-active-drop-zone {
+  min-height: 80px;
+  padding: 1rem;
+  border: 2px dashed #d1d5db;
+  border-radius: 8px;
+  background: #f9fafb;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+:global(.dark) .top-active-drop-zone {
+  border-color: #334155;
+  background: #0f172a;
+}
+
+.top-active-drop-zone.drag-over {
+  background: #eff6ff;
+  border-color: #2563eb;
+}
+
+:global(.dark) .top-active-drop-zone.drag-over {
+  background: rgba(59, 130, 246, 0.15);
+  border-color: #3b82f6;
+}
+
+.top-active-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.top-active-table th,
+.top-active-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+:global(.dark) .top-active-table th,
+:global(.dark) .top-active-table td {
+  border-bottom-color: #334155;
+}
+
+.top-active-table .col-actions {
+  width: 100px;
+}
+
+.top-active-empty {
+  margin: 0;
+  color: #6b7280;
+  font-size: 0.875rem;
+}
+
+:global(.dark) .top-active-empty {
+  color: #94a3b8;
+}
+
+.organization-card[draggable="true"] {
+  cursor: grab;
+}
+
+.organization-card[draggable="true"]:active {
+  cursor: grabbing;
+}
+
+.org-row[draggable="true"] {
+  cursor: grab;
+}
+
+.org-row[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .btn-primary,
