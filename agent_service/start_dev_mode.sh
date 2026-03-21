@@ -19,11 +19,12 @@ NC='\033[0m' # No Color
 
 echo -e "\n${YELLOW}Configuration:${NC}"
 echo -e "  Project Root:  $PROJECT_ROOT"
-echo -e "  Database:      $AGENT_SERVICE_DIR/data/content.db"
-echo -e "  LanceDB:       $AGENT_SERVICE_DIR/data/vs.db"
+echo -e "  Database:      $AGENT_SERVICE_DIR/test_wksp/content.db"
+echo -e "  LanceDB:       $AGENT_SERVICE_DIR/test_wksp/vs.db"
 
 # Export config for backend and agent service URL when running agent_service in this script
-export CONFIG_FILE="$AGENT_SERVICE_DIR/config.yaml"
+export AI_DB_FILE="$AGENT_SERVICE_DIR/test_wksp/memory.db"
+export VS_DB_URL="$AGENT_SERVICE_DIR/test_wksp/vs.db"
 export AGENT_SERVICE_URL="http://localhost:8100"
 export AGNO_DEBUG=1
 export TRACE_LLM_PROMPT=1

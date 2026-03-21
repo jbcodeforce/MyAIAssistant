@@ -30,6 +30,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["agent_service"]
 
+[project.scripts]
+normalize-customer-indexes = "agent_service.customer_index_normalize:main"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]

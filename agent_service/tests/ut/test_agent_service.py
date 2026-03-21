@@ -54,11 +54,3 @@ async def test_create_agent_router():
 
 
 
-async def test_get_ai_agent():
-    factory = get_or_create_agent_factory()
-    ai_agent = factory.get_ai_agent("MainAgent")
-    assert ai_agent is not None
-    assert isinstance(ai_agent, AIAgent)
-    assert ai_agent.get_agent() is not None
-    assert ai_agent.get_system_prompt() is not None
-

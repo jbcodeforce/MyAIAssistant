@@ -50,9 +50,6 @@
           <router-link to="/archived" class="nav-subitem" active-class="active">
             <span class="nav-label">Archived</span>
           </router-link>
-          <router-link to="/projects" class="nav-subitem" active-class="active">
-            <span class="nav-label">Projects</span>
-          </router-link>
           <router-link to="/weekly-todo" class="nav-subitem" active-class="active">
             <span class="nav-label">Weekly Todo</span>
           </router-link>
@@ -68,31 +65,6 @@
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
         <span class="nav-label">Organizations</span>
-      </router-link>
-
-      <!-- Persons -->
-      <router-link to="/persons" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span class="nav-label">Persons</span>
-      </router-link>
-
-      <!-- Knowledge -->
-      <router-link to="/knowledge" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-        </svg>
-        <span class="nav-label">Knowledge</span>
-      </router-link>
-
-      <!-- Assistant -->
-      <router-link to="/assistant" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="nav-label">Chat</span>
       </router-link>
 
       <!-- Meetings -->
@@ -112,6 +84,21 @@
         <span class="nav-label">Meetings</span>
       </router-link>
 
+      <!-- Projects -->
+      <router-link to="/projects" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="nav-label">Projects</span>
+      </router-link>
+      <!-- Persons -->
+      <router-link to="/persons" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">Persons</span>
+      </router-link>
       <!-- Assets -->
       <router-link to="/assets" class="nav-item" active-class="active">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -123,14 +110,22 @@
         <span class="nav-label">Assets</span>
       </router-link>
 
-      <!-- Metrics -->
-      <router-link to="/metrics" class="nav-item" active-class="active">
+
+
+      <!-- Assistant -->
+      <router-link to="/assistant" class="nav-item" active-class="active">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        <span class="nav-label">Metrics</span>
+        <span class="nav-label">Chat</span>
+      </router-link>
+
+      <!-- Knowledge -->
+      <router-link to="/knowledge" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+        </svg>
+        <span class="nav-label">Knowledge</span>
       </router-link>
 
       <!-- Agents -->
@@ -145,6 +140,18 @@
         </svg>
         <span class="nav-label">Agents</span>
       </router-link>
+      
+      <!-- Metrics -->
+      <router-link to="/metrics" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Metrics</span>
+      </router-link>
+
+
 
       <!-- Life Portfolio -->
       <router-link to="/life-portfolio" class="nav-item" active-class="active">

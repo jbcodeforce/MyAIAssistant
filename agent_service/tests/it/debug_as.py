@@ -5,8 +5,6 @@ from agent_service.main import app, agents, agent_os
 
 
 
-if __name__ == "__main__":
-
-    print(agents)
+def test_debug_as():
     print(agent_os)
     assert len(agent_os.agents) >= 2

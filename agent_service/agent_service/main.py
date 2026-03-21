@@ -31,11 +31,11 @@ from agent_service.agents.agent_factory import get_or_create_agent_factory
 from agent_service.routes import chat_router, health_router, rag_router, extract_router, tag_router, myai_agent_api_router
 from agent_service.ai_db import get_ai_db, create_knowledge
 
+# prepare agno config file path
 config_path = str(Path(__file__).parent.joinpath("config.yaml"))
 
 agent_factory = get_or_create_agent_factory()
 agents = agent_factory.list_agents()
-
 
 try:
     kb = create_knowledge("agent_os", "knowledge_base")
@@ -46,6 +46,7 @@ except Exception as e:
 
 
 print(f"config_path: {config_path}")
+db = get_ai_db()
 agent_os = AgentOS(
     id="myai-agent-service",
     name="MyAIAssistant Agent Service",
@@ -54,7 +55,7 @@ agent_os = AgentOS(
     config=config_path,
     tracing=True,
     telemetry=False,
-    db=get_ai_db()
+    db=db
 )
 
 app = agent_os.get_app()

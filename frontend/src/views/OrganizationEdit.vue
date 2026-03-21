@@ -550,7 +550,9 @@ function formatTime(date) {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  max-width: 48rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .preview-section {
@@ -590,6 +592,20 @@ function formatTime(date) {
   padding: 0;
   min-height: 0;
   max-height: none;
+  font-size: 0.9375rem;
+  line-height: 1.65;
+}
+
+.full-page-preview .markdown-preview.form-preview :deep(img) {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0.75rem 0;
+  border-radius: 6px;
+}
+
+.full-page-preview .preview-name {
+  font-size: 1.25rem;
 }
 
 .loading-state,

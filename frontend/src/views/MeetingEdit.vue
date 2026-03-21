@@ -643,10 +643,117 @@ function formatTime(date) {
   max-height: 500px;
   overflow-y: auto;
   background: white;
+  line-height: 1.6;
+  font-size: 0.875rem;
+  color: #374151;
 }
 
 :global(.dark) .markdown-preview.form-preview {
   background: #1e293b;
+  color: #e2e8f0;
+}
+
+.markdown-preview.form-preview :deep(h1) {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview.form-preview :deep(h2) {
+  font-size: 1.125rem;
+  margin: 0.75rem 0 0.375rem 0;
+}
+
+.markdown-preview.form-preview :deep(h3) {
+  font-size: 1rem;
+  margin: 0.5rem 0 0.25rem 0;
+}
+
+.markdown-preview.form-preview :deep(p) {
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview.form-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview.form-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.5rem 0;
+}
+
+.markdown-preview.form-preview :deep(li) {
+  display: list-item;
+}
+
+.markdown-preview.form-preview :deep(strong) {
+  font-weight: 600;
+}
+
+.markdown-preview.form-preview :deep(code) {
+  background: #f3f4f6;
+  padding: 0.125rem 0.375rem;
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.875em;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(code) {
+  background: #334155;
+}
+
+.markdown-preview.form-preview :deep(pre) {
+  background: #1f2937;
+  color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 0.5rem 0;
+}
+
+.markdown-preview.form-preview :deep(pre code) {
+  background: none;
+  padding: 0;
+  color: inherit;
+}
+
+.markdown-preview.form-preview :deep(blockquote) {
+  border-left: 4px solid #2563eb;
+  padding-left: 1rem;
+  margin: 0.5rem 0;
+  color: #4b5563;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(blockquote) {
+  color: #94a3b8;
+}
+
+.markdown-preview.form-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview.form-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview.form-preview :deep(a:hover) {
+  color: #93c5fd;
+}
+
+.markdown-preview.form-preview :deep(img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
 }
 
 .btn-primary {

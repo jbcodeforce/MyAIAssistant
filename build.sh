@@ -9,12 +9,6 @@ PUSH="${3:-false}"
 
 echo "Building Docker images with tag: $TAG for platforms: $PLATFORMS"
 
-# Build agent_core wheel first
-echo "Building agent_core library..."
-cd agent_core
-uv build --wheel
-cp dist/agent_core-*.whl ../backend/
-cd ..
 
 # Ensure buildx builder exists and is ready
 if ! docker buildx inspect multiarch-builder > /dev/null 2>&1; then

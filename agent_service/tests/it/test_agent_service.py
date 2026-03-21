@@ -88,13 +88,13 @@ async def test_simple_reasoning(client: AsyncClient):
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.read()}"
         async for event_type, data in _parse_sse_stream(response.aiter_lines()):
             events.append((event_type, data))
+            
     assert len(events) >= 1, "Expected at least one SSE event"
     event_names = [e[0] for e in events]
     assert "RunStarted" in event_names, f"Expected RunStarted in {event_names}"
     last_event = events[-1]  # the last event is a string
     print(last_event) # tuple(str, dict)
     payload_dict = last_event[1]
-    print(payload_dict)
     print("-"*40)
     session_id = payload_dict["session_id"]
     content = payload_dict["content"]
@@ -109,3 +109,54 @@ async def test_simple_reasoning(client: AsyncClient):
     print(json.dumps(data, indent=2))
 
 
+@pytest.mark.asyncio
+async def test_user_preference(client: AsyncClient):
+    """POST /agents/MainAgent/runs with stream=true returns SSE (HTTP) stream; consume events and assert RunStarted/RunCompleted.
+    AgentOS streams agent runs via Server-Sent Events; WebSocket is only used for workflows (/workflows/ws)."""
+    first_message = (
+        "My name is Alice and I prefer Python over JavaScript."
+    )
+    second_message = (
+        "What programming language do I prefer?"
+    )
+    events = []
+    print(f"Running test_user_preference with first_message:\n {first_message}")
+    async with client.stream(
+        "POST",
+        "/agents/MainAgent/runs",
+        data={"message": first_message,
+              "stream": "true",
+              "session_id": "test_session_id_123",
+              "user_id": "test_user_id_123",
+              "enable_agentic_memory": "true",
+              },
+        timeout=90.0,
+    ) as response:
+        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        async for event_type, data in _parse_sse_stream(response.aiter_lines()):
+            events.append((event_type, data))
+        print("-"*40)
+        assert len(events) >= 1, "Expected at least one SSE event"
+        last_event = events[-1]  # the last event is a string
+        payload_dict = last_event[1]
+        print(payload_dict['content'])
+        print("-"*40)
+    events = []
+    print(f"Running test_user_preference with second_message:\n {second_message}\n")
+    async with client.stream(
+        "POST",
+        "/agents/MainAgent/runs",
+        data={"message": second_message,
+              "stream": "true",
+              "session_id": "test_session_id_123",
+              "user_id": "test_user_id_123",
+              "enable_agentic_memory": "true",
+              },
+        timeout=90.0,
+    ) as response:
+        async for event_type, data in _parse_sse_stream(response.aiter_lines()):
+            events.append((event_type, data))
+            print(f"{event_type}, {data}\n")
+        print("-"*40)
+        last_event = events[-1]  # the last event is a string
+        print(last_event[1]['content']) # tuple(str, dict)
