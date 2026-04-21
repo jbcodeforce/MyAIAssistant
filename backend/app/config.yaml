@@ -18,17 +18,12 @@ cors_origins:
   - "http://localhost:5173"
   - "http://localhost:3000"
 
-# LLM settings
-llm_provider: "ollama"
-llm_model: "gpt-oss:20b"
-llm_api_key: null
-llm_base_url: "http://localhost:11434"
-llm_max_tokens: 2048
-llm_temperature: 0.1
+# Agent service (Agno/AgentOS microservice)
+agent_service_url: "http://localhost:8100"
 
 # Logging (set log_level to DEBUG for trace/debug; use LOG_LEVEL env to override)
 log_level: "INFO"
-# log_file: null   # default: ./logs/app.log
+# log_file: null   # default: ./logs/app_YYYY-MM-DD.log (date of execution)
 
 # Meeting notes storage
 notes_root: "docs/meetings"

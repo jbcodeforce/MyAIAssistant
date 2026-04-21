@@ -12,7 +12,7 @@
     <div v-else class="dashboard-content">
       <div class="dashboard-header">
         <div>
-          <h2>Tasks Dashboard</h2>
+          <h2>{{ user_name ? `${user_name}'s Tasks Dashboard` : 'Tasks Dashboard' }}</h2>
           <p class="view-description">Organize tasks by urgency and importance</p>
         </div>
         <form class="dashboard-search" @submit.prevent="runSearch">
@@ -206,7 +206,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import { useUiStore } from '@/stores/uiStore'
-import { projectsApi } from '@/services/api'
+import { projectsApi, getConfig } from '@/services/api'
 import TodoCanvas from '@/components/todo/TodoCanvas.vue'
 import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
@@ -218,6 +218,7 @@ import TaskDetailModal from '@/components/todo/TaskDetailModal.vue'
 
 const todoStore = useTodoStore()
 const uiStore = useUiStore()
+const user_name = ref(null)
 const projects = ref([])
 const searchTerm = ref('')
 const hasSearched = ref(false)
@@ -254,6 +255,10 @@ const unclassifiedOpenTodos = computed(() => {
 })
 
 onMounted(async () => {
+  try {
+    const c = await getConfig()
+    if (c.user_name) user_name.value = c.user_name
+  } catch (_) {}
   await Promise.all([loadTodos(), loadProjects()])
 })
 

@@ -9,13 +9,45 @@
       </div>
     </div>
     <div class="assistant-panel-wrapper">
-      <AssistantChatPanel />
+      <AssistantChatPanel :agent-name="agentName" :agent-url="agentUrl" />
     </div>
   </div>
 </template>
 
 <script setup>
+import { ref, computed, watch, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { agentsApi } from '@/services/api'
 import AssistantChatPanel from '@/components/chat/AssistantChatPanel.vue'
+
+const route = useRoute()
+const agentName = computed(() => route.query.agent || 'MainAgent')
+const agentUrlFromQuery = computed(() => route.query.agent_url || null)
+const agentUrlResolved = ref(null)
+
+async function resolveAgentUrl() {
+  if (agentUrlFromQuery.value) {
+    agentUrlResolved.value = agentUrlFromQuery.value
+    return
+  }
+  const name = agentName.value
+  if (!name || name === 'MainAgent') {
+    agentUrlResolved.value = null
+    return
+  }
+  try {
+    const { data } = await agentsApi.list()
+    const agent = Array.isArray(data) ? data.find((a) => a.agent_name === name) : null
+    agentUrlResolved.value = agent?.url || null
+  } catch {
+    agentUrlResolved.value = null
+  }
+}
+
+const agentUrl = computed(() => agentUrlFromQuery.value || agentUrlResolved.value || null)
+
+onMounted(resolveAgentUrl)
+watch([agentName, agentUrlFromQuery], resolveAgentUrl)
 </script>
 
 <style scoped>

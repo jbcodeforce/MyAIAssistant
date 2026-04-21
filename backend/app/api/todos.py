@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import httpx
 from app.db.database import get_db
 from app.db import crud
 from app.api.schemas.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse
 from app.api.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate, TaskPlanResponse
 from app.core.config import get_settings, resolve_agent_config_dir
 from app.tagging.service import BackendTaskTaggingToolProvider
-from agent_core.agents.agent_factory import get_agent_factory
-from agent_core.agents.base_agent import AgentInput
+from app.services import agent_service_client
 
 
 router = APIRouter(prefix="/todos", tags=["todos"])
@@ -143,25 +143,39 @@ async def tag_task(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Run the task-tagging agent on this todo. Uses Claude Agent SDK and backend
-    tools (get_available_tags, task_list, update_task) to classify and persist tags.
-    Requires ANTHROPIC_API_KEY when using TaskTaggingAgent.
+    Tag this todo. When AGENT_SERVICE_URL is set, uses agent-service for suggestions and backend applies tags.
     """
     todo = await crud.get_todo(db=db, todo_id=todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
+    if get_settings().agent_service_url:
+        try:
+            data = await agent_service_client.tag_task(
+                task_title=todo.title,
+                task_description=todo.description,
+            )
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+        tags = data.get("tags") or []
+        if tags:
+            tags_str = ",".join(str(t).strip() for t in tags if str(t).strip())
+            await crud.update_todo(db=db, todo_id=todo_id, todo_update=TodoUpdate(tags=tags_str or None))
+        return TagTaskResponse(
+            message=data.get("message", ""),
+            tags=tags,
+            agent_type="task_tagging",
+        )
+    from agent_core.agents.agent_factory import get_agent_factory
+    from agent_core.agents.base_agent import AgentInput
     settings = get_settings()
     config_dir = resolve_agent_config_dir(settings.agent_config_dir)
     factory = get_agent_factory(config_dir=config_dir)
     provider = BackendTaskTaggingToolProvider(db=db)
     agent = factory.create_agent("TaskTaggingAgent", tool_provider=provider)
-    query_text = "Tag this task based on its title and description. Use get_available_tags first, then update_task with the chosen tags."
-    context = {
-        "todo_id": todo_id,
-        "task_title": todo.title,
-        "task_description": todo.description or "",
-    }
-    response = await agent.execute(AgentInput(query=query_text, context=context))
+    response = await agent.execute(AgentInput(
+        query="Tag this task based on its title and description. Use get_available_tags first, then update_task with the chosen tags.",
+        context={"todo_id": todo_id, "task_title": todo.title, "task_description": todo.description or ""},
+    ))
     tags = response.metadata.get("tags") or []
     return TagTaskResponse(
         message=response.message,

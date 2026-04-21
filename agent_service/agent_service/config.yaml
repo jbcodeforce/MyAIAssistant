@@ -1,0 +1,6 @@
+
+chat:
+  quick_prompts:
+    market-agent:
+      - "What's the current price of AAPL?"
+      - "analyze NVDIA"

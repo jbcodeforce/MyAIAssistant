@@ -5,7 +5,6 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings, get_config_info, setup_logging
 from app.db.database import init_db
-from app.chat.service import get_chat_service
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
@@ -18,17 +17,16 @@ from app.api.slp_assessments import router as slp_assessments_router
 from app.api.meeting_refs import router as meeting_refs_router
 from app.api.assets import router as assets_router
 from app.api.persons import router as persons_router
-from app.api.agents import router as agents_router
+from app.api.config import router as config_router
 from app.api.tags import router as tags_router
 from app.api.weekly_todos import router as weekly_todos_router
+from app.api.notes_files import router as notes_files_router
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup: Initialize database
     await init_db()
-    # Create chat service singleton so agents are not recreated per request
-    app.state.chat_service = get_chat_service()
     yield
     # Shutdown: cleanup if needed
 
@@ -44,10 +42,13 @@ def create_app() -> FastAPI:
         lifespan=lifespan
     )
 
-    # Configure CORS
+    # Configure CORS (include frontend_origin if set, e.g. when frontend runs on custom port)
+    cors_origins = list(settings.cors_origins)
+    if settings.frontend_origin and settings.frontend_origin not in cors_origins:
+        cors_origins.append(settings.frontend_origin)
     application.add_middleware(
         CORSMiddleware,
-        allow_origins=settings.cors_origins,
+        allow_origins=cors_origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -59,8 +60,8 @@ def create_app() -> FastAPI:
     # Include routers
     application.include_router(todos_router, prefix="/api")
     application.include_router(knowledge_router, prefix="/api")
-    application.include_router(rag_router, prefix="/api")
-    application.include_router(chat_router, prefix="/api")
+    #application.include_router(rag_router, prefix="/api")
+    #application.include_router(chat_router, prefix="/api")
     application.include_router(organizations_router, prefix="/api")
     application.include_router(projects_router, prefix="/api")
     application.include_router(metrics_router, prefix="/api")
@@ -68,9 +69,10 @@ def create_app() -> FastAPI:
     application.include_router(meeting_refs_router, prefix="/api")
     application.include_router(assets_router, prefix="/api")
     application.include_router(persons_router, prefix="/api")
-    application.include_router(agents_router, prefix="/api")
+    application.include_router(config_router, prefix="/api")
     application.include_router(tags_router, prefix="/api")
     application.include_router(weekly_todos_router, prefix="/api")
+    application.include_router(notes_files_router, prefix="/api")
 
     return application
 
@@ -102,4 +104,5 @@ async def debug_config():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    settings = get_settings()
+    uvicorn.run(app, host=settings.backend_host, port=settings.backend_port)

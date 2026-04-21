@@ -24,7 +24,8 @@ class Organization(Base):
     team: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     related_products: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    
+    is_top_active: Mapped[bool] = mapped_column(Integer, nullable=False, default=False)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
@@ -254,7 +255,9 @@ class Meeting(Base):
     )
     file_ref: Mapped[str] = mapped_column(String(2048), nullable=False)
     attendees: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
-    
+    past_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+    next_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,

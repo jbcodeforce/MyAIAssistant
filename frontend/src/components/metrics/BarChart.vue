@@ -1,9 +1,9 @@
 <template>
   <div class="bar-chart">
     <div class="chart-y-axis">
-      <span class="y-label">{{ maxValue }}</span>
-      <span class="y-label">{{ Math.round(maxValue / 2) }}</span>
-      <span class="y-label">0</span>
+      <span class="y-label">{{ yTicks.top }}</span>
+      <span class="y-label">{{ yTicks.middle }}</span>
+      <span class="y-label">{{ yTicks.bottom }}</span>
     </div>
     <div class="chart-area">
       <div class="grid-lines">
@@ -14,13 +14,13 @@
       <div class="bars-container" ref="barsContainer">
         <div
           v-for="(item, index) in data"
-          :key="index"
+          :key="item.fullDate ?? item.label ?? index"
           class="bar-wrapper"
           :title="`${item.label}: ${item.value}`"
         >
           <div
             class="bar"
-            :class="{ 'custom-color': barColor }"
+            :class="{ 'custom-color': barColor, 'bar-zero': item.value <= 0 }"
             :style="getBarStyle(item.value, index)"
           >
             <span v-if="item.value > 0" class="bar-value" :style="barColor ? { color: barColor } : {}">{{ item.value }}</span>
@@ -33,6 +33,9 @@
 </template>
 
 <script setup>
+import { computed } from 'vue'
+import { getYAxisTickLabels } from '@/utils/chartYAxis'
+
 const props = defineProps({
   data: {
     type: Array,
@@ -49,10 +52,15 @@ const props = defineProps({
   }
 })
 
+const yTicks = computed(() => getYAxisTickLabels(props.maxValue))
+
 function getBarHeight(value) {
   if (props.maxValue === 0) return '0%'
   const percentage = (value / props.maxValue) * 100
-  return `${Math.max(percentage, value > 0 ? 4 : 0)}%`
+  if (value <= 0) {
+    return '3px'
+  }
+  return `${Math.max(percentage, 4)}%`
 }
 
 function getBarStyle(value, index) {
@@ -141,9 +149,12 @@ function truncateLabel(label) {
   flex: 1;
   min-width: 20px;
   max-width: 48px;
+  min-height: 0;
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: flex-end;
   height: 100%;
 }
 
@@ -167,24 +178,16 @@ function truncateLabel(label) {
   width: 100%;
   min-width: 12px;
   max-width: 32px;
+  flex-shrink: 0;
   background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
   border-radius: 4px 4px 0 0;
   position: relative;
-  transition: background 0.2s;
-  animation: barGrow 0.6s ease-out forwards;
-  animation-delay: var(--delay);
-  transform-origin: bottom;
-  transform: scaleY(0);
+  transition: background 0.2s, height 0.45s ease-out;
   cursor: pointer;
 }
 
-@keyframes barGrow {
-  from {
-    transform: scaleY(0);
-  }
-  to {
-    transform: scaleY(1);
-  }
+.bar-zero {
+  opacity: 0.35;
 }
 
 .bar:hover {

@@ -62,6 +62,8 @@ docker compose up -d
     # - API Docs: http://localhost:8000/docs
     ```
 
+* **If `uv sync` is slow:** First run is often slow (dependency resolution and downloads). Subsequent runs use the lock file and are faster. To see where time goes, run `uv sync --verbose`. You can try: `uv upgrade` (use a recent uv); on fast networks `UV_CONCURRENT_DOWNLOADS=50 uv sync`; behind a proxy, lower concurrency or use a direct PyPI URL. On macOS, the first run after a cold start can be much slower than later runs.
+
 * Build docker images:
     ```sh
     ./build.sh           # builds with :latest tag

@@ -11,7 +11,7 @@
             <path d="M15 11.5 12 8"/>
           </svg>
         </div>
-        <h3>Query Your Knowledge Base</h3>
+        <h3>{{ user_name ? `Hi, ${user_name}` : 'Query Your Knowledge Base' }}</h3>
         <p>Ask questions about your indexed documents or to your other agents for help. The AI will search through your knowledge base and agents and provide answers based on the content.</p>
         <div class="suggested-prompts">
           <button @click="sendSuggested('What topics are covered in my knowledge base?', 'knowledge_search')">
@@ -159,8 +159,20 @@
 
 <script setup>
 import { ref, nextTick, onMounted } from 'vue'
-import { chatApi } from '@/services/api'
+import { chatApi, getConfig } from '@/services/api'
 
+const props = defineProps({
+  agentName: {
+    type: String,
+    default: 'MainAgent'
+  },
+  agentUrl: {
+    type: String,
+    default: null
+  }
+})
+
+const user_name = ref(null)
 const messages = ref([])
 const inputMessage = ref('')
 const contextField = ref('')
@@ -170,7 +182,11 @@ const messagesContainer = ref(null)
 const inputField = ref(null)
 const useRagForNext = ref(true)
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const c = await getConfig()
+    if (c.user_name) user_name.value = c.user_name
+  } catch (_) {}
   inputField.value?.focus()
 })
 
@@ -259,10 +275,12 @@ async function sendMessage() {
         const last = messages.value[messages.value.length - 1]
         if (last && last.role === 'assistant') messages.value.pop()
         isLoading.value = false
-      }
+      },
+      props.agentName,
+      props.agentUrl || undefined
     )
   } else {
-    // Send without RAG - use generic chat stream
+    // Send without RAG - use generic chat stream (exposed_url or /agents/<agentName>/runs or /chat/generic/stream)
     await chatApi.genericChatStream(
       message,
       history,
@@ -290,7 +308,9 @@ async function sendMessage() {
         const last = messages.value[messages.value.length - 1]
         if (last && last.role === 'assistant') messages.value.pop()
         isLoading.value = false
-      }
+      },
+      props.agentName,
+      props.agentUrl || undefined
     )
   }
 }

@@ -108,20 +108,6 @@ class AgentConfig(BaseModel):
             agent_dir=yaml_path.parent
         )
     
-    def get_base_url(self) -> Optional[str]:
-        """Get the base URL, using default if not set."""
-        return self.base_url
-    
-    def validate(self) -> None:
-        """Validate the configuration."""
-        if not self.model:
-            raise ValueError("Model name is required")
-        
-        if self.temperature < 0.0 or self.temperature > 2.0:
-            raise ValueError("Temperature must be between 0.0 and 2.0")
-        
-        if self.max_tokens < 1:
-            raise ValueError("max_tokens must be at least 1")
     
 
 def get_available_models() -> list[str]:

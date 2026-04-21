@@ -1,8 +1,11 @@
 <template>
   <aside class="sidebar" :class="{ collapsed: collapsed }">
     <div class="sidebar-header">
-      <div class="logo" v-show="!collapsed">
-        <span class="logo-text">MyAIAssistant</span>
+      <div class="sidebar-header-left" v-show="!collapsed">
+        <div class="logo">
+          <span class="logo-text">MyAIAssistant</span>
+        </div>
+        <div v-if="user_name" class="sidebar-user">Hi, {{ user_name }}</div>
       </div>
       <button class="collapse-btn" @click="emit('toggle')" :title="collapsed ? 'Expand' : 'Collapse'">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -47,9 +50,6 @@
           <router-link to="/archived" class="nav-subitem" active-class="active">
             <span class="nav-label">Archived</span>
           </router-link>
-          <router-link to="/projects" class="nav-subitem" active-class="active">
-            <span class="nav-label">Projects</span>
-          </router-link>
           <router-link to="/weekly-todo" class="nav-subitem" active-class="active">
             <span class="nav-label">Weekly Todo</span>
           </router-link>
@@ -65,31 +65,6 @@
           <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
         </svg>
         <span class="nav-label">Organizations</span>
-      </router-link>
-
-      <!-- Persons -->
-      <router-link to="/persons" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-          <circle cx="12" cy="7" r="4"/>
-        </svg>
-        <span class="nav-label">Persons</span>
-      </router-link>
-
-      <!-- Knowledge -->
-      <router-link to="/knowledge" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
-        </svg>
-        <span class="nav-label">Knowledge</span>
-      </router-link>
-
-      <!-- Assistant -->
-      <router-link to="/assistant" class="nav-item" active-class="active">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
-        </svg>
-        <span class="nav-label">Assistant</span>
       </router-link>
 
       <!-- Meetings -->
@@ -109,6 +84,21 @@
         <span class="nav-label">Meetings</span>
       </router-link>
 
+      <!-- Projects -->
+      <router-link to="/projects" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+        <span class="nav-label">Projects</span>
+      </router-link>
+      <!-- Persons -->
+      <router-link to="/persons" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+          <circle cx="12" cy="7" r="4"/>
+        </svg>
+        <span class="nav-label">Persons</span>
+      </router-link>
       <!-- Assets -->
       <router-link to="/assets" class="nav-item" active-class="active">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -120,14 +110,22 @@
         <span class="nav-label">Assets</span>
       </router-link>
 
-      <!-- Metrics -->
-      <router-link to="/metrics" class="nav-item" active-class="active">
+
+
+      <!-- Assistant -->
+      <router-link to="/assistant" class="nav-item" active-class="active">
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="18" y1="20" x2="18" y2="10"/>
-          <line x1="12" y1="20" x2="12" y2="4"/>
-          <line x1="6" y1="20" x2="6" y2="14"/>
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
         </svg>
-        <span class="nav-label">Metrics</span>
+        <span class="nav-label">Chat</span>
+      </router-link>
+
+      <!-- Knowledge -->
+      <router-link to="/knowledge" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>
+        </svg>
+        <span class="nav-label">Knowledge</span>
       </router-link>
 
       <!-- Agents -->
@@ -142,6 +140,18 @@
         </svg>
         <span class="nav-label">Agents</span>
       </router-link>
+      
+      <!-- Metrics -->
+      <router-link to="/metrics" class="nav-item" active-class="active">
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="18" y1="20" x2="18" y2="10"/>
+          <line x1="12" y1="20" x2="12" y2="4"/>
+          <line x1="6" y1="20" x2="6" y2="14"/>
+        </svg>
+        <span class="nav-label">Metrics</span>
+      </router-link>
+
+
 
       <!-- Life Portfolio -->
       <router-link to="/life-portfolio" class="nav-item" active-class="active">
@@ -174,8 +184,9 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { getConfig } from '@/services/api'
 
 const props = defineProps({
   collapsed: {
@@ -186,8 +197,16 @@ const props = defineProps({
 
 const emit = defineEmits(['toggle'])
 const route = useRoute()
+const user_name = ref(null)
 
 const tasksExpanded = ref(true)
+
+onMounted(async () => {
+  try {
+    const c = await getConfig()
+    if (c.user_name) user_name.value = c.user_name
+  } catch (_) {}
+})
 
 const isTasksActive = computed(() => {
   return route.path === '/unclassified' || route.path === '/archived' || route.path === '/projects' || route.path === '/weekly-todo'
@@ -224,6 +243,13 @@ const isTasksActive = computed(() => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.sidebar-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  overflow: hidden;
+}
+
 .logo {
   display: flex;
   align-items: center;
@@ -237,6 +263,12 @@ const isTasksActive = computed(() => {
   font-weight: 600;
   color: #f1f5f9;
   white-space: nowrap;
+}
+
+.sidebar-user {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-top: 0.25rem;
 }
 
 .collapse-btn {
@@ -416,10 +448,6 @@ const isTasksActive = computed(() => {
     top: 0;
     z-index: 100;
     transform: translateX(-100%);
-  }
-
-  .sidebar.expanded {
-    transform: translateX(0);
   }
 }
 </style>

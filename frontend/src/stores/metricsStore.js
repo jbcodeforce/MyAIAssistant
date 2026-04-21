@@ -10,7 +10,11 @@ export const useMetricsStore = defineStore('metrics', () => {
   const taskCompletion = ref(null)
   const taskStatusOverTime = ref(null)
   const organizationsCreated = ref(null)
+  /** Monthly time series for the org chart only (one bar per month). */
+  const organizationsCreatedMonthlyChart = ref(null)
   const meetingsCreated = ref(null)
+  /** Monthly time series for the meetings chart only (one bar per month). */
+  const meetingsCreatedMonthlyChart = ref(null)
   const weeklyTodoMetrics = ref(null)
   const loading = ref(false)
   const error = ref(null)
@@ -49,9 +53,19 @@ export const useMetricsStore = defineStore('metrics', () => {
     return organizationsCreated.value.data_points
   })
 
+  const organizationsMonthlyChartDataPoints = computed(() => {
+    if (!organizationsCreatedMonthlyChart.value?.data_points) return []
+    return organizationsCreatedMonthlyChart.value.data_points
+  })
+
   const meetingsDataPoints = computed(() => {
     if (!meetingsCreated.value?.data_points) return []
     return meetingsCreated.value.data_points
+  })
+
+  const meetingsMonthlyChartDataPoints = computed(() => {
+    if (!meetingsCreatedMonthlyChart.value?.data_points) return []
+    return meetingsCreatedMonthlyChart.value.data_points
   })
 
   const taskStatusDataPoints = computed(() => {
@@ -78,15 +92,22 @@ export const useMetricsStore = defineStore('metrics', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await metricsApi.getDashboard(period, days)
-      const data = response.data
+      const [dashboardResponse, orgMonthlyResponse, meetingsMonthlyResponse] =
+        await Promise.all([
+          metricsApi.getDashboard(period, days),
+          metricsApi.getOrganizationsCreated('monthly', days),
+          metricsApi.getMeetingsCreated('monthly', days)
+        ])
+      const data = dashboardResponse.data
       projectMetrics.value = data.projects
       taskMetrics.value = data.tasks
       assetMetrics.value = data.assets
       taskCompletion.value = data.tasks_completion
       taskStatusOverTime.value = data.task_status_over_time
       organizationsCreated.value = data.organizations_created
+      organizationsCreatedMonthlyChart.value = orgMonthlyResponse.data
       meetingsCreated.value = data.meetings_created
+      meetingsCreatedMonthlyChart.value = meetingsMonthlyResponse.data
       weeklyTodoMetrics.value = data.weekly_todos
       return data
     } catch (err) {
@@ -154,7 +175,9 @@ export const useMetricsStore = defineStore('metrics', () => {
     taskCompletion,
     taskStatusOverTime,
     organizationsCreated,
+    organizationsCreatedMonthlyChart,
     meetingsCreated,
+    meetingsCreatedMonthlyChart,
     weeklyTodoMetrics,
     loading,
     error,
@@ -173,7 +196,9 @@ export const useMetricsStore = defineStore('metrics', () => {
     taskStatusDataPoints,
     taskStatusTotals,
     organizationsDataPoints,
+    organizationsMonthlyChartDataPoints,
     meetingsDataPoints,
+    meetingsMonthlyChartDataPoints,
     weeklyTodoDataPoints,
     totalWeeklyTodoMinutes,
     // Actions

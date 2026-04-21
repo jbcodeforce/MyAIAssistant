@@ -291,7 +291,7 @@ async function loadAssets() {
     if (filterTodoId.value) params.todo_id = parseInt(filterTodoId.value)
     
     const response = await store.fetchItems(params)
-    items.value = response.assets
+    items.value = [...response.assets]
     totalCount.value = response.total
     currentSkip.value = response.assets.length
   } catch (err) {
@@ -370,7 +370,7 @@ async function handleSubmit() {
       }
     } else {
       const created = await store.createItem(formData.value)
-      items.value.unshift(created)
+      items.value = [created, ...items.value]
       totalCount.value++
     }
     closeModal()

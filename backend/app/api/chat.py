@@ -1,6 +1,7 @@
-"""Chat API endpoints for LLM-powered task planning."""
+"""Chat API endpoints for LLM-powered task planning. Frontend calls agent_service directly when agent_service_url is set (see GET /api/config)."""
 
 import json
+import logging
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -13,9 +14,15 @@ from app.core.config import get_settings
 from app.api.schemas.chat import (
     ChatRequest,
     ChatResponse,
-    ContextItem
+    ContextItem,
 )
-from agent_core.agents.query_classifier import QueryIntent
+
+logger = logging.getLogger(__name__)
+
+try:
+    from agent_core.agents.query_classifier import QueryIntent
+except ImportError:
+    QueryIntent = None
 
 
 def _normalize_context_used(context_used):
@@ -35,49 +42,55 @@ def _normalize_context_used(context_used):
     ]
 
 
-
 router = APIRouter(prefix="/chat", tags=["chat"])
 
 
 def get_chat(request: Request) -> ChatService:
-    """Dependency to get the app-scoped chat service singleton."""
-    return request.app.state.chat_service
+    """Dependency to get the app-scoped chat service singleton (lazy init on first use)."""
+    if request.app.state.chat_service is not None:
+        return request.app.state.chat_service
+    if getattr(request.app.state, "_chat_service_error", None) is not None:
+        raise HTTPException(
+            status_code=503,
+            detail=f"Chat service unavailable: {request.app.state._chat_service_error}",
+        )
+    try:
+        from app.chat.service import get_chat_service
+        request.app.state.chat_service = get_chat_service()
+        return request.app.state.chat_service
+    except Exception as e:
+        request.app.state._chat_service_error = str(e)
+        raise HTTPException(
+            status_code=503,
+            detail=f"Chat service failed to initialize: {request.app.state._chat_service_error}",
+        )
 
 
 @router.post("/todo/{todo_id}", response_model=ChatResponse)
 async def chat_about_todo(
     todo_id: int,
     request: ChatRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
-    chat_service: ChatService = Depends(get_chat)
 ):
     """
     Chat with an AI assistant about a specific todo task.
-    
-    The assistant can help plan how to approach and complete the task,
-    using the knowledge base for relevant context.
+    When agent_service_url is set, the frontend calls agent-service directly (GET todo then POST /chat/todo).
+    This endpoint is the in-process fallback when agent_service is not used.
     """
-    # Get the todo item
     todo = await crud.get_todo(db, todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
-    
-    # Convert conversation history
-    history = [
-        ChatMessage(role=msg.role, content=msg.content)
-        for msg in request.conversation_history
-    ]
-    
+    chat_service = get_chat(http_request)
+    history_chat = [ChatMessage(role=msg.role, content=msg.content) for msg in request.conversation_history]
     try:
-        # Call the chat service
         response = await chat_service.chat_with_todo(
             todo_title=todo.title,
             todo_description=todo.description,
             user_message=request.message,
-            conversation_history=history,
-            use_rag=request.use_rag
+            conversation_history=history_chat,
+            use_rag=request.use_rag,
         )
-        
         normalized = _normalize_context_used(response.context_used)
         return ChatResponse(
             message=response.message,
@@ -86,58 +99,36 @@ async def chat_about_todo(
                     title=ctx["title"],
                     uri=ctx["uri"],
                     score=float(ctx["score"]) if ctx["score"] is not None else 0.0,
-                    snippet=ctx["snippet"] or ctx["content"]
+                    snippet=ctx["snippet"] or ctx["content"],
                 )
                 for ctx in normalized
-            ]
+            ],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        # Log the error and return a user-friendly message
-        import logging
-        logging.exception("Chat error")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get response from LLM: {str(e)}"
-        )
+        logger.exception("Chat error")
+        raise HTTPException(status_code=500, detail=f"Failed to get response from LLM: {str(e)}")
 
 
 @router.post("/generic", response_model=ChatResponse)
-async def generic_chat(
-    request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat),
-):
-    """
-    This endpoint allows querying the general knowledge base, meeting notes, assets descriptions, etc. without 
-    being tied to a specific todo task. Useful for general questions about indexed documents and using a query routing system.
-    This endpoint classifies the user's query to determine intent,
-    then routes to the appropriate specialized agent.
-    If the force_intent is provided, it will override the automatic classification.
-    The response includes classification metadata showing which
-    agent handled the request and the confidence of classification.
-    """
-    # Convert conversation history
-    history = [
-        ChatMessage(role=msg.role, content=msg.content)
-        for msg in request.conversation_history
-    ]
-    force_intent = None
-    if request.force_intent:
-        try:
-            force_intent = QueryIntent(request.force_intent)
-        except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid intent: {request.force_intent}"
-            )
+async def generic_chat(request: ChatRequest, http_request: Request):
+    """Generic chat with routing. Frontend calls agent-service directly when agent_service_url is set."""
     context = dict(request.context or {})
+    force_intent = request.force_intent
+    if force_intent and QueryIntent:
+        try:
+            force_intent = QueryIntent(force_intent)
+        except ValueError:
+            raise HTTPException(status_code=400, detail=f"Invalid intent: {request.force_intent}")
+    chat_service = get_chat(http_request)
+    history_chat = [ChatMessage(role=msg.role, content=msg.content) for msg in request.conversation_history]
     try:
         response = await chat_service.chat_with_routing(
             user_message=request.message,
-            conversation_history=history,
+            conversation_history=history_chat,
             context=context,
-            force_intent=force_intent
+            force_intent=force_intent,
         )
         normalized = _normalize_context_used(response.context_used)
         return ChatResponse(
@@ -147,62 +138,50 @@ async def generic_chat(
                     title=ctx["title"],
                     uri=ctx["uri"],
                     score=float(ctx["score"]) if ctx["score"] is not None else 0.0,
-                    snippet=ctx["snippet"] or ctx["content"]
+                    snippet=ctx["snippet"] or ctx["content"],
                 )
                 for ctx in normalized
-            ]
+            ],
         )
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        import logging
-        logging.exception("RAG chat error")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get response from LLM: {str(e)}"
-        )
+        logger.exception("RAG chat error")
+        raise HTTPException(status_code=500, detail=f"Failed to get response from LLM: {str(e)}")
 
 
 @router.post("/generic/stream")
 async def generic_chat_stream(
     request: ChatRequest,
+    http_request: Request,
     db: AsyncSession = Depends(get_db),
-    chat_service: ChatService = Depends(get_chat),
 ):
-    """
-    Stream generic chat response as NDJSON (one JSON object per line).
-    Each line: {"content": "chunk text"}. Optional final line: {"done": true, "intent": "...", "agent_type": "..."}.
-    """
-    history = [
-        ChatMessage(role=msg.role, content=msg.content)
-        for msg in request.conversation_history
-    ]
+    """Stream generic chat as NDJSON. Frontend calls agent-service directly when agent_service_url is set."""
+    context = dict(request.context or {})
     force_intent = None
-    if request.force_intent:
+    if request.force_intent and QueryIntent:
         try:
             force_intent = QueryIntent(request.force_intent)
         except ValueError:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Invalid intent: {request.force_intent}"
-            )
+            raise HTTPException(status_code=400, detail=f"Invalid intent: {request.force_intent}")
+    context["data_query_provider"] = BackendDataQueryToolProvider(db=db)
 
     def _context_item_dict(ctx: dict) -> dict:
         return {
-            "title": ctx["title"],
-            "uri": ctx["uri"],
-            "score": float(ctx["score"]) if ctx["score"] is not None else 0.0,
-            "snippet": ctx["snippet"] or ctx["content"],
+            "title": ctx.get("title", ""),
+            "uri": ctx.get("uri", ""),
+            "score": float(ctx["score"]) if ctx.get("score") is not None else 0.0,
+            "snippet": ctx.get("snippet") or ctx.get("content", ""),
         }
 
-    context = dict(request.context or {})
-    context["data_query_provider"] = BackendDataQueryToolProvider(db=db)
+    chat_service = get_chat(http_request)
+    history_chat = [ChatMessage(role=msg.role, content=msg.content) for msg in request.conversation_history]
 
     async def stream_generator():
         try:
             response = await chat_service.chat_with_routing(
                 user_message=request.message,
-                conversation_history=history,
+                conversation_history=history_chat,
                 context=context,
                 force_intent=force_intent,
             )
@@ -214,77 +193,43 @@ async def generic_chat_stream(
                 yield (json.dumps({"content": message[i : i + chunk_size]}) + "\n").encode("utf-8")
             yield (json.dumps({"done": True, "context_used": context_used}) + "\n").encode("utf-8")
         except Exception as e:
-            import logging
-            logging.exception("Generic chat stream error")
+            logger.exception("Generic chat stream error")
             yield (json.dumps({"content": f"Error: {e}", "done": True}) + "\n").encode("utf-8")
 
-    return StreamingResponse(
-        stream_generator(),
-        media_type="application/x-ndjson",
-    )
+    return StreamingResponse(stream_generator(), media_type="application/x-ndjson")
 
 
 @router.post("/kb", response_model=ChatResponse)
-async def kb_chat(
-    request: ChatRequest,
-    chat_service: ChatService = Depends(get_chat)
-):
-    """
-    Chat using the knowledge base for context.
-    """ 
-    # Convert conversation history
-    history = [
-        ChatMessage(role=msg.role, content=msg.content)
-        for msg in request.conversation_history
-    ]
+async def kb_chat(request: ChatRequest, http_request: Request):
+    """Chat using the knowledge base. Frontend calls agent-service directly when agent_service_url is set."""
+    chat_service = get_chat(http_request)
+    history_chat = [ChatMessage(role=msg.role, content=msg.content) for msg in request.conversation_history]
     try:
-        response= await chat_service.chat_with_kb( user_message=request.message,
-            conversation_history=history)
-        return ChatResponse(
-            message=response.message,
-            context_used=[]
+        response = await chat_service.chat_with_kb(
+            user_message=request.message,
+            conversation_history=history_chat,
         )
+        return ChatResponse(message=response.message, context_used=[])
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        import logging
-        logging.exception("KB chat error")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Failed to get response from LLM: {str(e)}"
-        )
+        logger.exception("KB chat error")
+        raise HTTPException(status_code=500, detail=f"Failed to get response from LLM: {str(e)}")
+
 
 @router.get("/health")
-async def chat_health_check(chat: ChatService = Depends(get_chat)):
+async def chat_health_check():
     """
-    Check if the chat service is configured and ready.
-    
-    Returns the provider configuration status.
+    Chat service health and config. Returns agent_service_url when set so the frontend
+    can call the agent-service directly for chat and RAG search/stats/delete.
     """
     settings = get_settings()
-    provider = settings.llm_provider
-    has_api_key = settings.llm_api_key is not None
-    
-    if provider == "ollama":
-        # Ollama doesn't need an API key
-        return {
-            "status": "ready",
-            "provider": provider,
-            "model": settings.llm_model,
-            "message": "Ollama is configured. Make sure Ollama is running locally."
-        }
-    elif has_api_key:
-        return {
-            "status": "ready",
-            "provider": provider,
-            "model": settings.llm_model,
-            "message": f"{provider.capitalize()} API is configured."
-        }
-    else:
-        return {
-            "status": "not_configured",
-            "provider": provider,
-            "model": settings.llm_model,
-            "message": f"LLM_API_KEY environment variable is not set for {provider}."
-        }
-
+    out = {
+        "agent_service_url": settings.agent_service_url
+    }
+    if settings.agent_service_url:
+        out["status"] = "agent_service"
+        out["message"] = "Frontend should call agent_service_url for chat and RAG search/stats."
+        return out
+    out["status"] = "not_configured"
+    return out

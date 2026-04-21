@@ -280,7 +280,7 @@
               v-if="descriptionTab === 'write'"
               v-model="formData.description" 
               class="markdown-textarea"
-              rows="8"
+              rows="12"
               placeholder="## Project Overview
 
 Describe the project goals, scope, and key deliverables.
@@ -291,7 +291,10 @@ Describe the project goals, scope, and key deliverables.
 
 ### Timeline
 - **Phase 1**: Discovery (2 weeks)
-- **Phase 2**: Implementation (4 weeks)"
+- **Phase 2**: Implementation (4 weeks)
+
+## Architecture
+"
             ></textarea>
             <div v-else class="markdown-preview" v-html="renderedDescription"></div>
           </div>
@@ -497,8 +500,8 @@ Describe the project goals, scope, and key deliverables.
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
-import { projectsApi, organizationsApi } from '@/services/api'
+import { projectsApi, organizationsApi, uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const route = useRoute()
@@ -559,9 +562,19 @@ const isFormValid = computed(() => {
   return formData.value.name && formData.value.name.trim().length > 0
 })
 
+const notesImagesContextBase = computed(() => {
+  const orgId = showSectionViewer.value ? viewingProject.value?.organization_id : formData.value.organization_id
+  if (!orgId) return ''
+  const org = organizations.value.find(o => o.id === orgId)
+  return org?.name ? sanitizeOrgNameForPath(org.name) : ''
+})
 // Rendered markdown for form fields
-const renderedDescription = computed(() => marked(formData.value.description || ''))
-const renderedTasks = computed(() => marked(formData.value.tasks || ''))
+const renderedDescription = computed(() =>
+  renderMarkdownForNotes(formData.value.description || '', notesImagesContextBase.value)
+)
+const renderedTasks = computed(() =>
+  renderMarkdownForNotes(formData.value.tasks || '', notesImagesContextBase.value)
+)
 
 // Section viewer computeds
 const sectionLabels = {
@@ -579,7 +592,7 @@ const sectionViewerTitle = computed(() => {
 const renderedSectionContent = computed(() => {
   if (!viewingProject.value || !viewingSection.value) return ''
   const content = viewingProject.value[viewingSection.value] || ''
-  return marked(content)
+  return renderMarkdownForNotes(content, notesImagesContextBase.value)
 })
 
 const viewingSectionSteps = computed(() => {
@@ -822,9 +835,8 @@ async function handleSubmit() {
         projects.value[index] = response.data
       }
     } else {
-      const response = await projectsApi.create(payload)
-      projects.value.unshift(response.data)
-      totalCount.value++
+      await projectsApi.create(payload)
+      await loadProjects()
     }
     closeModal()
   } catch (err) {
@@ -1144,37 +1156,32 @@ function formatDate(dateString) {
   align-items: center;
   gap: 0.25rem;
   margin: 0 0 0.625rem 0;
-  font-size: 0.75rem;
-  color: #6b7280;
-  text-decoration: none;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
   transition: color 0.15s;
 }
 
 .project-organization:hover {
-  color: #2563eb;
+  color: #1d4ed8;
 }
 
 :global(.dark) .project-organization {
-  color: #94a3b8;
+  color: #60a5fa;
 }
 
 :global(.dark) .project-organization:hover {
-  color: #60a5fa;
+  color: #93c5fd;
 }
 
 .project-organization svg {
-  color: #9ca3af;
-  width: 12px;
-  height: 12px;
+  color: inherit;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
   transition: color 0.15s;
-}
-
-.project-organization:hover svg {
-  color: #2563eb;
-}
-
-:global(.dark) .project-organization:hover svg {
-  color: #60a5fa;
 }
 
 .project-sections {
@@ -1521,18 +1528,45 @@ function formatDate(dateString) {
   margin: 0 0 0.5rem 0;
 }
 
-.markdown-preview :deep(ul),
+.markdown-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.25rem;
+  margin: 0 0 0.75rem 0;
+}
+
 .markdown-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
   padding-left: 1.25rem;
   margin: 0 0 0.75rem 0;
 }
 
 .markdown-preview :deep(li) {
+  display: list-item;
   margin: 0.125rem 0;
 }
 
 .markdown-preview :deep(strong) {
   font-weight: 600;
+}
+
+.markdown-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview :deep(a:hover) {
+  color: #93c5fd;
 }
 
 .markdown-preview :deep(code) {

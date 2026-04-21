@@ -74,6 +74,10 @@ graph TB
     style ChromaDB fill:#336791
 ```
 
+### Agent microservice (optional)
+
+When `AGENT_SERVICE_URL` is set, the backend proxies chat, RAG, meeting extract, and task tagging to a separate **agent-service** (Agno + AgentOS). The agent-service runs the LLM, knowledge base, and ChromaDB for RAG; the backend keeps app data (todos, orgs, meetings) and forwards requests. See `agent_service/README.md` and backend config `AGENT_SERVICE_URL`.
+
 
 ## System Components
 

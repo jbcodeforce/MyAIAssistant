@@ -86,7 +86,7 @@
             </svg>
             <h3>Description</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedDescription"></div>
+          <div class="section-content markdown-preview view-mode" v-html="renderedDescription"></div>
         </div>
 
         <div class="section-card full-width" v-if="project.tasks">
@@ -97,7 +97,7 @@
             </svg>
             <h3>Notes</h3>
           </div>
-          <div class="section-content markdown-preview" v-html="renderedTasks"></div>
+          <div class="section-content markdown-preview view-mode" v-html="renderedTasks"></div>
         </div>
 
         <div class="section-card" v-if="project.past_steps && project.past_steps.length > 0">
@@ -252,9 +252,12 @@
               >
                 Preview
               </button>
+              <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('description')" title="Insert image">Image</button>
             </div>
+            <input ref="imageFileInput" type="file" accept="image/png,image/jpeg,image/gif,image/webp" class="hidden-file-input" @change="onImageFileSelected" />
             <textarea 
               v-if="descriptionTab === 'write'"
+              ref="descriptionInput"
               v-model="formData.description" 
               class="markdown-textarea"
               rows="6"
@@ -284,9 +287,11 @@ Describe the project goals, scope, and key deliverables."
               >
                 Preview
               </button>
+              <button type="button" class="tab-btn insert-image-btn" @click="triggerImageUpload('tasks')" title="Insert image">Image</button>
             </div>
             <textarea 
               v-if="tasksTab === 'write'"
+              ref="tasksInput"
               v-model="formData.tasks" 
               class="markdown-textarea"
               rows="6"
@@ -499,8 +504,8 @@ Describe the project goals, scope, and key deliverables."
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { marked } from 'marked'
-import { projectsApi, organizationsApi, todosApi } from '@/services/api'
+import { projectsApi, organizationsApi, todosApi, uploadNotesImage } from '@/services/api'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 
@@ -527,6 +532,10 @@ const formData = ref({
 // Editor tabs
 const descriptionTab = ref('write')
 const tasksTab = ref('write')
+const imageFileInput = ref(null)
+const activeImageField = ref(null)
+const descriptionInput = ref(null)
+const tasksInput = ref(null)
 
 // Drag and drop state
 const isDragging = ref(false)
@@ -540,19 +549,56 @@ const taskFromStep = ref(null)  // { step, index, type: 'next' }
 // Project todos for linking in edit mode
 const projectTodos = ref([])
 
+const notesImagesContextBase = computed(() =>
+  organizationName.value ? sanitizeOrgNameForPath(organizationName.value) : ''
+)
 // Computed for rendered markdown (view mode)
-const renderedDescription = computed(() => marked(project.value?.description || ''))
-const renderedTasks = computed(() => marked(project.value?.tasks || ''))
+const renderedDescription = computed(() =>
+  renderMarkdownForNotes(project.value?.description || '', notesImagesContextBase.value)
+)
+const renderedTasks = computed(() =>
+  renderMarkdownForNotes(project.value?.tasks || '', notesImagesContextBase.value)
+)
 
 // Computed for form rendered markdown
-const formRenderedDescription = computed(() => marked(formData.value.description || ''))
-const formRenderedTasks = computed(() => marked(formData.value.tasks || ''))
+const formRenderedDescription = computed(() =>
+  renderMarkdownForNotes(formData.value.description || '', notesImagesContextBase.value)
+)
+const formRenderedTasks = computed(() =>
+  renderMarkdownForNotes(formData.value.tasks || '', notesImagesContextBase.value)
+)
 
 const organizationName = computed(() => {
   if (!project.value?.organization_id) return null
   const org = organizations.value.find(o => o.id === project.value.organization_id)
   return org?.name || null
 })
+
+function triggerImageUpload(field) {
+  if (!project.value?.organization_id) return
+  activeImageField.value = field
+  imageFileInput.value?.click()
+}
+
+async function onImageFileSelected(event) {
+  const file = event.target?.files?.[0]
+  event.target.value = ''
+  const field = activeImageField.value
+  activeImageField.value = null
+  if (!file || !project.value?.organization_id || !field) return
+  const refMap = { description: descriptionInput, tasks: tasksInput }
+  const textareaRef = refMap[field]
+  try {
+    const result = await uploadNotesImage(file, 'organization', { organization_id: project.value.organization_id })
+    const insert = `![](${result.path})`
+    const el = textareaRef?.value
+    const setValue = (v) => { formData.value[field] = v }
+    if (el) insertMarkdownAtCursor(el, insert, setValue)
+    else formData.value[field] = (formData.value[field] || '') + insert
+  } catch (err) {
+    console.error('Image upload failed:', err)
+  }
+}
 
 const hasContent = computed(() => {
   if (!project.value) return false
@@ -1103,11 +1149,17 @@ function formatDate(dateString) {
   background-color: #334155;
 }
 
-/* Markdown Preview */
+/* Markdown Preview (same pattern as OrganizationDetail / Organizations.vue) */
 .markdown-preview {
   line-height: 1.6;
   font-size: 0.9375rem;
   color: #374151;
+}
+
+.markdown-preview.view-mode {
+  min-height: 150px;
+  max-height: 500px;
+  overflow-y: auto;
 }
 
 :global(.dark) .markdown-preview {
@@ -1147,18 +1199,45 @@ function formatDate(dateString) {
   margin: 0 0 0.75rem 0;
 }
 
-.markdown-preview :deep(ul),
+.markdown-preview :deep(ul) {
+  list-style-type: disc;
+  list-style-position: outside;
+  padding-left: 1.5rem;
+  margin: 0 0 1rem 0;
+}
+
 .markdown-preview :deep(ol) {
+  list-style-type: decimal;
+  list-style-position: outside;
   padding-left: 1.5rem;
   margin: 0 0 1rem 0;
 }
 
 .markdown-preview :deep(li) {
+  display: list-item;
   margin: 0.25rem 0;
 }
 
 .markdown-preview :deep(strong) {
   font-weight: 600;
+}
+
+.markdown-preview :deep(a) {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.markdown-preview :deep(a:hover) {
+  color: #1d4ed8;
+}
+
+:global(.dark) .markdown-preview :deep(a) {
+  color: #60a5fa;
+}
+
+:global(.dark) .markdown-preview :deep(a:hover) {
+  color: #93c5fd;
 }
 
 .markdown-preview :deep(code) {
@@ -1309,6 +1388,18 @@ function formatDate(dateString) {
 :global(.dark) .tab-btn.active {
   background: #1e293b;
   color: #60a5fa;
+}
+
+.insert-image-btn {
+  margin-left: auto;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 .markdown-textarea {

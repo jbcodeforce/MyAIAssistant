@@ -163,3 +163,466 @@ FROM organizations ORDER BY organizations.created_at DESC
 2026-02-16 16:46:23,278 - sqlalchemy.engine.Engine - INFO - [cached since 1877s ago] (500, 0)
 2026-02-16 16:46:23,279 - sqlalchemy.engine.Engine - INFO - ROLLBACK
 2026-02-16 16:46:23,279 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 11:23:23,673 - app.core.config - INFO - Logging to file: /Users/jerome/Documents/Code/MyAIAssistant/workspaces/demo/logs/app.log
+2026-03-07 11:23:23,740 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 11:23:23,740 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("organizations")
+2026-03-07 11:23:23,740 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,740 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("organizations")
+2026-03-07 11:23:23,740 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("projects")
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("projects")
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("todos")
+2026-03-07 11:23:23,741 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("todos")
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("knowledge")
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("knowledge")
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("task_plans")
+2026-03-07 11:23:23,742 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("task_plans")
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("meetings")
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("meetings")
+2026-03-07 11:23:23,743 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("assets")
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("assets")
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("persons")
+2026-03-07 11:23:23,744 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("persons")
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("slp_assessments")
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("slp_assessments")
+2026-03-07 11:23:23,745 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("weekly_todos")
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("weekly_todos")
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("weekly_todo_allocations")
+2026-03-07 11:23:23,746 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,747 - sqlalchemy.engine.Engine - INFO - PRAGMA temp.table_info("weekly_todo_allocations")
+2026-03-07 11:23:23,747 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 11:23:23,747 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE organizations (
+	id INTEGER NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	stakeholders TEXT, 
+	team TEXT, 
+	description TEXT, 
+	related_products TEXT, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-03-07 11:23:23,747 - sqlalchemy.engine.Engine - INFO - [no key 0.00007s] ()
+2026-03-07 11:23:23,749 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE todos (
+	id INTEGER NOT NULL, 
+	title VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	status VARCHAR(50) NOT NULL, 
+	urgency VARCHAR(50), 
+	importance VARCHAR(50), 
+	category VARCHAR(100), 
+	tags VARCHAR(500), 
+	project_id INTEGER, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	completed_at DATETIME, 
+	due_date DATETIME, 
+	source_type VARCHAR(50), 
+	source_id INTEGER, 
+	asset_id INTEGER, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(project_id) REFERENCES projects (id), 
+	FOREIGN KEY(asset_id) REFERENCES assets (id)
+)
+
+
+2026-03-07 11:23:23,749 - sqlalchemy.engine.Engine - INFO - [no key 0.00010s] ()
+2026-03-07 11:23:23,750 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE knowledge (
+	id INTEGER NOT NULL, 
+	title VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	document_type VARCHAR(50) NOT NULL, 
+	uri VARCHAR(2048) NOT NULL, 
+	category VARCHAR(100), 
+	tags VARCHAR(500), 
+	content_hash VARCHAR(64), 
+	status VARCHAR(50) NOT NULL, 
+	referenced_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	last_fetched_at DATETIME, 
+	indexed_at DATETIME, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-03-07 11:23:23,750 - sqlalchemy.engine.Engine - INFO - [no key 0.00005s] ()
+2026-03-07 11:23:23,751 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE assets (
+	id INTEGER NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	reference_url VARCHAR(2048), 
+	status VARCHAR(50) NOT NULL, 
+	project_count INTEGER NOT NULL, 
+	project_id INTEGER, 
+	todo_id INTEGER, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(project_id) REFERENCES projects (id), 
+	FOREIGN KEY(todo_id) REFERENCES todos (id)
+)
+
+
+2026-03-07 11:23:23,751 - sqlalchemy.engine.Engine - INFO - [no key 0.00008s] ()
+2026-03-07 11:23:23,752 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE slp_assessments (
+	id INTEGER NOT NULL, 
+	partner JSON NOT NULL, 
+	family JSON NOT NULL, 
+	friends JSON NOT NULL, 
+	physical_health JSON NOT NULL, 
+	mental_health JSON NOT NULL, 
+	spirituality JSON NOT NULL, 
+	community JSON NOT NULL, 
+	societal JSON NOT NULL, 
+	job_task JSON NOT NULL, 
+	learning JSON NOT NULL, 
+	finance JSON NOT NULL, 
+	hobbies JSON NOT NULL, 
+	online_entertainment JSON NOT NULL, 
+	offline_entertainment JSON NOT NULL, 
+	physiological_needs JSON NOT NULL, 
+	daily_activities JSON NOT NULL, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id)
+)
+
+
+2026-03-07 11:23:23,752 - sqlalchemy.engine.Engine - INFO - [no key 0.00006s] ()
+2026-03-07 11:23:23,753 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE projects (
+	id INTEGER NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	organization_id INTEGER, 
+	status VARCHAR(50) NOT NULL, 
+	tasks TEXT, 
+	past_steps JSON, 
+	next_steps JSON, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(organization_id) REFERENCES organizations (id)
+)
+
+
+2026-03-07 11:23:23,753 - sqlalchemy.engine.Engine - INFO - [no key 0.00005s] ()
+2026-03-07 11:23:23,753 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE task_plans (
+	id INTEGER NOT NULL, 
+	todo_id INTEGER NOT NULL, 
+	content TEXT NOT NULL, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (todo_id), 
+	FOREIGN KEY(todo_id) REFERENCES todos (id) ON DELETE CASCADE
+)
+
+
+2026-03-07 11:23:23,753 - sqlalchemy.engine.Engine - INFO - [no key 0.00006s] ()
+2026-03-07 11:23:23,754 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE weekly_todos (
+	id INTEGER NOT NULL, 
+	title VARCHAR(255) NOT NULL, 
+	description TEXT, 
+	todo_id INTEGER, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(todo_id) REFERENCES todos (id) ON DELETE SET NULL
+)
+
+
+2026-03-07 11:23:23,754 - sqlalchemy.engine.Engine - INFO - [no key 0.00005s] ()
+2026-03-07 11:23:23,757 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE meetings (
+	id INTEGER NOT NULL, 
+	meeting_id VARCHAR(255) NOT NULL, 
+	project_id INTEGER, 
+	org_id INTEGER, 
+	file_ref VARCHAR(2048) NOT NULL, 
+	attendees VARCHAR(2048), 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	UNIQUE (meeting_id), 
+	FOREIGN KEY(project_id) REFERENCES projects (id), 
+	FOREIGN KEY(org_id) REFERENCES organizations (id)
+)
+
+
+2026-03-07 11:23:23,757 - sqlalchemy.engine.Engine - INFO - [no key 0.00006s] ()
+2026-03-07 11:23:23,757 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE persons (
+	id INTEGER NOT NULL, 
+	name VARCHAR(255) NOT NULL, 
+	context TEXT, 
+	role VARCHAR(255), 
+	last_met_date DATETIME, 
+	next_step TEXT, 
+	project_id INTEGER, 
+	organization_id INTEGER, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(project_id) REFERENCES projects (id), 
+	FOREIGN KEY(organization_id) REFERENCES organizations (id)
+)
+
+
+2026-03-07 11:23:23,757 - sqlalchemy.engine.Engine - INFO - [no key 0.00005s] ()
+2026-03-07 11:23:23,758 - sqlalchemy.engine.Engine - INFO - 
+CREATE TABLE weekly_todo_allocations (
+	id INTEGER NOT NULL, 
+	weekly_todo_id INTEGER NOT NULL, 
+	week_key VARCHAR(20) NOT NULL, 
+	mon INTEGER NOT NULL, 
+	tue INTEGER NOT NULL, 
+	wed INTEGER NOT NULL, 
+	thu INTEGER NOT NULL, 
+	fri INTEGER NOT NULL, 
+	sat INTEGER NOT NULL, 
+	sun INTEGER NOT NULL, 
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	updated_at DATETIME DEFAULT CURRENT_TIMESTAMP NOT NULL, 
+	PRIMARY KEY (id), 
+	CONSTRAINT uq_weekly_todo_allocations_todo_week UNIQUE (weekly_todo_id, week_key), 
+	FOREIGN KEY(weekly_todo_id) REFERENCES weekly_todos (id) ON DELETE CASCADE
+)
+
+
+2026-03-07 11:23:23,758 - sqlalchemy.engine.Engine - INFO - [no key 0.00006s] ()
+2026-03-07 11:23:23,759 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-07 11:23:23,802 - app.request - INFO - GET /health 200 0.7ms
+2026-03-07 12:10:46,035 - app.core.config - INFO - Logging to file: /Users/jerome/Documents/Code/MyAIAssistant/workspaces/demo/logs/app.log
+2026-03-07 12:10:46,093 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 12:10:46,093 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("organizations")
+2026-03-07 12:10:46,093 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,093 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("projects")
+2026-03-07 12:10:46,093 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("todos")
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("knowledge")
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("task_plans")
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,094 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("meetings")
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("assets")
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("persons")
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("slp_assessments")
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("weekly_todos")
+2026-03-07 12:10:46,095 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,096 - sqlalchemy.engine.Engine - INFO - PRAGMA main.table_info("weekly_todo_allocations")
+2026-03-07 12:10:46,096 - sqlalchemy.engine.Engine - INFO - [raw sql] ()
+2026-03-07 12:10:46,096 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-07 12:10:46,121 - app.request - INFO - GET /health 200 0.8ms
+2026-03-07 12:37:50,632 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 12:37:50,647 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM todos 
+WHERE todos.status IN (?, ?)
+2026-03-07 12:37:50,647 - sqlalchemy.engine.Engine - INFO - [generated in 0.00051s] ('Open', 'Started')
+2026-03-07 12:37:50,672 - sqlalchemy.engine.Engine - INFO - SELECT todos.id, todos.title, todos.description, todos.status, todos.urgency, todos.importance, todos.category, todos.tags, todos.project_id, todos.created_at, todos.updated_at, todos.completed_at, todos.due_date, todos.source_type, todos.source_id, todos.asset_id 
+FROM todos 
+WHERE todos.status IN (?, ?) ORDER BY todos.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 12:37:50,672 - sqlalchemy.engine.Engine - INFO - [generated in 0.00029s] ('Open', 'Started', 500, 0)
+2026-03-07 12:37:50,672 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 12:37:50,674 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT projects.id AS id, projects.name AS name, projects.description AS description, projects.organization_id AS organization_id, projects.status AS status, projects.tasks AS tasks, projects.past_steps AS past_steps, projects.next_steps AS next_steps, projects.created_at AS created_at, projects.updated_at AS updated_at 
+FROM projects) AS anon_1
+2026-03-07 12:37:50,674 - sqlalchemy.engine.Engine - INFO - [generated in 0.00011s] ()
+2026-03-07 12:37:50,680 - app.request - INFO - GET /api/todos/?status=Open,Started&limit=500 200 57.8ms
+2026-03-07 12:37:50,687 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 12:37:50,690 - sqlalchemy.engine.Engine - INFO - SELECT projects.id, projects.name, projects.description, projects.organization_id, projects.status, projects.tasks, projects.past_steps, projects.next_steps, projects.created_at, projects.updated_at 
+FROM projects ORDER BY projects.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 12:37:50,690 - sqlalchemy.engine.Engine - INFO - [generated in 0.00022s] (500, 0)
+2026-03-07 12:37:50,693 - app.request - INFO - GET /api/projects/?limit=500 200 45.3ms
+2026-03-07 12:37:50,693 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 12:37:57,069 - app.request - INFO - GET /api/agents/ 404 1.3ms
+2026-03-07 12:57:18,444 - app.request - INFO - GET /api/config 200 7.7ms
+2026-03-07 13:18:02,153 - app.request - INFO - GET /api/config 200 7.9ms
+2026-03-07 13:52:12,490 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:12,496 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT organizations.id AS id, organizations.name AS name, organizations.stakeholders AS stakeholders, organizations.team AS team, organizations.description AS description, organizations.related_products AS related_products, organizations.created_at AS created_at, organizations.updated_at AS updated_at 
+FROM organizations) AS anon_1
+2026-03-07 13:52:12,496 - sqlalchemy.engine.Engine - INFO - [generated in 0.00072s] ()
+2026-03-07 13:52:12,498 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations ORDER BY organizations.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:52:12,498 - sqlalchemy.engine.Engine - INFO - [generated in 0.00014s] (50, 0)
+2026-03-07 13:52:12,500 - app.request - INFO - GET /api/organizations/?skip=0&limit=50 200 21.1ms
+2026-03-07 13:52:12,500 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:52:45,577 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:45,583 - sqlalchemy.engine.Engine - INFO - INSERT INTO organizations (name, stakeholders, team, description, related_products) VALUES (?, ?, ?, ?, ?) RETURNING id, created_at, updated_at
+2026-03-07 13:52:45,583 - sqlalchemy.engine.Engine - INFO - [generated in 0.00027s] ('University Of AI', '## Key Contacts\n- **Name** - Role, responsibilities\n- **Name** - Role, responsibilities', '## Internal Team\n- **Account Manager**: Name\n- **Technical Lead**: Name', '## Account Strategy\n\n### Goals\n- Goal 1\n- Goal 2\n\n### Current Status\nBrief overview of current engagement\n\n### Next Steps\n- Action item 1\n- Action item 2', '## Products in Use\n- **Product Name** - Status (Production/Evaluation/POC)\n- **Product Name** - Status')
+2026-03-07 13:52:45,586 - sqlalchemy.engine.Engine - INFO - COMMIT
+2026-03-07 13:52:45,591 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:45,595 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations 
+WHERE organizations.id = ?
+2026-03-07 13:52:45,595 - sqlalchemy.engine.Engine - INFO - [generated in 0.00025s] (1,)
+2026-03-07 13:52:45,598 - app.request - INFO - POST /api/organizations/ 201 32.3ms
+2026-03-07 13:52:45,599 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:52:45,818 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:45,819 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations 
+WHERE organizations.id = ?
+2026-03-07 13:52:45,819 - sqlalchemy.engine.Engine - INFO - [generated in 0.00033s] (1,)
+2026-03-07 13:52:45,820 - app.request - INFO - GET /api/organizations/1 200 3.2ms
+2026-03-07 13:52:45,820 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:52:50,359 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:50,359 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT organizations.id AS id, organizations.name AS name, organizations.stakeholders AS stakeholders, organizations.team AS team, organizations.description AS description, organizations.related_products AS related_products, organizations.created_at AS created_at, organizations.updated_at AS updated_at 
+FROM organizations) AS anon_1
+2026-03-07 13:52:50,359 - sqlalchemy.engine.Engine - INFO - [cached since 37.86s ago] ()
+2026-03-07 13:52:50,360 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations ORDER BY organizations.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:52:50,360 - sqlalchemy.engine.Engine - INFO - [generated in 0.00014s] (500, 0)
+2026-03-07 13:52:50,361 - app.request - INFO - GET /api/organizations/?limit=500 200 2.9ms
+2026-03-07 13:52:50,361 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:52:50,393 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:52:50,394 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT projects.id AS id, projects.name AS name, projects.description AS description, projects.organization_id AS organization_id, projects.status AS status, projects.tasks AS tasks, projects.past_steps AS past_steps, projects.next_steps AS next_steps, projects.created_at AS created_at, projects.updated_at AS updated_at 
+FROM projects 
+WHERE projects.organization_id = ?) AS anon_1
+2026-03-07 13:52:50,394 - sqlalchemy.engine.Engine - INFO - [generated in 0.00021s] (1,)
+2026-03-07 13:52:50,396 - sqlalchemy.engine.Engine - INFO - SELECT projects.id, projects.name, projects.description, projects.organization_id, projects.status, projects.tasks, projects.past_steps, projects.next_steps, projects.created_at, projects.updated_at 
+FROM projects 
+WHERE projects.organization_id = ? ORDER BY projects.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:52:50,396 - sqlalchemy.engine.Engine - INFO - [generated in 0.00020s] (1, 50, 0)
+2026-03-07 13:52:50,399 - app.request - INFO - GET /api/projects/?skip=0&limit=50&organization_id=1 200 7.5ms
+2026-03-07 13:52:50,399 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:53:03,352 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:53:03,354 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT organizations.id AS id, organizations.name AS name, organizations.stakeholders AS stakeholders, organizations.team AS team, organizations.description AS description, organizations.related_products AS related_products, organizations.created_at AS created_at, organizations.updated_at AS updated_at 
+FROM organizations) AS anon_1
+2026-03-07 13:53:03,355 - sqlalchemy.engine.Engine - INFO - [cached since 50.86s ago] ()
+2026-03-07 13:53:03,360 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations ORDER BY organizations.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:53:03,360 - sqlalchemy.engine.Engine - INFO - [cached since 13s ago] (500, 0)
+2026-03-07 13:53:03,363 - app.request - INFO - GET /api/organizations/?limit=500 200 24.5ms
+2026-03-07 13:53:03,364 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:53:03,370 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:53:03,370 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT projects.id AS id, projects.name AS name, projects.description AS description, projects.organization_id AS organization_id, projects.status AS status, projects.tasks AS tasks, projects.past_steps AS past_steps, projects.next_steps AS next_steps, projects.created_at AS created_at, projects.updated_at AS updated_at 
+FROM projects 
+WHERE projects.organization_id = ?) AS anon_1
+2026-03-07 13:53:03,370 - sqlalchemy.engine.Engine - INFO - [cached since 12.98s ago] (1,)
+2026-03-07 13:53:03,374 - sqlalchemy.engine.Engine - INFO - SELECT projects.id, projects.name, projects.description, projects.organization_id, projects.status, projects.tasks, projects.past_steps, projects.next_steps, projects.created_at, projects.updated_at 
+FROM projects 
+WHERE projects.organization_id = ? ORDER BY projects.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:53:03,374 - sqlalchemy.engine.Engine - INFO - [generated in 0.00032s] (1, 50, 0)
+2026-03-07 13:53:03,376 - app.request - INFO - GET /api/projects/?skip=0&limit=50&organization_id=1 200 7.4ms
+2026-03-07 13:53:03,377 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:53:09,529 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:53:09,530 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT organizations.id AS id, organizations.name AS name, organizations.stakeholders AS stakeholders, organizations.team AS team, organizations.description AS description, organizations.related_products AS related_products, organizations.created_at AS created_at, organizations.updated_at AS updated_at 
+FROM organizations) AS anon_1
+2026-03-07 13:53:09,530 - sqlalchemy.engine.Engine - INFO - [cached since 57.04s ago] ()
+2026-03-07 13:53:09,530 - sqlalchemy.engine.Engine - INFO - SELECT organizations.id, organizations.name, organizations.stakeholders, organizations.team, organizations.description, organizations.related_products, organizations.created_at, organizations.updated_at 
+FROM organizations ORDER BY organizations.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:53:09,531 - sqlalchemy.engine.Engine - INFO - [cached since 19.17s ago] (50, 0)
+2026-03-07 13:53:09,532 - app.request - INFO - GET /api/organizations/?skip=0&limit=50 200 3.8ms
+2026-03-07 13:53:09,532 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:53:12,498 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:53:12,499 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM todos 
+WHERE todos.status IN (?, ?)
+2026-03-07 13:53:12,499 - sqlalchemy.engine.Engine - INFO - [cached since 2990s ago] ('Open', 'Started')
+2026-03-07 13:53:12,501 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:53:12,501 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT projects.id AS id, projects.name AS name, projects.description AS description, projects.organization_id AS organization_id, projects.status AS status, projects.tasks AS tasks, projects.past_steps AS past_steps, projects.next_steps AS next_steps, projects.created_at AS created_at, projects.updated_at AS updated_at 
+FROM projects) AS anon_1
+2026-03-07 13:53:12,501 - sqlalchemy.engine.Engine - INFO - [cached since 2990s ago] ()
+2026-03-07 13:53:12,502 - sqlalchemy.engine.Engine - INFO - SELECT todos.id, todos.title, todos.description, todos.status, todos.urgency, todos.importance, todos.category, todos.tags, todos.project_id, todos.created_at, todos.updated_at, todos.completed_at, todos.due_date, todos.source_type, todos.source_id, todos.asset_id 
+FROM todos 
+WHERE todos.status IN (?, ?) ORDER BY todos.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:53:12,502 - sqlalchemy.engine.Engine - INFO - [cached since 2990s ago] ('Open', 'Started', 500, 0)
+2026-03-07 13:53:12,503 - sqlalchemy.engine.Engine - INFO - SELECT projects.id, projects.name, projects.description, projects.organization_id, projects.status, projects.tasks, projects.past_steps, projects.next_steps, projects.created_at, projects.updated_at 
+FROM projects ORDER BY projects.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:53:12,503 - sqlalchemy.engine.Engine - INFO - [generated in 0.00010s] (500, 0)
+2026-03-07 13:53:12,503 - app.request - INFO - GET /api/todos/?status=Open,Started&limit=500 200 6.4ms
+2026-03-07 13:53:12,503 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:53:12,504 - app.request - INFO - GET /api/projects/?limit=500 200 4.5ms
+2026-03-07 13:53:12,504 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:55:13,752 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:55:13,753 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT projects.id AS id, projects.name AS name, projects.description AS description, projects.organization_id AS organization_id, projects.status AS status, projects.tasks AS tasks, projects.past_steps AS past_steps, projects.next_steps AS next_steps, projects.created_at AS created_at, projects.updated_at AS updated_at 
+FROM projects) AS anon_1
+2026-03-07 13:55:13,753 - sqlalchemy.engine.Engine - INFO - [cached since 3112s ago] ()
+2026-03-07 13:55:13,754 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:55:13,754 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM todos 
+WHERE todos.status IN (?, ?)
+2026-03-07 13:55:13,754 - sqlalchemy.engine.Engine - INFO - [cached since 3112s ago] ('Open', 'Started')
+2026-03-07 13:55:13,755 - sqlalchemy.engine.Engine - INFO - SELECT projects.id, projects.name, projects.description, projects.organization_id, projects.status, projects.tasks, projects.past_steps, projects.next_steps, projects.created_at, projects.updated_at 
+FROM projects ORDER BY projects.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:55:13,755 - sqlalchemy.engine.Engine - INFO - [cached since 121.3s ago] (500, 0)
+2026-03-07 13:55:13,755 - sqlalchemy.engine.Engine - INFO - SELECT todos.id, todos.title, todos.description, todos.status, todos.urgency, todos.importance, todos.category, todos.tags, todos.project_id, todos.created_at, todos.updated_at, todos.completed_at, todos.due_date, todos.source_type, todos.source_id, todos.asset_id 
+FROM todos 
+WHERE todos.status IN (?, ?) ORDER BY todos.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:55:13,756 - sqlalchemy.engine.Engine - INFO - [cached since 3112s ago] ('Open', 'Started', 500, 0)
+2026-03-07 13:55:13,757 - app.request - INFO - GET /api/projects/?limit=500 200 8.3ms
+2026-03-07 13:55:13,758 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:55:13,759 - app.request - INFO - GET /api/todos/?limit=500&status=Open,Started 200 5.3ms
+2026-03-07 13:55:13,759 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:55:13,763 - sqlalchemy.engine.Engine - INFO - BEGIN (implicit)
+2026-03-07 13:55:13,764 - sqlalchemy.engine.Engine - INFO - SELECT count(*) AS count_1 
+FROM (SELECT assets.id AS id, assets.name AS name, assets.description AS description, assets.reference_url AS reference_url, assets.status AS status, assets.project_count AS project_count, assets.project_id AS project_id, assets.todo_id AS todo_id, assets.created_at AS created_at, assets.updated_at AS updated_at 
+FROM assets) AS anon_1
+2026-03-07 13:55:13,764 - sqlalchemy.engine.Engine - INFO - [generated in 0.00010s] ()
+2026-03-07 13:55:13,765 - sqlalchemy.engine.Engine - INFO - SELECT assets.id, assets.name, assets.description, assets.reference_url, assets.status, assets.project_count, assets.project_id, assets.todo_id, assets.created_at, assets.updated_at 
+FROM assets ORDER BY assets.created_at DESC
+ LIMIT ? OFFSET ?
+2026-03-07 13:55:13,765 - sqlalchemy.engine.Engine - INFO - [generated in 0.00010s] (50, 0)
+2026-03-07 13:55:13,766 - app.request - INFO - GET /api/assets/?skip=0&limit=50 200 4.3ms
+2026-03-07 13:55:13,766 - sqlalchemy.engine.Engine - INFO - ROLLBACK
+2026-03-07 13:55:17,579 - app.request - INFO - GET /api/config 200 0.4ms
+2026-03-07 13:55:23,998 - app.request - INFO - GET /api/config 200 0.2ms
+2026-03-07 14:16:28,664 - app.request - INFO - GET /docs 200 2.6ms
+2026-03-07 14:16:28,960 - app.request - INFO - GET /openapi.json 200 158.1ms
+2026-03-07 14:19:35,327 - app.request - INFO - GET /api/config 200 2.0ms
+2026-03-07 14:19:37,915 - app.request - INFO - GET /api/config 200 0.8ms
+2026-03-07 14:19:44,436 - app.request - INFO - GET /api/config 200 0.9ms
+2026-03-07 14:39:45,803 - app.request - INFO - GET /api/config 200 1.4ms

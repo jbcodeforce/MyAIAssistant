@@ -12,6 +12,7 @@
     </div>
 
     <div class="top-bar-right">
+      <span v-if="user_name" class="user-name">{{ user_name }}</span>
       <!-- GitHub Link -->
       <a 
         href="https://github.com/jbcodeforce/MyAIAssistant" 
@@ -49,10 +50,11 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { getConfig } from '@/services/api'
 
 const emit = defineEmits(['toggle-sidebar'])
 const route = useRoute()
-
+const user_name = ref(null)
 const isDarkMode = ref(false)
 
 const currentPageTitle = computed(() => {
@@ -72,7 +74,11 @@ function toggleDarkMode() {
   localStorage.setItem('darkMode', isDarkMode.value ? 'true' : 'false')
 }
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const c = await getConfig()
+    if (c.user_name) user_name.value = c.user_name
+  } catch (_) {}
   // Load dark mode preference
   const savedDarkMode = localStorage.getItem('darkMode')
   if (savedDarkMode === 'true') {
@@ -143,6 +149,16 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.user-name {
+  font-size: 0.875rem;
+  color: #6b7280;
+  margin-right: 0.25rem;
+}
+
+:global(.dark) .user-name {
+  color: #94a3b8;
 }
 
 .icon-btn {

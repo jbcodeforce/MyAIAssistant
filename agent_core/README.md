@@ -1,5 +1,7 @@
 # Agent Core
 
+DEPRECATED 
+
 A library for building agentic AI applications with unified LLM integration via HuggingFace InferenceClient. Provides both synchronous and asynchronous APIs, a config-driven agent framework, and intelligent query routing.
 
 ## Features

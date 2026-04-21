@@ -22,69 +22,42 @@
       <div v-if="agents.length === 0" class="empty-state">
         <p>No agents found</p>
         <p class="empty-state-hint">
-          Agents are loaded from the agent config directory
+          Configure agent_service_url and ensure the agent service exposes GET /myai/agents
         </p>
       </div>
 
       <div v-else class="agents-grid">
         <div
           v-for="agent in agents"
-          :key="agent.name"
+          :key="agent.agent_name"
           class="agent-tile"
-          @click="openDetailModal(agent)"
         >
-          <h3 class="agent-name">{{ agent.name }}</h3>
+          <div class="agent-tile-header">
+            <h3 class="agent-name">{{ agent.agent_name }}</h3>
+            <span v-if="agent.default" class="agent-badge">default</span>
+          </div>
           <p class="agent-description">{{ agent.description || 'No description' }}</p>
+          <div class="agent-tile-actions">
+            <button type="button" class="btn-primary" @click="openChat(agent)">
+              Chat
+            </button>
+            <button type="button" class="btn-secondary" @click="openConfig(agent)">
+              Configure
+            </button>
+          </div>
         </div>
       </div>
     </div>
 
     <Modal
-      :show="showDetailModal"
-      :title="selectedAgent ? selectedAgent.name : ''"
-      @close="closeDetailModal"
+      :show="showConfigModal"
+      :title="configModalTitle"
+      @close="closeConfigModal"
     >
-      <div v-if="selectedAgent" class="agent-detail">
-        <p class="agent-detail-description">{{ selectedAgent.description || 'No description' }}</p>
-        <dl class="agent-detail-params">
-          <dt>Base URL</dt>
-          <dd>{{ selectedAgent.base_url ?? '—' }}</dd>
-          <dt>Model</dt>
-          <dd>{{ selectedAgent.model ?? '—' }}</dd>
-          <dt>Temperature</dt>
-          <dd>{{ selectedAgent.temperature != null ? selectedAgent.temperature : '—' }}</dd>
-          <dt>Max tokens</dt>
-          <dd>{{ selectedAgent.max_tokens != null ? selectedAgent.max_tokens : '—' }}</dd>
-        </dl>
-        <div class="agent-detail-actions">
-          <button type="button" class="btn-secondary" @click="openPromptEdit">
-            Edit prompt
-          </button>
-        </div>
-      </div>
-    </Modal>
-
-    <Modal
-      :show="showPromptModal"
-      :title="promptModalTitle"
-      size="large"
-      @close="closePromptModal"
-    >
-      <div class="prompt-edit">
-        <textarea
-          v-model="promptEditText"
-          class="prompt-textarea"
-          placeholder="System prompt..."
-          rows="12"
-          :disabled="promptLoading"
-        ></textarea>
-        <p v-if="promptSaveError" class="prompt-error">{{ promptSaveError }}</p>
-        <div class="prompt-edit-actions">
-          <button type="button" class="btn-secondary" @click="closePromptModal">Cancel</button>
-          <button type="button" class="btn-primary" @click="savePrompt" :disabled="!promptEditText.trim() || promptLoading">
-            {{ promptLoading ? 'Saving...' : 'Save' }}
-          </button>
-        </div>
+      <div v-if="selectedAgent" class="config-detail">
+        <p class="config-path-label">Config path</p>
+        <p class="config-path">{{ selectedAgent.path_to_config }}</p>
+        <button type="button" class="btn-secondary" @click="copyConfigPath">Copy path</button>
       </div>
     </Modal>
   </div>
@@ -92,22 +65,19 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { agentsApi } from '@/services/api'
 import Modal from '@/components/common/Modal.vue'
 
+const router = useRouter()
 const agents = ref([])
 const loading = ref(true)
 const error = ref(null)
-const showDetailModal = ref(false)
+const showConfigModal = ref(false)
 const selectedAgent = ref(null)
 
-const showPromptModal = ref(false)
-const promptEditText = ref('')
-const promptSaveError = ref(null)
-const promptLoading = ref(false)
-
-const promptModalTitle = computed(() =>
-  selectedAgent.value ? `Edit prompt: ${selectedAgent.value.name}` : 'Edit prompt'
+const configModalTitle = computed(() =>
+  selectedAgent.value ? `Configure: ${selectedAgent.value.agent_name}` : 'Configure'
 )
 
 async function loadAgents() {
@@ -123,46 +93,30 @@ async function loadAgents() {
   }
 }
 
-function openDetailModal(agent) {
-  selectedAgent.value = agent
-  showDetailModal.value = true
+function openChat(agent) {
+  const query = { agent: agent.agent_name }
+  if (agent.url) query.agent_url = agent.url
+  router.push({ path: '/assistant', query })
 }
 
-function closeDetailModal() {
-  showDetailModal.value = false
+function openConfig(agent) {
+  selectedAgent.value = agent
+  showConfigModal.value = true
+}
+
+function closeConfigModal() {
+  showConfigModal.value = false
   selectedAgent.value = null
 }
 
-async function openPromptEdit() {
-  if (!selectedAgent.value) return
-  promptSaveError.value = null
-  promptEditText.value = ''
-  showPromptModal.value = true
+async function copyConfigPath() {
+  if (!selectedAgent.value?.path_to_config) return
+  const path = String(selectedAgent.value.path_to_config)
   try {
-    const response = await agentsApi.get(selectedAgent.value.name)
-    promptEditText.value = response.data.sys_prompt ?? ''
-  } catch (err) {
-    promptSaveError.value = err.response?.data?.detail || err.message || 'Failed to load prompt'
-  }
-}
-
-function closePromptModal() {
-  showPromptModal.value = false
-  promptEditText.value = ''
-  promptSaveError.value = null
-}
-
-async function savePrompt() {
-  if (!selectedAgent.value || !promptEditText.value.trim()) return
-  promptLoading.value = true
-  promptSaveError.value = null
-  try {
-    await agentsApi.savePrompt(selectedAgent.value.name, promptEditText.value.trim())
-    closePromptModal()
-  } catch (err) {
-    promptSaveError.value = err.response?.data?.detail || err.message || 'Failed to save prompt'
-  } finally {
-    promptLoading.value = false
+    await navigator.clipboard.writeText(path)
+    closeConfigModal()
+  } catch (_) {
+    // ignore
   }
 }
 
@@ -266,13 +220,39 @@ onMounted(() => {
   border: 1px solid #e5e7eb;
   border-radius: 10px;
   padding: 1.25rem;
-  transition: box-shadow 0.2s ease, transform 0.2s ease;
-  cursor: pointer;
+  transition: box-shadow 0.2s ease;
 }
 
 .agent-tile:hover {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+}
+
+.agent-tile-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.agent-badge {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  color: #6b7280;
+  background: #f3f4f6;
+  padding: 0.125rem 0.5rem;
+  border-radius: 4px;
+}
+
+:global(.dark) .agent-badge {
+  color: #94a3b8;
+  background: #334155;
+}
+
+.agent-tile-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 :global(.dark) .agent-tile {
@@ -302,97 +282,33 @@ onMounted(() => {
   color: #94a3b8;
 }
 
-.agent-detail {
-  padding: 0.25rem 0;
+.config-detail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
 }
 
-.agent-detail-description {
-  margin: 0 0 1.25rem 0;
-  font-size: 0.9375rem;
-  color: #6b7280;
-  line-height: 1.5;
-}
-
-:global(.dark) .agent-detail-description {
-  color: #94a3b8;
-}
-
-.agent-detail-params {
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.5rem 1.5rem;
-  margin: 0;
-}
-
-.agent-detail-params dt {
+.config-path-label {
   margin: 0;
   font-size: 0.875rem;
   font-weight: 600;
   color: #374151;
 }
 
-.agent-detail-params dd {
-  margin: 0;
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-:global(.dark) .agent-detail-params dt {
+:global(.dark) .config-path-label {
   color: #cbd5e1;
 }
 
-:global(.dark) .agent-detail-params dd {
-  color: #94a3b8;
-}
-
-.agent-detail-actions {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid #e5e7eb;
-}
-
-:global(.dark) .agent-detail-actions {
-  border-top-color: #334155;
-}
-
-.prompt-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-}
-
-.prompt-textarea {
-  width: 100%;
-  padding: 0.75rem 1rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-family: ui-monospace, monospace;
-  resize: vertical;
-  min-height: 200px;
-}
-
-.prompt-textarea:focus {
-  outline: none;
-  border-color: #2563eb;
-}
-
-:global(.dark) .prompt-textarea {
-  background: #1e293b;
-  border-color: #334155;
-  color: #f1f5f9;
-}
-
-.prompt-error {
+.config-path {
   margin: 0;
-  font-size: 0.875rem;
-  color: #dc2626;
+  font-size: 0.8125rem;
+  font-family: ui-monospace, monospace;
+  color: #6b7280;
+  word-break: break-all;
 }
 
-.prompt-edit-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
+:global(.dark) .config-path {
+  color: #94a3b8;
 }
 
 .btn-primary,

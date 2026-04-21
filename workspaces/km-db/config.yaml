@@ -12,6 +12,10 @@ database_url: "sqlite+aiosqlite:///./data/km.db"
 chroma_persist_directory: "/app/data/chroma"
 chroma_collection_name: "km-kb"
 
+# Optional: user identity for UI and future AI tools (e.g. send email)
+# user_name: "Jerome"       # Display name in UI
+# email: "jerome@example.com"   # For future AI tools (e.g. sending email)
+
 # CORS settings (list of allowed origins)
 cors_origins:
   - "http://localhost:5173"

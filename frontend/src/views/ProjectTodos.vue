@@ -82,7 +82,11 @@
               v-for="todo in sortedTodos" 
               :key="todo.id" 
               :class="['todo-row', todo.status.toLowerCase(), { 'highlighted': todo.id === highlightTodoId }]"
-              :ref="todo.id === highlightTodoId ? 'highlightedRow' : null"
+              role="button"
+              tabindex="0"
+              @click="openEditModal(todo)"
+              @keydown.enter="openEditModal(todo)"
+              @keydown.space.prevent="openEditModal(todo)"
             >
               <td class="col-status">
                 <span :class="['status-badge', todo.status.toLowerCase()]">
@@ -90,7 +94,7 @@
                 </span>
               </td>
               <td class="col-title">
-                <span class="todo-title">{{ todo.title }}</span>
+                <span class="todo-title todo-title-link">{{ todo.title }}</span>
                 <span v-if="todo.description" class="todo-description">{{ truncate(stripHtml(todo.description), 60) }}</span>
               </td>
               <td class="col-category">
@@ -139,6 +143,21 @@
         @cancel="closeCreateModal"
       />
     </Modal>
+
+    <Modal
+      :show="showEditModal"
+      title="Edit Todo"
+      size="large"
+      @close="closeEditModal"
+    >
+      <TodoForm
+        v-if="editingTodo"
+        :initial-data="editingTodo"
+        :is-edit="true"
+        @submit="handleUpdate"
+        @cancel="closeEditModal"
+      />
+    </Modal>
   </div>
 </template>
 
@@ -163,6 +182,8 @@ const limit = 50
 const loading = ref(false)
 const error = ref(null)
 const showCreateModal = ref(false)
+const showEditModal = ref(false)
+const editingTodo = ref(null)
 const highlightTodoId = ref(null)
 
 const sortedTodos = computed(() => {
@@ -307,6 +328,16 @@ function closeCreateModal() {
   showCreateModal.value = false
 }
 
+function openEditModal(todo) {
+  editingTodo.value = todo
+  showEditModal.value = true
+}
+
+function closeEditModal() {
+  showEditModal.value = false
+  editingTodo.value = null
+}
+
 async function handleCreate(todoData) {
   try {
     // Pre-fill the project_id with the current project
@@ -320,6 +351,17 @@ async function handleCreate(todoData) {
     await loadProjectTodos()
   } catch (err) {
     console.error('Failed to create todo:', err)
+  }
+}
+
+async function handleUpdate(todoData) {
+  if (!editingTodo.value) return
+  try {
+    await todosApi.update(editingTodo.value.id, todoData)
+    closeEditModal()
+    await loadProjectTodos()
+  } catch (err) {
+    console.error('Failed to update todo:', err)
   }
 }
 </script>
@@ -582,6 +624,10 @@ async function handleCreate(todoData) {
   border-bottom: none;
 }
 
+.todos-table tbody tr {
+  cursor: pointer;
+}
+
 .todos-table tbody tr:hover {
   background: #f9fafb;
 }
@@ -714,8 +760,21 @@ async function handleCreate(todoData) {
   color: #111827;
 }
 
+.todo-title-link {
+  color: #2563eb;
+  text-decoration: none;
+}
+
+.todo-title-link:hover {
+  text-decoration: underline;
+}
+
 :global(.dark) .todo-title {
   color: #f1f5f9;
+}
+
+:global(.dark) .todo-title-link {
+  color: #60a5fa;
 }
 
 .todo-description {
