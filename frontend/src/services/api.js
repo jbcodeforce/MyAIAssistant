@@ -568,15 +568,55 @@ export async function uploadNotesImage(file, contextType, contextPayload) {
 }
 
 /**
+ * Resolve a markdown image path against the note's serve context (directory under docs).
+ * Handles ./images/x.png, ../images/x.png, and bare images/x.png. Pops ".." without going
+ * below one path segment (safe clamp). Returns a path with no ".." for the notes-files API.
+ *
+ * @param {string} contextBase - e.g. 'meetings/acme/proj' or 'my-org'
+ * @param {string} relativeSrc - e.g. './images/a.png', '../images/a.png', 'images/a.png'
+ * @returns {string|null} e.g. 'meetings/acme/images/a.png', or null if absolute URL / invalid
+ */
+export function resolveNotesImageServePath(contextBase, relativeSrc) {
+  if (!contextBase || !relativeSrc || typeof relativeSrc !== 'string') return null
+  const t = relativeSrc.trim()
+  if (/^(https?:|data:|mailto:)/i.test(t)) return null
+  if (t.startsWith('/')) return null
+
+  const baseParts = contextBase.split('/').filter(Boolean)
+  if (baseParts.length === 0) return null
+
+  let rel = t.replace(/^(\.\/)+/, '')
+  const relParts = rel.split('/').filter((seg) => seg && seg !== '.')
+  const out = [...baseParts]
+  const MIN_SEGMENTS = 1
+
+  for (const seg of relParts) {
+    if (seg === '..') {
+      if (out.length > MIN_SEGMENTS) out.pop()
+    } else {
+      out.push(seg)
+    }
+  }
+  return out.join('/')
+}
+
+/**
  * Build in-app URL for a note image so the browser can load it.
  * contextBase is from upload response (e.g. 'meetings/acme/proj' or 'my-org').
- * relativePath is the path stored in markdown (e.g. './images/name.png').
+ * relativePath is the path in markdown: ./images/name.png, ../images/name.png, or images/name.png.
  */
 export function getNotesFileUrl(contextBase, relativePath) {
-  if (!contextBase || !relativePath) return relativePath || ''
-  const path = relativePath.replace(/^\.\//, '')
+  if (!relativePath || typeof relativePath !== 'string') return ''
+  const t = relativePath.trim()
+  if (/^(https?:|data:|mailto:)/i.test(t)) return t
+  if (!contextBase) return relativePath
+
+  const servePath = resolveNotesImageServePath(contextBase, t)
+  if (!servePath) return relativePath
+
   const base = api.defaults.baseURL || '/api'
-  const full = [base, 'notes-files', contextBase, path].filter(Boolean).join('/')
+  const encoded = servePath.split('/').map(encodeURIComponent).join('/')
+  const full = `${base}/notes-files/${encoded}`
   return full.replace(/([^:]\/)\/+/g, '$1')
 }
 

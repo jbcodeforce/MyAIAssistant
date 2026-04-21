@@ -1,7 +1,7 @@
 
 from agent_service.main import agents
 import pytest
-from agno.agent import Agent, RemoteAgent
+from agno.agent import Agent
 from agent_service.agents.agent_factory import get_or_create_agent_factory, reset_agent_factory
 import os
 from agent_service.agents.base_ai_agent import AIAgent
@@ -45,12 +45,12 @@ def test_load_agno_agents():
 
 
 @pytest.mark.asyncio
-async def test_create_agent_router():
+async def test_create_main_agent():
     factory = get_or_create_agent_factory()
-    router = factory.get_or_create_agent("MainAgent")
-    assert router is not None
-    assert router.name == "MainAgent"
-    assert router.db is not None
+    mainAgent = factory.get_or_create_agent("MainAgent")
+    assert mainAgent is not None
+    assert mainAgent.name == "MainAgent"
+    assert mainAgent.db is not None
 
 
 

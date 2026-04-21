@@ -10,7 +10,7 @@ data uses biz-db-like shape (backend Todo).
 import logging
 from typing import List, Optional
 
-from agent_service.agents.agent_config import AgentConfig, get_llm_base_url, get_llm_model, get_vstore_path, get_llm_api_key
+from agent_service.agents.agent_config import AgentConfig, get_llm_base_url, get_llm_api_key
 from agent_service.tools.backend_tools import TASK_PROJECT_TOOL_REGISTRY
 from agno.agent import Agent
 from agno.models.openai.like import OpenAILike

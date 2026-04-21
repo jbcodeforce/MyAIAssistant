@@ -1,4 +1,6 @@
-"""Integration tests for agent_service. Run against a live server with: AGENT_SERVICE_URL=http://localhost:8100 pytest ..."""
+"""Integration tests for agent_service. 
+Run against a live server with: AGENT_SERVICE_URL=http://localhost:8100 before running pytest ...
+"""
 
 import json
 import pytest
@@ -24,16 +26,20 @@ async def test_get_list_agents(client: AsyncClient):
     data = response.json()
     print(data)
     assert isinstance(data, list)
+    assert len(data) > 1
 
 @pytest.mark.asyncio
 async def test_get_list_agent_names(client: AsyncClient):
-    """GET /agents returns list of agent names (same as curl -X GET http://localhost:8100/agents)."""
+    """
+    GET /myai/agents returns list of AI agent names (same as curl -X GET http://localhost:8100/myai/agents).
+    AIAgent is a wrapper around the agno.Agent class, it loads the configuration from the yaml file and creates the agent.
+    """
     response = await client.get("/myai/agents")
     assert response.status_code == 200
     data = response.json()
     print(data)
     assert isinstance(data, list)
-    assert len(data) > 0
+    assert len(data) > 1
 
 
 @pytest.mark.asyncio
@@ -114,7 +120,7 @@ async def test_user_preference(client: AsyncClient):
     """POST /agents/MainAgent/runs with stream=true returns SSE (HTTP) stream; consume events and assert RunStarted/RunCompleted.
     AgentOS streams agent runs via Server-Sent Events; WebSocket is only used for workflows (/workflows/ws)."""
     first_message = (
-        "My name is Alice and I prefer Python over JavaScript."
+        "My name is Jerome and I do Java andr Python and Typescript over JavaScript."
     )
     second_message = (
         "What programming language do I prefer?"
@@ -160,3 +166,12 @@ async def test_user_preference(client: AsyncClient):
         print("-"*40)
         last_event = events[-1]  # the last event is a string
         print(last_event[1]['content']) # tuple(str, dict)
+
+
+@pytest.mark.asyncio
+async def test_uodate_prompt():
+    """
+    load existing prompt from one of the agent,
+    modify it and save to the workspace/agents folder
+    """
+    pass

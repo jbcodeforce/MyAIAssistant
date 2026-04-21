@@ -13,7 +13,10 @@ export function sanitizeOrgNameForPath(name) {
   return s || 'unknown'
 }
 
-/** Context base for meeting note images from file_ref (e.g. "acme/proj/file.md" -> "meetings/acme/proj"). */
+/**
+ * Context base for meeting note images from file_ref (e.g. "acme/proj/file.md" -> "meetings/acme/proj").
+ * Markdown can use ./images/..., ../images/..., or images/...; all resolve under this directory for preview.
+ */
 export function meetingNotesContextBaseFromFileRef(fileRef) {
   if (!fileRef || typeof fileRef !== 'string') return ''
   const trimmed = fileRef.trim()
@@ -102,7 +105,8 @@ export function renderMarkdownForNotes(content, contextBase) {
 }
 
 /**
- * Rewrite HTML from marked() so that img src starting with ./ use the notes-files API.
+ * Rewrite HTML from marked() so relative img src uses the notes-files API.
+ * Resolves ./images/..., ../images/..., and bare images/... against contextBase.
  * @param {string} html - Raw HTML from marked(markdown)
  * @param {string} contextBase - Base path for serve API (e.g. 'meetings/acme/proj' or 'my-org')
  * @returns {string} HTML with relative image src replaced by /api/notes-files/... URLs
@@ -112,12 +116,15 @@ export function renderMarkdownWithNoteImages(html, contextBase) {
   if (!contextBase) return html
   const parser = new DOMParser()
   const doc = parser.parseFromString(html, 'text/html')
-  const imgs = doc.querySelectorAll('img[src^="./"]')
+  const imgs = doc.querySelectorAll('img[src]')
   imgs.forEach((img) => {
     const src = img.getAttribute('src')
-    if (src) {
-      img.setAttribute('src', getNotesFileUrl(contextBase, src))
-    }
+    if (!src) return
+    const t = src.trim()
+    if (/^(https?:|data:|mailto:)/i.test(t)) return
+    if (t.startsWith('/')) return
+    const url = getNotesFileUrl(contextBase, t)
+    if (url && url !== t) img.setAttribute('src', url)
   })
   return doc.body?.innerHTML ?? html
 }

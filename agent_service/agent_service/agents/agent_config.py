@@ -50,7 +50,7 @@ class AgentConfig(BaseModel):
     # Agent-specific fields
     name: str = ""
     description: str = ""
-    agent_class: str = "agent_service.agent_router.AgentRouter"
+    agent_class: str = "agent_service.agents.base_ai_agent.AIAgent"
     
     # LLM configuration fields (provider is always "huggingface")
     model: str = "gpt-4o-mini"
@@ -92,7 +92,7 @@ class AgentConfig(BaseModel):
         
         # Extract known fields (provider is ignored, always "huggingface")
         known_fields = {
-            'name', 'description', 'class', 'model', 
+            'name', 'description', 'agent_class', 'model', 
             'api_key', 'base_url', 'llm_url', 'max_tokens', 'temperature',
             'timeout', 'response_format', 'tools', 'tool_choice', 'tool_prompt',
             'reasoning',
@@ -102,7 +102,7 @@ class AgentConfig(BaseModel):
         return cls(
             name=data.get('name', yaml_path.parent.name),
             description=data.get('description', 'A general purpose agent.'),
-            agent_class=data.get('class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
+            agent_class=data.get('agent_class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
             model=data.get('model', get_llm_model()),
             api_key=data.get('api_key'),
             base_url=base_url,

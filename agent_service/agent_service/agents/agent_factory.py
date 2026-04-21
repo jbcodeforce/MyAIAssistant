@@ -47,28 +47,7 @@ class AgentFactory():
             self._agents = [self.get_or_create_agent(agent_ref.agent_name) for agent_ref in self.get_agent_references()]
         return self._agents
     
-      # ----------------- Private
-    def _load_agent_references(self) -> Dict[str, AgentConfigReference]:
-        agent_references: Dict[str, AgentConfigReference] = {}
-        # first load default agents from package resources
-        package = "agent_service.agents.config"
-        target_dir = files(package)
-        for entry in target_dir.iterdir():
-            with as_file(entry) as path:
-                
-                yaml_path = path / "agent.yaml"
-                yaml_content = self._load_resource_text(yaml_path)
-                data = yaml.safe_load(yaml_content) or {}
-                description = data.get('description', 'A general purpose agent.')
-                agent_references[entry.name] = AgentConfigReference(
-                    agent_name=entry.name,
-                    description=description,
-                    path_to_config=path,
-                    url=data.get("exposed_url", f"{os.getenv('AGENT_SERVICE_URL')}/agents/{entry.name}/runs"),
-                    default=True)
-        return agent_references
     
-
     def get_or_create_agent(self, agent_name: str) -> Agent | RemoteAgent:
         if agent_name is None or agent_name == "":
             agent_name = "MainAgent"
@@ -96,6 +75,27 @@ class AgentFactory():
             return self._ai_agents[agent_name]
         return None
 
+    # ----------------- Private
+    def _load_agent_references(self) -> Dict[str, AgentConfigReference]:
+        agent_references: Dict[str, AgentConfigReference] = {}
+        # first load default agents from package resources
+        package = "agent_service.agents.config"
+        target_dir = files(package)
+        for entry in target_dir.iterdir():
+            with as_file(entry) as path:
+                
+                yaml_path = path / "agent.yaml"
+                yaml_content = self._load_resource_text(yaml_path)
+                data = yaml.safe_load(yaml_content) or {}
+                description = data.get('description', 'A general purpose agent.')
+                agent_references[entry.name] = AgentConfigReference(
+                    agent_name=entry.name,
+                    description=description,
+                    path_to_config=path,
+                    url=data.get("exposed_url", f"{os.getenv('AGENT_SERVICE_URL')}/agents/{entry.name}/runs"),
+                    default=True)
+        return agent_references
+    
     def _load_agent_config_from_resource(self, config_ref :  AgentConfigReference) -> AgentConfig:
 
         yaml_path = config_ref.path_to_config / "agent.yaml"
@@ -121,7 +121,7 @@ class AgentFactory():
         config = AgentConfig(
             name=agent_name,
             description=data.get('description', 'A general purpose agent.'),
-            agent_class=data.get('class', 'agent_service.agent_router.AgentRouter'),
+            agent_class=data.get('class', 'agent_service.agents.base_ai_agent.AIAgent'),
             model=data.get('model', get_llm_model()),
             api_key=data.get('api_key'),
             base_url=base_url,

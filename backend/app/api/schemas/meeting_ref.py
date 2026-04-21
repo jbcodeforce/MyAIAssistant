@@ -4,6 +4,13 @@ from typing import Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 
+class MeetingStepSchema(BaseModel):
+    """A past or next step on a meeting (aligns with project Step JSON / StepDict)."""
+    what: str = ""
+    who: str = ""
+    todo_id: Optional[int] = None
+
+
 class MeetingRefBase(BaseModel):
     """Base fields for meeting reference (stored in database)."""
     meeting_id: str = Field(..., min_length=1, max_length=255, description="Unique meeting identifier")
@@ -11,6 +18,14 @@ class MeetingRefBase(BaseModel):
     org_id: Optional[int] = Field(None, description="Associated organization ID")
     file_ref: str = Field(..., min_length=1, max_length=2048, description="File path where meeting note is saved")
     attendees: Optional[str] = Field(None, max_length=2048, description="Comma or semicolon separated list of attendees")
+    past_steps: Optional[list[MeetingStepSchema]] = Field(
+        None,
+        description="Structured past steps for this meeting only",
+    )
+    next_steps: Optional[list[MeetingStepSchema]] = Field(
+        None,
+        description="Structured next steps for this meeting only",
+    )
 
 
 class MeetingRefCreate(BaseModel):
@@ -42,6 +57,8 @@ class MeetingRefUpdate(BaseModel):
     org_id: Optional[int] = None
     attendees: Optional[str] = Field(None, max_length=2048, description="Comma or semicolon separated list of attendees")
     content: Optional[str] = Field(None, min_length=1, max_length=1000000, description="Updated content (optional)")
+    past_steps: Optional[list[MeetingStepSchema]] = None
+    next_steps: Optional[list[MeetingStepSchema]] = None
 
     model_config = ConfigDict(
         json_schema_extra={

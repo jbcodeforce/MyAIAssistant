@@ -12,20 +12,29 @@ AgentOS  delivers a powerful REST API to be usable by any clients and the fronte
 
 ## Implementation goals
 
-* The AI agents are defined in yaml, with their prompt and use a generic Python class for mst of use cases. Base class delegates to agno.Agent class. Externalize the configuration of the agent, brings the advantage of having the user defining its own tools, temperature, llm reference, and system prompt for dedicated use case in the workspace.
+* The AI agents are defined in yaml, with their prompt and use a generic Python class for most of use cases. Base class delegates to agno.Agent class. Externalize the configuration of the agent, brings the advantage of having the user defining its own tools, temperature, llm reference, and system prompt for dedicated use case in the workspace.
 * When there is a need to do workflow, team, it is possible to define custom agent class.
 * the agent_factory helps to load yaml definitions from agent_service code or local workspace.
+* Support RAG operations on documents referenced by users and in knowledge db
 
 The Agno Agents are wrapped by AIAgent, to map the loaded the configuration from the Yaml.
 
 The general purpose agent is the base_ai_agent. It has tooks to search the web, knowledge and reasoning capability.
 
-## Agent_Service configuration
+### Features
 
-The agents will use local llm anyway like for example to support memory operations. User can configure remote LLM.
+* [x] AgnoOS is serving APIs - [http://localhost:8100/docs](http://localhost:8100/docs)
+* [x] AgentFactory is able to load config from config folder or workspace/agents folder. Agents are visible as Agents in the 
+    ```sh
+    curl -X 'GET'  'http://localhost:8100/agents'  -H 'accept: application/json'
+    ```
+* [ ] The agents will use local llm to support memory operations. 
+* [ ] User can configure remote LLM.
+
 
 ## Run locally
 
+Start the backend for integration tests.
 
 ```bash
 cd agent_service
@@ -37,7 +46,7 @@ To get realistic data for testing, the test_wksp folder represents a workspace w
 ## Endpoints (frontend direct or backend proxy)
 
 - `GET /health` – liveness
-- `POST /agents/agentId/runs`
+- `POST /agents/<agentId>/runs`
 
 Backend: set `AGENT_SERVICE_URL=http://localhost:8100` (or `http://agent-service:8100` in Compose) to use this service.
 

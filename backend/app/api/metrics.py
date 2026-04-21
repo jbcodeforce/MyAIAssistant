@@ -271,17 +271,30 @@ async def get_organizations_over_time(
             for k, v in sorted(weekly_data.items())
         ]
     
-    # Monthly aggregation
+    # Monthly aggregation: include every calendar month from the lookback start
+    # through the current month (zeros for months with no creates).
     elif period == "monthly":
-        monthly_data = {}
+        monthly_data: dict[str, int] = {}
         for dp in data_points:
             month_key = dp.date[:7]  # YYYY-MM
             monthly_data[month_key] = monthly_data.get(month_key, 0) + dp.count
-        
-        data_points = [
-            TimeSeriesDataPoint(date=f"{k}-01", count=v) 
-            for k, v in sorted(monthly_data.items())
-        ]
+
+        start_day = start_date.date()
+        # Align chart end with API window (now + 1 day) so the active calendar month is included
+        range_end_day = end_date.date()
+        y, m = start_day.year, start_day.month
+        last_y, last_m = range_end_day.year, range_end_day.month
+        filled: list[TimeSeriesDataPoint] = []
+        while y < last_y or (y == last_y and m <= last_m):
+            mk = f"{y:04d}-{m:02d}"
+            filled.append(
+                TimeSeriesDataPoint(date=f"{mk}-01", count=monthly_data.get(mk, 0))
+            )
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+        data_points = filled
     
     return TimeSeriesMetrics(
         period=period,
@@ -346,17 +359,29 @@ async def get_meetings_over_time(
             for k, v in sorted(weekly_data.items())
         ]
     
-    # Monthly aggregation
+    # Monthly aggregation: include every calendar month from the lookback start
+    # through the API window end (zeros for months with no meetings).
     elif period == "monthly":
-        monthly_data = {}
+        monthly_data: dict[str, int] = {}
         for dp in data_points:
             month_key = dp.date[:7]  # YYYY-MM
             monthly_data[month_key] = monthly_data.get(month_key, 0) + dp.count
-        
-        data_points = [
-            TimeSeriesDataPoint(date=f"{k}-01", count=v) 
-            for k, v in sorted(monthly_data.items())
-        ]
+
+        start_day = start_date.date()
+        range_end_day = end_date.date()
+        y, m = start_day.year, start_day.month
+        last_y, last_m = range_end_day.year, range_end_day.month
+        filled: list[TimeSeriesDataPoint] = []
+        while y < last_y or (y == last_y and m <= last_m):
+            mk = f"{y:04d}-{m:02d}"
+            filled.append(
+                TimeSeriesDataPoint(date=f"{mk}-01", count=monthly_data.get(mk, 0))
+            )
+            m += 1
+            if m > 12:
+                m = 1
+                y += 1
+        data_points = filled
     
     return TimeSeriesMetrics(
         period=period,

@@ -52,7 +52,7 @@ class AgentFactory:
     # Special marker for resource-based agents
     RESOURCE_MARKER = Path("__resource__")
     
-    def __init__(self, config_dir: str = None):
+    def __init__(self, config_dir: Path):
         """
         Initialize the agent factory.
         
@@ -153,7 +153,7 @@ class AgentFactory:
         return config
 
 
-    def _load_resource_text(self, resource_path: str) -> str:
+    def _load_resource_text(self, resource_path_str: str) -> str:
         """
         Load text content from a package resource.
         
@@ -167,7 +167,7 @@ class AgentFactory:
         Raises:
             FileNotFoundError: If resource doesn't exist
         """
-        resource_path = Path(resource_path)
+        resource_path = Path(resource_path_str)
         if resource_path.exists():
             return resource_path.read_text(encoding="utf-8")
         else:
@@ -340,7 +340,7 @@ class AgentFactory:
 _factory: Optional[AgentFactory] = None
 
 
-def get_agent_factory(config_dir: Path = None) -> AgentFactory:
+def get_agent_factory(config_dir: Path) -> AgentFactory:
     """
     Get or create the global agent factory instance.
     

@@ -21,7 +21,4 @@ class AgentDetailResponse(AgentConfigResponse):
     sys_prompt: Optional[str] = Field(None, description="System prompt text (for editing)")
 
 
-class SavePromptRequest(BaseModel):
-    """Request body for saving an agent's prompt."""
 
-    prompt: str = Field(..., min_length=1, description="Prompt text to save")

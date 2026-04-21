@@ -6,7 +6,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from agent_service.customer_index_normalize import (
+from agent_service.tools.customer_index_normalize import (
     CustomerIndexNormalized,
     discover_index_files,
     normalize_source_with_agent,

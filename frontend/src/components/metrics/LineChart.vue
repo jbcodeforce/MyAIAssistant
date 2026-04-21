@@ -1,9 +1,9 @@
 <template>
   <div class="line-chart" ref="chartContainer">
     <div class="chart-y-axis">
-      <span class="y-label">{{ maxValue }}</span>
-      <span class="y-label">{{ Math.round(maxValue / 2) }}</span>
-      <span class="y-label">0</span>
+      <span class="y-label">{{ yTicks.top }}</span>
+      <span class="y-label">{{ yTicks.middle }}</span>
+      <span class="y-label">{{ yTicks.bottom }}</span>
     </div>
     <div class="chart-area">
       <div class="grid-lines">
@@ -82,6 +82,7 @@
 
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { getYAxisTickLabels } from '@/utils/chartYAxis'
 
 const props = defineProps({
   data: {
@@ -104,6 +105,8 @@ const props = defineProps({
     default: 10
   }
 })
+
+const yTicks = computed(() => getYAxisTickLabels(props.maxValue))
 
 const chartContainer = ref(null)
 const chartWidth = 800

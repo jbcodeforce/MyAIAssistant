@@ -253,7 +253,7 @@ def setup_logging() -> None:
     logger.info(f"Logging to file: {log_path.resolve()}")
 
 
-def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> str:
+def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> Path:
     """
     Resolve the agent configuration directory path.
     
@@ -266,15 +266,14 @@ def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> str:
     if agent_config_dir is None:
         # Default to current hardcoded path relative to workspace root
         # This assumes the workspace root is the current working directory
-        return str(Path.cwd() / "config")
+        return Path.cwd() / "config"
     
     path = Path(agent_config_dir)
     if path.is_absolute():
-        return str(path)
+        return path
     else:
         # Resolve relative to workspace root (current working directory)
-        return str(Path.cwd() / path)
-
+        return Path.cwd() / path
 
 def get_config_info() -> dict[str, Any]:
     """

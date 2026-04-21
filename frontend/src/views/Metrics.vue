@@ -248,10 +248,10 @@
           </div>
         </div>
 
-        <!-- Organizations Created Over Time -->
+        <!-- Organizations created: one bar per month (same date range as dashboard) -->
         <div class="chart-card">
-          <h3 class="chart-title">Organizations Created Over Time</h3>
-          <div class="bar-chart-container" v-if="metricsStore.organizationsDataPoints.length > 0">
+          <h3 class="chart-title">Organizations Created by Month</h3>
+          <div class="bar-chart-container" v-if="metricsStore.organizationsMonthlyChartDataPoints.length > 0">
             <BarChart :data="organizationsChartData" :maxValue="maxOrganizationsValue" :barColor="'#f97316'" />
           </div>
           <div v-else class="empty-chart">
@@ -259,10 +259,10 @@
           </div>
         </div>
 
-        <!-- Meetings Created Over Time -->
+        <!-- Meetings created: one bar per month (same date range as dashboard) -->
         <div class="chart-card">
-          <h3 class="chart-title">Meetings Created Over Time</h3>
-          <div class="bar-chart-container" v-if="metricsStore.meetingsDataPoints.length > 0">
+          <h3 class="chart-title">Meetings Created by Month</h3>
+          <div class="bar-chart-container" v-if="metricsStore.meetingsMonthlyChartDataPoints.length > 0">
             <BarChart :data="meetingsChartData" :maxValue="maxMeetingsValue" :barColor="'#06b6d4'" />
           </div>
           <div v-else class="empty-chart">
@@ -345,29 +345,31 @@ const maxTaskStatusValue = computed(() => {
 })
 
 const organizationsChartData = computed(() => {
-  return metricsStore.organizationsDataPoints.map(item => ({
-    label: formatDateLabel(item.date),
+  return metricsStore.organizationsMonthlyChartDataPoints.map(item => ({
+    label: formatMonthLabel(item.date),
     value: item.count,
     fullDate: item.date
   }))
 })
 
 const maxOrganizationsValue = computed(() => {
-  if (metricsStore.organizationsDataPoints.length === 0) return 0
-  return Math.max(...metricsStore.organizationsDataPoints.map(d => d.count), 1)
+  const points = metricsStore.organizationsMonthlyChartDataPoints
+  if (points.length === 0) return 0
+  return Math.max(...points.map(d => d.count), 1)
 })
 
 const meetingsChartData = computed(() => {
-  return metricsStore.meetingsDataPoints.map(item => ({
-    label: formatDateLabel(item.date),
+  return metricsStore.meetingsMonthlyChartDataPoints.map(item => ({
+    label: formatMonthLabel(item.date),
     value: item.count,
     fullDate: item.date
   }))
 })
 
 const maxMeetingsValue = computed(() => {
-  if (metricsStore.meetingsDataPoints.length === 0) return 0
-  return Math.max(...metricsStore.meetingsDataPoints.map(d => d.count), 1)
+  const points = metricsStore.meetingsMonthlyChartDataPoints
+  if (points.length === 0) return 0
+  return Math.max(...points.map(d => d.count), 1)
 })
 
 const totalWeeklyTodoMinutes = computed(() => {
@@ -394,6 +396,15 @@ function formatDateLabel(dateStr) {
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
   }
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function formatMonthLabel(dateStr) {
+  const parts = String(dateStr).slice(0, 10).split('-')
+  const y = Number(parts[0])
+  const mo = Number(parts[1])
+  if (!y || !mo) return dateStr
+  const date = new Date(y, mo - 1, 1)
+  return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
 }
 
 async function loadMetrics() {

@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Any, Optional
 
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,9 +75,13 @@ async def update_meeting_ref(
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
     attendees: Optional[str] = None,
+    past_steps: Optional[list[dict[str, Any]]] = None,
+    next_steps: Optional[list[dict[str, Any]]] = None,
     update_project_id: bool = False,
     update_org_id: bool = False,
     update_attendees: bool = False,
+    update_past_steps: bool = False,
+    update_next_steps: bool = False,
 ) -> Optional[Meeting]:
     """Update an existing meeting reference.
     
@@ -87,9 +91,12 @@ async def update_meeting_ref(
         project_id: New project ID (only applied if update_project_id is True)
         org_id: New organization ID (only applied if update_org_id is True)
         attendees: Comma or semicolon separated list of attendees (only applied if update_attendees is True)
+        past_steps / next_steps: JSON-ready list of step dicts (only if update_* is True)
         update_project_id: Whether to update project_id (allows setting to None)
         update_org_id: Whether to update org_id (allows setting to None)
         update_attendees: Whether to update attendees (allows setting to None)
+        update_past_steps: Whether to update past_steps (allows setting to None)
+        update_next_steps: Whether to update next_steps (allows setting to None)
     """
     db_meeting_ref = await get_meeting_ref(db, meeting_ref_id)
     if not db_meeting_ref:
@@ -101,6 +108,10 @@ async def update_meeting_ref(
         db_meeting_ref.org_id = org_id
     if update_attendees:
         db_meeting_ref.attendees = attendees
+    if update_past_steps:
+        db_meeting_ref.past_steps = past_steps
+    if update_next_steps:
+        db_meeting_ref.next_steps = next_steps
     
     await db.commit()
     await db.refresh(db_meeting_ref)

@@ -13,6 +13,7 @@ from app.api.schemas.meeting_ref import (
     MeetingRefResponse,
     MeetingRefListResponse,
     MeetingAgentOutputResponse,
+    MeetingStepSchema,
     NextStepResponse,
     KeyPointResponse,
 )
@@ -39,6 +40,17 @@ router = APIRouter(prefix="/meeting-refs", tags=["meeting-refs"])
 def get_notes_service() -> MeetingNotesService:
     """Dependency for meeting notes service."""
     return get_meeting_notes_service()
+
+
+def _steps_to_db_payload(raw: Optional[list]) -> Optional[list]:
+    """Normalize validated steps to JSON-storable dicts; empty list becomes None."""
+    if raw is None:
+        return None
+    out = []
+    for item in raw:
+        step = MeetingStepSchema.model_validate(item)
+        out.append(step.model_dump(mode="python", exclude_none=True))
+    return out if out else None
 
 
 @router.post("/", response_model=MeetingRefResponse, status_code=201)
@@ -187,7 +199,7 @@ async def update_meeting_ref(
         except FileNotFoundError:
             raise HTTPException(status_code=404, detail="Meeting note file not found")
     
-    # Update database record (project_id, org_id, and attendees)
+    # Update database record (project_id, org_id, attendees, steps)
     update_data = meeting_ref_update.model_dump(exclude_unset=True, exclude={"content"})
     
     meeting_ref = await crud.update_meeting_ref(
@@ -196,9 +208,17 @@ async def update_meeting_ref(
         project_id=update_data.get("project_id"),
         org_id=update_data.get("org_id"),
         attendees=update_data.get("attendees"),
+        past_steps=_steps_to_db_payload(update_data.get("past_steps"))
+        if "past_steps" in update_data
+        else None,
+        next_steps=_steps_to_db_payload(update_data.get("next_steps"))
+        if "next_steps" in update_data
+        else None,
         update_project_id="project_id" in update_data,
         update_org_id="org_id" in update_data,
         update_attendees="attendees" in update_data,
+        update_past_steps="past_steps" in update_data,
+        update_next_steps="next_steps" in update_data,
     )
     
     return meeting_ref

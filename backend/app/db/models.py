@@ -255,7 +255,9 @@ class Meeting(Base):
     )
     file_ref: Mapped[str] = mapped_column(String(2048), nullable=False)
     attendees: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
-    
+    past_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+    next_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
