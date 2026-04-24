@@ -908,6 +908,8 @@ function truncate(text, maxLength) {
 }
 
 .markdown-preview {
+  width: 100%;
+  box-sizing: border-box;
   padding: 1rem;
   min-height: 300px;
   max-height: 500px;
@@ -1030,6 +1032,11 @@ function truncate(text, maxLength) {
 .markdown-preview :deep(th) {
   background: #f9fafb;
   font-weight: 600;
+}
+
+/* View modal: notes area uses full width of the modal (fullscreen) */
+.content-view {
+  width: 100%;
 }
 
 /* View header info */

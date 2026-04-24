@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Self
 
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class MeetingStepSchema(BaseModel):
@@ -35,6 +35,12 @@ class MeetingRefCreate(BaseModel):
     org_id: Optional[int] = Field(None, description="Associated organization ID")
     attendees: Optional[str] = Field(None, max_length=2048, description="Comma or semicolon separated list of attendees")
     content: str = Field(..., min_length=1, max_length=1000000, description="Meeting note content in markdown")
+
+    @model_validator(mode="after")
+    def require_org_or_project(self) -> Self:
+        if self.org_id is None and self.project_id is None:
+            raise ValueError("Select an organization and/or a project; at least one is required.")
+        return self
 
     model_config = ConfigDict(
         json_schema_extra={

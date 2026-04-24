@@ -815,7 +815,8 @@ function formatTime(date) {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  max-width: 48rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .preview-section {
@@ -871,7 +872,8 @@ function formatTime(date) {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 56rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .form-group {
@@ -933,6 +935,8 @@ function formatTime(date) {
 }
 
 .markdown-editor-container {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   overflow: hidden;

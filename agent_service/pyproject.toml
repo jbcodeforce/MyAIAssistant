@@ -31,7 +31,8 @@ build-backend = "hatchling.build"
 packages = ["agent_service"]
 
 [project.scripts]
-normalize-customer-indexes = "agent_service.customer_index_normalize:main"
+normalize-customer-indexes = "agent_service.tools.customer_index_normalize:main"
+migrate-customer-index = "agent_service.tools.migrate_customer_index:main"
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

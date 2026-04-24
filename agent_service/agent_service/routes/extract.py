@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from agent_service.agents.chat import _build_model
+from agent_service.tools.legacy_customer_import.extractor import extract_legacy_customer_index
 from agno.agent import Agent
 
 logger = logging.getLogger(__name__)
@@ -102,3 +103,21 @@ async def extract_meeting(req: ExtractMeetingRequest) -> dict[str, Any]:
         "key_points": [{"point": kp.get("point", str(kp)) if isinstance(kp, dict) else str(kp)} for kp in key_points],
         "cleaned_notes": cleaned_notes,
     }
+
+
+class ExtractCustomerIndexRequest(BaseModel):
+    """Full legacy customer engagement note markdown."""
+
+    content: str = Field(..., min_length=1, description="Legacy index.md or engagement note markdown")
+    folder_slug: str | None = Field(None, description="Account folder slug hint for naming")
+
+
+@router.post("/customer-index")
+async def extract_customer_index(req: ExtractCustomerIndexRequest) -> dict[str, Any]:
+    """Extract organization, project, and meetings from a legacy customer note (JSON only; no persistence)."""
+    try:
+        data = extract_legacy_customer_index(req.content, folder_slug=req.folder_slug)
+    except Exception as e:
+        logger.exception("Legacy customer index extraction failed")
+        raise HTTPException(status_code=500, detail=str(e))
+    return data.model_dump(mode="json")

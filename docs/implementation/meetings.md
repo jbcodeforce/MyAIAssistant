@@ -21,100 +21,55 @@ Meeting notes content is stored in markdown files on the filesystem. The databas
 - Large document support without database bloat
 - Direct editing with any text editor
 
+### Meeting-Creation Flow
+
+#### Frontend (MeetingCreate.vue)
+* User fills meeting_id, optional org / project, attendees (presents in the form), and markdown content.
+* Create runs handleCreate, which builds a payload and calls the Pinia store
+* Store (meetingRefStore.js): createItem → meetingRefsApi.create(meetingRef).
+* HTTP (api.js): POST /meeting-refs/ with the JSON body (no file_ref from the client; the server chooses the path).
+
+#### API layer (FastAPI)
+* Router: app/api/meeting_refs.py, mounted at /api in main.py → POST /api/meeting-refs/.
+* Handler: create_meeting_ref injects:
+  * db → get_db
+  * notes_service → MeetingNotesService / get_meeting_notes_service
+
+Flow inside the handler:
+
+* Conflict check: crud.get_meeting_ref_by_meeting_id — if meeting_id exists → 409.
+* Optional FK resolution: if org_id / project_id are set, load org/project to get names for the folder layout (and 404 if missing).
+* Filesystem write first: notes_service.save_note(...) with meeting_id, content, and optional org_name / project_name.
+* DB insert: crud.create_meeting_ref with the returned file_ref string plus metadata.
+
+#### Filesystem (MeetingNotesService)
+* Root: settings.notes_root, default docs/meetings (see app/core/config.py and config.yaml), resolved relative to the process working directory unless configured as absolute.
+* Relative path (_build_file_path → save_note):
+  * Folders: sanitized org name, else general / sanitized project name, else general.
+  * File name: {YYYY-MM-DD}-{sanitized_meeting_id}.md (date defaults to “now”).
+* I/O: mkdir -p on the parent directory, then write_text for the markdown.
+
+on disk you get: {notes_root}/{org_or_general}/{project_or_general}/{date}-{meeting_id}.md,
+
+#### Database (crud.create_meeting_ref)
+* `app/db/crud/meeting.py` builds a Meeting row: meeting_id, file_ref (relative path under notes_root), project_id, org_id, attendees, then add → commit → refresh.
+* The body of the note is not in SQLite; only metadata and file_ref are persisted, as the doc states.
+
 ## Database Model
 
-```python
-class MeetingRef(Base):
-    __tablename__ = "meeting_refs"
-
-    id: int                    # Primary key
-    meeting_id: str            # Unique meeting identifier
-    project_id: int            # Optional project link
-    org_id: int                # Optional organization link
-    file_ref: str              # Path to markdown file
-    created_at: datetime       # Record creation time
-    updated_at: datetime       # Last update time
-```
+[See schemas/meeting_ref.py](https://github.com/jbcodeforce/MyAIAssistant/blob/640ee852e3bdd9183f0e841134eba01130774a95/backend/app/api/schemas/meeting_ref.py#L14-L28)
 
 ## API Endpoints
 
-### Create Meeting Note
+[See app/api/metrics.py](https://github.com/jbcodeforce/MyAIAssistant/blob/main/backend/app/api/metrics.py)
 
-```bash
-POST /api/meeting-refs/
-Content-Type: application/json
-
-{
-  "meeting_id": "mtg-2026-01-05-kickoff",
-  "org_id": 1,
-  "project_id": 5,
-  "content": "# Meeting Title\n\n## Attendees\n- Person 1\n\n## Notes\n..."
-}
-```
-
-The content is automatically written to a markdown file and the file path is stored in `file_ref`.
-
-### List Meeting Notes
-
-```bash
-GET /api/meeting-refs/?org_id=1&project_id=5
-```
-
-Query parameters:
-
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| org_id | int | Filter by organization ID |
-| project_id | int | Filter by project ID |
-| skip | int | Pagination offset |
-| limit | int | Maximum results (max 500) |
-
-### Get Meeting Note
-
-```bash
-GET /api/meeting-refs/{id}
-```
-
-### Get Meeting Content
-
-```bash
-GET /api/meeting-refs/{id}/content
-```
-
-Returns the markdown content of the meeting file:
-
-```json
-{
-  "content": "# Meeting Title\n\n## Attendees\n..."
-}
-```
-
-### Update Meeting Note
-
-```bash
-PUT /api/meeting-refs/{id}
-Content-Type: application/json
-
-{
-  "org_id": 2,
-  "project_id": null,
-  "content": "# Updated Meeting Notes\n..."
-}
-```
-
-### Delete Meeting Note
-
-```bash
-DELETE /api/meeting-refs/{id}
-```
-
-Deletes both the database record and the associated markdown file.
-
-### Search by Meeting ID
-
-```bash
-GET /api/meeting-refs/search/by-meeting-id?meeting_id=mtg-2026-01-05-kickoff
-```
+* POST /api/meeting-refs/
+* List Meeting Notes: GET /api/meeting-refs/?org_id=1&project_id=5
+* Get Meeting Note: GET /api/meeting-refs/{id}
+* Get Meeting Content: GET /api/meeting-refs/{id}/content
+* Update Meeting Note: PUT /api/meeting-refs/{id}
+* Delete Meeting Note: DELETE /api/meeting-refs/{id}   -> Deletes both the database record and the associated markdown file.
+* Search by Meeting ID: GET /api/meeting-refs/search/by-meeting-id?meeting_id=mtg-2026-01-05-kickoff
 
 ## File Storage Structure
 
@@ -128,7 +83,7 @@ Meeting files are stored in a structured directory hierarchy:
 │   │   └── {date}-{meeting-id}.md
 │   └── general/
 │       └── {date}-{meeting-id}.md
-└── unassigned/
+└── general/
     └── {date}-{meeting-id}.md
 ```
 
@@ -143,28 +98,6 @@ The Meetings view provides:
 - Edit modal for updating content and associations
 - Delete confirmation
 
-## Meeting Note Template
-
-The default template for new meeting notes:
-
-```markdown
-# Meeting Title
-
-## Attendees
-- Name 1
-- Name 2
-
-## Agenda
-1. Topic 1
-2. Topic 2
-
-## Notes
-...
-
-## Action Items
-- [ ] Action 1
-- [ ] Action 2
-```
 
 ## Best Practices
 

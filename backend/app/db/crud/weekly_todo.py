@@ -6,30 +6,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models import WeeklyTodo, WeeklyTodoAllocation
 from app.api.schemas.weekly_todo import WeeklyTodoCreate, WeeklyTodoUpdate, AllocationDayMinutes
-from app.api.schemas.todo import TodoCreate
-from app.db.crud.todo import create_todo
 
 logger = logging.getLogger(__name__)
 
 
 async def create_weekly_todo(db: AsyncSession, data: WeeklyTodoCreate) -> WeeklyTodo:
-    """Create a new weekly todo. If todo_id is not provided, create an unclassified todo and link it."""
+    """Create a new weekly todo. ``todo_id`` is optional; when omitted, no link to a task is stored."""
     logger.debug("create_weekly_todo title=%r todo_id=%s", data.title, data.todo_id)
-    todo_id = data.todo_id
-    if todo_id is None or todo_id == 0:
-        new_todo = await create_todo(
-            db,
-            TodoCreate(
-                title=data.title,
-                description=data.description,
-                status="Open",
-                urgency=None,
-                importance=None,
-            ),
-        )
-        todo_id = new_todo.id
     payload = data.model_dump()
-    payload["todo_id"] = todo_id
     db_item = WeeklyTodo(**payload)
     db.add(db_item)
     await db.commit()

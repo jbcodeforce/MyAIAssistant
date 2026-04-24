@@ -74,12 +74,13 @@
           required
           placeholder="e.g., mtg-2026-01-05-kickoff"
         />
-        <span class="form-hint">Unique identifier for this meeting</span>
+        <span class="form-hint">Unique identifier for this meeting. Use a consistent naming convention for meeting IDs: format: `{type}-{date}-{description}`</span>
       </div>
 
       <div class="form-row">
+        <p class="form-hint org-project-hint">Choose an organization and/or a project — at least one is required.</p>
         <div class="form-group">
-          <label for="org_id">Organization</label>
+          <label for="org_id">Organization *</label>
           <select id="org_id" v-model="formData.org_id">
             <option :value="null">None</option>
             <option v-for="org in organizations" :key="org.id" :value="org.id">
@@ -88,7 +89,7 @@
           </select>
         </div>
         <div class="form-group">
-          <label for="project_id">Project</label>
+          <label for="project_id">Project *</label>
           <select id="project_id" v-model="formData.project_id">
             <option :value="null">None</option>
             <option v-for="project in filteredProjects" :key="project.id" :value="project.id">
@@ -170,8 +171,18 @@ const filteredProjects = computed(() => {
   return store.projects.filter(p => p.organization_id === formData.value.org_id)
 })
 
+const hasOrgOrProject = computed(
+  () => formData.value.org_id != null || formData.value.project_id != null
+)
+
 const isFormValid = computed(() => {
-  return formData.value.meeting_id && formData.value.meeting_id.trim() && formData.value.content && formData.value.content.trim()
+  return (
+    formData.value.meeting_id &&
+    formData.value.meeting_id.trim() &&
+    hasOrgOrProject.value &&
+    formData.value.content &&
+    formData.value.content.trim()
+  )
 })
 
 const formRenderedContent = computed(() => marked(formData.value.content || ''))
@@ -317,7 +328,8 @@ async function handleCreate() {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  max-width: 48rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .preview-section {
@@ -363,7 +375,8 @@ async function handleCreate() {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
-  max-width: 48rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .form-group {
@@ -403,12 +416,19 @@ async function handleCreate() {
   gap: 1rem;
 }
 
+.form-row .org-project-hint {
+  grid-column: 1 / -1;
+  margin: 0 0 0.25rem 0;
+}
+
 .form-hint {
   font-size: 0.75rem;
   color: #6b7280;
 }
 
 .markdown-editor-container {
+  width: 100%;
+  box-sizing: border-box;
   border: 1px solid #d1d5db;
   border-radius: 8px;
   overflow: hidden;

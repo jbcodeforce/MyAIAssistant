@@ -69,6 +69,37 @@ uv run normalize-customer-indexes --customers-root "$CUSTOMERS_ROOT" --write --b
 
 Module: `agent_service.tools.customer_index_normalize`. Alternate entry: `uv run python scripts/normalize_customer_indexes.py`.
 
+## Legacy customer index → MyAIAssistant import
+
+Migrate a monolithic engagement note (e.g. `customers/*/index.md`) into an **organization**, **project**, and **meeting refs** using Agno structured extraction and the MyAIAssistant REST API (`/api/organizations`, `/api/projects`, `/api/meeting-refs`). Same LLM env vars as the rest of agent_service.
+
+```bash
+cd agent_service
+uv sync --extra dev
+
+# Preview extraction only (JSON to stdout)
+export LLM_BASE_URL=... LLM_MODEL=... LLM_API_KEY=...
+uv run migrate-customer-index --file /path/to/index.md --only-extract
+
+# Preview planned REST payloads after extraction (no backend calls)
+uv run migrate-customer-index --file /path/to/index.md --dry-run
+
+# Persist (backend must be running)
+export MYAI_BACKEND_URL=http://localhost:8000
+uv run migrate-customer-index --file /path/to/index.md --folder-slug att
+
+# Save extraction JSON for review
+uv run migrate-customer-index --file /path/to/index.md --only-extract --json-out /tmp/extract.json
+```
+
+**HTTP (agent_service):** `POST /extract/customer-index` with JSON body `{ "content": "<markdown>", "folder_slug": "optional" }` returns the same structured object as `--only-extract` (no persistence).
+
+**Behavior:** Organizations and projects are matched by name (`GET .../search/by-name`); existing records are reused. Duplicate `meeting_id` returns **409** from the backend — the CLI logs a warning and skips that meeting. Relative images in legacy markdown are **not** copied automatically; fix paths or copy assets separately after import.
+
+| Env | Default | Description |
+|-----|---------|-------------|
+| `MYAI_BACKEND_URL` | `http://localhost:8000` | MyAIAssistant FastAPI base URL for the migrator CLI. |
+
 ## Tests
 
 Unit tests are under `tests/ut` and do not need agent_service server to run.
@@ -91,6 +122,7 @@ uv run pytest tests/it -v
 | `CORS_ORIGINS` | `http://localhost:3000,http://127.0.0.1:3000` | Comma-separated origins allowed for browser requests (frontend-direct mode). |
 | `TRACE_LLM_PROMPT` or `AGNO_DEBUG` | unset | Set to `1`, `true`, or `yes` to log the prompt (messages) sent to the LLM at DEBUG level. Uses agno debug mode; output appears in the agent_service process stdout. |
 | `CUSTOMERS_ROOT` | unset | Used by `normalize-customer-indexes` when `--customers-root` is omitted. |
+| `MYAI_BACKEND_URL` | `http://localhost:8000` | Used by `migrate-customer-index` when `--backend-url` is omitted. |
 | `LLM_MODEL` | `llama3.2` | Model id for OpenAI-compatible endpoint. |
 | `LLM_API_KEY` | `no-key` | API key when the server requires it. |
 | `LLM_BASE_URL` | derived from `OLLAMA_BASE_URL` | OpenAI-compatible base URL (default adds `/v1`). |
