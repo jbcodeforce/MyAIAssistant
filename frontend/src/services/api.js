@@ -572,13 +572,13 @@ export async function uploadNotesImage(file, contextType, contextPayload) {
  * Handles ./images/x.png, ../images/x.png, and bare images/x.png. Pops ".." without going
  * below one path segment (safe clamp). Returns a path with no ".." for the notes-files API.
  *
- * @param {string} contextBase - e.g. 'meetings/acme/proj' or 'my-org'
+ * @param {string} contextBase - e.g. 'notes/acme/meetings/proj' or 'notes/my-org/notes'
  * @param {string} relativeSrc - e.g. './images/a.png', '../images/a.png', 'images/a.png'
- * @returns {string|null} e.g. 'meetings/acme/images/a.png', or null if absolute URL / invalid
+ * @returns {string|null} e.g. 'notes/acme/notes/images/a.png', or null if absolute URL / invalid
  */
 export function resolveNotesImageServePath(contextBase, relativeSrc) {
   if (!contextBase || !relativeSrc || typeof relativeSrc !== 'string') return null
-  const t = relativeSrc.trim()
+  const t = relativeSrc.trim().replace(/\\/g, '/')
   if (/^(https?:|data:|mailto:)/i.test(t)) return null
   if (t.startsWith('/')) return null
 
@@ -700,18 +700,12 @@ export const personsApi = {
 
 export const agentsApi = {
   /**
-   * List configured agents from agent service (GET myai/agents).
-   * Returns array of { agent_name, description, path_to_config, default }.
-   * Uses agent_service_url when set; otherwise returns empty array.
+   * List configured agents from the agent microservice, via the app backend
+   * (GET /api/myai/agents) which forwards using server-side agent_service_url.
+   * Response items: { agent_name, description, path_to_config, url, default }.
    */
-  async list() {
-    const base = await getAgentServiceUrl()
-    if (base) {
-      const data = await agentFetch(base, '/myai/agents', { method: 'GET' })
-      const list = Array.isArray(data) ? data : (data?.data ?? [])
-      return { data: list }
-    }
-    return { data: [] }
+  list() {
+    return api.get('/myai/agents')
   }
 }
 

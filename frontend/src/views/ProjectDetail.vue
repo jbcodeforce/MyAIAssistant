@@ -505,7 +505,7 @@ Describe the project goals, scope, and key deliverables."
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { projectsApi, organizationsApi, todosApi, uploadNotesImage } from '@/services/api'
-import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 
@@ -550,7 +550,7 @@ const taskFromStep = ref(null)  // { step, index, type: 'next' }
 const projectTodos = ref([])
 
 const notesImagesContextBase = computed(() =>
-  organizationName.value ? sanitizeOrgNameForPath(organizationName.value) : ''
+  organizationName.value ? organizationNotesContextBase(organizationName.value) : ''
 )
 // Computed for rendered markdown (view mode)
 const renderedDescription = computed(() =>

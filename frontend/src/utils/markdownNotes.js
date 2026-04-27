@@ -14,14 +14,23 @@ export function sanitizeOrgNameForPath(name) {
 }
 
 /**
- * Context base for meeting note images from file_ref (e.g. "acme/proj/file.md" -> "meetings/acme/proj").
- * Markdown can use ./images/..., ../images/..., or images/...; all resolve under this directory for preview.
+ * Serve context for organization-scoped note images (under docs/notes/{org}/notes/images/).
+ */
+export function organizationNotesContextBase(orgName) {
+  if (!orgName || typeof orgName !== 'string') return ''
+  const s = sanitizeOrgNameForPath(orgName)
+  return s ? `notes/${s}/notes` : ''
+}
+
+/**
+ * Context base for meeting note images from file_ref (path relative to notes_root, e.g. docs/notes).
+ * e.g. "acme/meetings/proj/file.md" -> "notes/acme/meetings/proj" (served under docs).
  */
 export function meetingNotesContextBaseFromFileRef(fileRef) {
   if (!fileRef || typeof fileRef !== 'string') return ''
   const trimmed = fileRef.trim()
   const dir = trimmed.includes('/') ? trimmed.replace(/\/[^/]+$/, '') : '.'
-  return dir === '.' ? 'meetings' : `meetings/${dir}`
+  return dir === '.' ? 'notes' : `notes/${dir}`
 }
 
 /**

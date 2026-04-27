@@ -16,7 +16,7 @@ import app.api.notes_files as notes_files_module
 def tmp_notes_root(monkeypatch):
     """Patch notes_root to a temp dir; reset service singleton."""
     tmp = Path(tempfile.mkdtemp(prefix="notes_files_test_"))
-    notes_root = tmp / "docs" / "meetings"
+    notes_root = tmp / "docs" / "notes"
     notes_root.mkdir(parents=True)
     stub = type("Stub", (), {"notes_root": str(notes_root)})()
     monkeypatch.setattr("app.core.config.get_settings", lambda: stub)
@@ -45,14 +45,14 @@ async def test_upload_organization_image(client: AsyncClient, tmp_notes_root):
     assert response.status_code == 200
     body = response.json()
     assert body["path"] == "./images/pic.png"
-    assert body["context_base"] == "test-org"
+    assert body["context_base"] == "notes/test-org/notes"
 
 
 @pytest.mark.asyncio
 async def test_upload_meeting_image(client: AsyncClient, db_session, tmp_notes_root):
     """Upload with meeting context and file_ref returns path and context_base."""
     files = {"file": ("img.png", io.BytesIO(b"\x89PNG\r\n\x1a\n"), "image/png")}
-    data = {"context_type": "meeting", "file_ref": "acme/proj/2026-01-10-mtg.md"}
+    data = {"context_type": "meeting", "file_ref": "acme/meetings/proj/2026-01-10-mtg.md"}
     response = await client.post(
         "/api/notes-files/upload",
         data=data,
@@ -61,7 +61,7 @@ async def test_upload_meeting_image(client: AsyncClient, db_session, tmp_notes_r
     assert response.status_code == 200
     body = response.json()
     assert body["path"] == "./images/img.png"
-    assert "meetings" in body["context_base"] and "acme" in body["context_base"]
+    assert body["context_base"] == "notes/acme/meetings/proj"
 
 
 @pytest.mark.asyncio

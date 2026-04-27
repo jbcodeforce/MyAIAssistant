@@ -38,10 +38,10 @@ async def upload_note_image(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Upload an image for use in note markdown. Stores under workspace docs/meetings layout.
+    Upload an image for use in note markdown. Stores under the workspace docs/ tree.
     context_type: "meeting" | "organization"
-    - meeting: file_ref required (e.g. acme/proj/2026-01-10-mtg.md). Image saved next to that note.
-    - organization: organization_id required. Image saved under docs/<org_name>/images/ for export.
+    - meeting: file_ref required (e.g. acme/meetings/proj/2026-01-10-mtg.md). Image saved next to that note.
+    - organization: organization_id required. Image saved under docs/notes/{org}/notes/images/.
     Returns: { "path": "./images/filename", "context_base": "..." } to insert into markdown.
     """
     service = get_notes_images_service()

@@ -1,5 +1,4 @@
 import logging
-import re
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +16,15 @@ from app.api.schemas.organization import (
 )
 from app.api.schemas.todo import TodoListResponse
 from app.core.config import get_settings
+from app.core.utils import sanitize_org_name
 from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_service
+from app.services.organization_notes import (
+    default_description_path,
+    read_description_file,
+    write_description,
+    move_org_notes_tree_if_renamed,
+    rebase_description_path,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +32,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
 
-def _sanitize_org_name(name: str) -> str:
-    """Sanitize organization name for use in file paths."""
-    sanitized = (name or "").lower().replace(" ", "-")
-    sanitized = re.sub(r"[^a-z0-9\-_]", "", sanitized)
-    sanitized = re.sub(r"-+", "-", sanitized).strip("-")
-    return sanitized or "unknown"
+def _organization_to_response(org) -> OrganizationResponse:
+    """`description` in JSON is always file content; `description_path` is stored in the database."""
+    text = read_description_file(org.name, org.description_path)
+    return OrganizationResponse(
+        id=org.id,
+        name=org.name,
+        stakeholders=org.stakeholders,
+        team=org.team,
+        description=text if text else None,
+        description_path=org.description_path,
+        related_products=org.related_products,
+        is_top_active=bool(org.is_top_active),
+        created_at=org.created_at,
+        updated_at=org.updated_at,
+    )
 
 
 def _format_steps(steps: Optional[list]) -> str:
@@ -54,9 +70,11 @@ async def create_organization(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Create a new organization.
+    Create a new organization. Optional `description` in the body is written to the file
+    at description_path (default: {org}/notes/strategy.md under notes_root); the DB stores only the path.
     """
-    return await crud.create_organization(db=db, organization=organization)
+    created = await crud.create_organization(db=db, organization=organization)
+    return _organization_to_response(created)
 
 
 @router.get("/", response_model=OrganizationListResponse)
@@ -72,7 +90,12 @@ async def list_organizations(
     organizations, total = await crud.get_organizations(
         db=db, skip=skip, limit=limit, top_active=top_active
     )
-    return OrganizationListResponse(organizations=organizations, total=total, skip=skip, limit=limit)
+    return OrganizationListResponse(
+        organizations=[_organization_to_response(o) for o in organizations],
+        total=total,
+        skip=skip,
+        limit=limit,
+    )
 
 
 @router.get("/search/by-name", response_model=OrganizationResponse)
@@ -86,7 +109,7 @@ async def get_organization_by_name(
     organization = await crud.get_organization_by_name(db=db, name=name)
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return organization
+    return _organization_to_response(organization)
 
 
 @router.get("/{organization_id}", response_model=OrganizationResponse)
@@ -100,7 +123,7 @@ async def get_organization(
     organization = await crud.get_organization(db=db, organization_id=organization_id)
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return organization
+    return _organization_to_response(organization)
 
 
 @router.put("/{organization_id}", response_model=OrganizationResponse)
@@ -110,14 +133,46 @@ async def update_organization(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Update an organization.
+    Update an organization. When `description` is in the request body, it is written to the
+    file at `description_path` (default path if unset). The database stores only the path, not
+    the markdown text. Renaming the organization renames the on-disk org folder when needed.
     """
+    existing = await crud.get_organization(db=db, organization_id=organization_id)
+    if not existing:
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    old_name = existing.name
+    update_keys = set(organization_update.model_dump(exclude_unset=True).keys())
+    update_payload = organization_update.model_dump(exclude_unset=True)
+    content_update = (
+        update_payload["description"] if "description" in update_keys else None
+    )
+
     organization = await crud.update_organization(
         db=db, organization_id=organization_id, organization_update=organization_update
     )
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
-    return organization
+
+    if old_name != organization.name:
+        move_org_notes_tree_if_renamed(old_name, organization.name)
+        new_path = rebase_description_path(
+            organization.description_path, old_name, organization.name
+        )
+        if new_path != organization.description_path:
+            organization.description_path = new_path
+            await db.commit()
+            await db.refresh(organization)
+
+    if "description" in update_keys:
+        path_ref = organization.description_path or default_description_path(organization.name)
+        write_description(organization.name, path_ref, content_update or "")
+        if not organization.description_path:
+            organization.description_path = path_ref
+            await db.commit()
+            await db.refresh(organization)
+
+    return _organization_to_response(organization)
 
 
 @router.delete("/{organization_id}", status_code=204)
@@ -142,7 +197,7 @@ async def export_organization(
 ):
     """
     Export organization content, its projects, and meeting notes to a single
-    markdown file under the workspace docs folder: docs/<org_name>/index.md.
+    markdown file under docs/notes/<org-slug>/full_export.md (does not overwrite strategy.md).
     """
     organization = await crud.get_organization(db=db, organization_id=organization_id)
     if not organization:
@@ -163,8 +218,9 @@ async def export_organization(
         sections.append(f"## Stakeholders\n\n{organization.stakeholders.strip()}\n")
     if organization.team:
         sections.append(f"## Team\n\n{organization.team.strip()}\n")
-    if organization.description:
-        sections.append(f"## Strategy / Notes\n\n{organization.description.strip()}\n")
+    strategy_text = read_description_file(organization.name, organization.description_path).strip()
+    if strategy_text:
+        sections.append(f"## Strategy / Notes\n\n{strategy_text}\n")
     if organization.related_products:
         sections.append(f"## Related Products\n\n{organization.related_products.strip()}\n")
 
@@ -207,17 +263,17 @@ async def export_organization(
     if not notes_root.is_absolute():
         notes_root = Path.cwd() / notes_root
     export_base = notes_root.resolve().parent
-    sanitized = _sanitize_org_name(organization.name)
-    export_dir = export_base / sanitized
+    sanitized = sanitize_org_name(organization.name)
+    export_dir = export_base / "notes" / sanitized
     export_dir.mkdir(parents=True, exist_ok=True)
-    export_file = export_dir / "index.md"
+    export_file = export_dir / "full_export.md"
     export_file.write_text(markdown_content, encoding="utf-8")
     logger.info("Exported organization %s to %s", organization.name, export_file)
 
     try:
         relative_path = str(export_file.relative_to(Path.cwd()))
     except ValueError:
-        relative_path = f"docs/{sanitized}/index.md"
+        relative_path = f"docs/notes/{sanitized}/full_export.md"
 
     return OrganizationExportResponse(
         path=relative_path,

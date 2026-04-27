@@ -501,7 +501,7 @@ Describe the project goals, scope, and key deliverables.
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { projectsApi, organizationsApi, uploadNotesImage } from '@/services/api'
-import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const route = useRoute()
@@ -566,7 +566,7 @@ const notesImagesContextBase = computed(() => {
   const orgId = showSectionViewer.value ? viewingProject.value?.organization_id : formData.value.organization_id
   if (!orgId) return ''
   const org = organizations.value.find(o => o.id === orgId)
-  return org?.name ? sanitizeOrgNameForPath(org.name) : ''
+  return org?.name ? organizationNotesContextBase(org.name) : ''
 })
 // Rendered markdown for form fields
 const renderedDescription = computed(() =>

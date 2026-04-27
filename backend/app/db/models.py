@@ -22,7 +22,8 @@ class Organization(Base):
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     stakeholders: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     team: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    # Path to strategy markdown relative to notes_root (e.g. acme/notes/strategy.md); file is source of truth
+    description_path: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     related_products: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_top_active: Mapped[bool] = mapped_column(Integer, nullable=False, default=False)
 

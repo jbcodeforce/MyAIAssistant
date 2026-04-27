@@ -72,3 +72,14 @@ async def tag_task(
         r = await client.post(f"{_base_url()}/tag/task", json=body)
         r.raise_for_status()
         return r.json()
+
+
+async def list_myai_agents() -> list[dict[str, Any]]:
+    """GET /myai/agents on agent-service (agent definitions for the Agents UI)."""
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.get(f"{_base_url()}/myai/agents")
+        r.raise_for_status()
+        data = r.json()
+    if not isinstance(data, list):
+        return []
+    return data

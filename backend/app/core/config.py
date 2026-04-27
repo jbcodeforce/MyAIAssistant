@@ -105,8 +105,8 @@ class Settings(BaseSettings):
     log_file: Optional[str] = None  # None = {CONFIG_FILE parent or cwd}/logs/app_YYYY-MM-DD.log, or path (date appended)
     log_format: str = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 
-    # Meeting notes storage
-    notes_root: str = "docs/meetings"  # Root folder for meeting notes
+    # Meeting and org note files (meeting markdown under {org}/meetings/...; org strategy under {org}/notes/...)
+    notes_root: str = "docs/notes"  # Root folder relative to CWD; default docs/notes
 
     # Agent configuration directory
     agent_config_dir: Optional[str] = None  # Path to agent config directory (defaults to agent_core/agent_core/agents/config)

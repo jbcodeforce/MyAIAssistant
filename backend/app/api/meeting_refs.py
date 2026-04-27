@@ -21,6 +21,7 @@ from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_se
 from app.api.schemas.project import ProjectEntity, Step
 from app.core.config import get_settings, resolve_agent_config_dir
 from app.services import agent_service_client
+from app.services.organization_notes import read_description_file
 
 logger = logging.getLogger(__name__)
 
@@ -270,7 +271,7 @@ async def extract_meeting_info(
     if meeting_ref.org_id:
         org = await crud.get_organization(db=db, organization_id=meeting_ref.org_id)
         if org:
-            org_description = org.description or ""
+            org_description = read_description_file(org.name, org.description_path) or ""
     project_description = ""
     if meeting_ref.project_id:
         project = await crud.get_project(db=db, project_id=meeting_ref.project_id)

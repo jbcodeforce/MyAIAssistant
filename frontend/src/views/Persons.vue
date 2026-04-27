@@ -328,7 +328,7 @@ How you know this person, their responsibilities, key topics discussed.
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { personsApi, projectsApi, organizationsApi, uploadNotesImage } from '@/services/api'
-import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const persons = ref([])
@@ -383,7 +383,7 @@ const notesImagesContextBase = computed(() => {
   const orgId = showSectionViewer.value ? viewingPerson.value?.organization_id : formData.value.organization_id
   if (!orgId) return ''
   const org = organizations.value.find(o => o.id === orgId)
-  return org?.name ? sanitizeOrgNameForPath(org.name) : ''
+  return org?.name ? organizationNotesContextBase(org.name) : ''
 })
 // Rendered markdown for form fields
 const renderedContext = computed(() =>

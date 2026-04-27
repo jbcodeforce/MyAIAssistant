@@ -25,5 +25,5 @@ agent_service_url: "http://localhost:8100"
 log_level: "INFO"
 # log_file: null   # default: ./logs/app_YYYY-MM-DD.log (date of execution)
 
-# Meeting notes storage
-notes_root: "docs/meetings"
+# Meeting and org note files (meetings: docs/notes/{org}/meetings/...; strategy: docs/notes/{org}/notes/strategy.md)
+notes_root: "docs/notes"

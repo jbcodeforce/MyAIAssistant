@@ -1,12 +1,12 @@
-"""Service for storing and resolving note images under the workspace docs/meetings layout."""
+"""Service for storing and resolving note images under the workspace docs/ tree."""
 
 import logging
-import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 from app.core.config import get_settings
+from app.core.utils import sanitize_org_name, sanitize_upload_basename
 
 logger = logging.getLogger(__name__)
 
@@ -24,30 +24,14 @@ class UploadResult:
     """Result of uploading an image for a note."""
 
     path: str  # Relative path for markdown, e.g. ./images/name.png
-    context_base: str  # Base path for serve API, e.g. meetings/acme/proj or my-org
-
-
-def _sanitize_filename(name: str) -> str:
-    """Sanitize filename: no path components, safe chars only."""
-    base = Path(name).name
-    base = re.sub(r"[^a-zA-Z0-9._-]", "-", base)
-    base = re.sub(r"-+", "-", base).strip("-.")
-    return base[:200] or "image"
-
-
-def _sanitize_org_name(name: str) -> str:
-    """Sanitize organization name for path (match organizations.py)."""
-    sanitized = (name or "").lower().replace(" ", "-")
-    sanitized = re.sub(r"[^a-z0-9\-_]", "", sanitized)
-    sanitized = re.sub(r"-+", "-", sanitized).strip("-")
-    return sanitized or "unknown"
+    context_base: str  # Base path for serve API (relative to docs), e.g. notes/acme/meetings/proj
 
 
 class NotesImagesService:
     """
     Handles saving note images under the workspace and resolving paths.
     - Meeting context: images under notes_root / dir(file_ref) / images/
-    - Organization context: images under docs_root / org_name / images/
+    - Organization context: images under docs_root / notes / org / notes / images/
     """
 
     def __init__(self):
@@ -70,11 +54,19 @@ class NotesImagesService:
             return str(Path(ref).parent).replace("\\", "/")
         return "."
 
+    def _serve_base_for_note_dir(self, dir_part: str) -> str:
+        """Directory containing the .md file, as a path relative to docs_root (for API URLs)."""
+        if dir_part == ".":
+            note_dir = self.notes_root
+        else:
+            note_dir = self.notes_root / dir_part
+        return note_dir.resolve().relative_to(self.docs_root).as_posix()
+
     def save_meeting_image(self, file_ref: str, filename: str, content: bytes) -> UploadResult:
         """
-        Save an image for a meeting note. file_ref is e.g. acme/proj/2026-01-10-mtg.md.
-        Saves to notes_root / acme/proj / images / filename.
-        Returns path ./images/filename and context_base meetings/acme/proj.
+        Save an image for a meeting note. file_ref is relative to notes_root, e.g. acme/meetings/proj/2026-01-10-mtg.md.
+        Saves under notes_root / ... / images / filename.
+        Returns path ./images/filename and context_base = note directory relative to docs_root.
         """
         dir_part = self._dir_of_file_ref(file_ref)
         if dir_part == ".":
@@ -82,38 +74,37 @@ class NotesImagesService:
         else:
             images_dir = self.notes_root / dir_part / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
-        safe_name = _sanitize_filename(filename)
+        safe_name = sanitize_upload_basename(filename)
         target = images_dir / safe_name
         target.write_bytes(content)
         logger.info("Saved meeting image to %s", target)
-        # context_base for serve: path relative to docs_root
-        if dir_part == ".":
-            serve_base = "meetings"
-        else:
-            serve_base = f"meetings/{dir_part}"
+        serve_base = self._serve_base_for_note_dir(dir_part)
         return UploadResult(path=f"./images/{safe_name}", context_base=serve_base)
 
     def save_organization_image(
         self, org_name: str, filename: str, content: bytes
     ) -> UploadResult:
         """
-        Save an image for organization (and export). org_name is sanitized.
-        Saves to docs_root / org_name / images / filename.
-        Returns path ./images/filename and context_base org_name.
+        Save an image for organization strategy/notes markdown. org_name is sanitized.
+        Saves to docs/notes/{org}/notes/images/ (i.e. alongside strategy.md).
+        Returns path ./images/filename and context_base notes/{org}/notes.
         """
-        safe_org = _sanitize_org_name(org_name)
-        images_dir = self.docs_root / safe_org / "images"
+        safe_org = sanitize_org_name(org_name)
+        images_dir = self.docs_root / "notes" / safe_org / "notes" / "images"
         images_dir.mkdir(parents=True, exist_ok=True)
-        safe_name = _sanitize_filename(filename)
+        safe_name = sanitize_upload_basename(filename)
         target = images_dir / safe_name
         target.write_bytes(content)
         logger.info("Saved organization image to %s", target)
-        return UploadResult(path=f"./images/{safe_name}", context_base=safe_org)
+        return UploadResult(
+            path=f"./images/{safe_name}",
+            context_base=f"notes/{safe_org}/notes",
+        )
 
     def resolve_serve_path(self, path: str) -> Optional[Path]:
         """
         Resolve a request path (relative to docs_root) to a file path.
-        path is e.g. meetings/acme/proj/images/name.png or my-org/images/name.png.
+        path is e.g. notes/acme/meetings/proj/images/name.png or notes/acme/notes/images/name.png.
         Returns absolute Path if valid and under docs_root; None otherwise.
         """
         path = path.strip("/")

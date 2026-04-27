@@ -389,7 +389,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { organizationsApi } from '@/services/api'
-import { renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
+import { renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
 import Modal from '@/components/common/Modal.vue'
 
 const router = useRouter()
@@ -455,7 +455,7 @@ const sectionViewerTitle = computed(() => {
 })
 
 const notesImagesContextBase = computed(() =>
-  viewingOrganization.value?.name ? sanitizeOrgNameForPath(viewingOrganization.value.name) : ''
+  viewingOrganization.value?.name ? organizationNotesContextBase(viewingOrganization.value.name) : ''
 )
 const renderedSectionContent = computed(() => {
   if (!viewingOrganization.value || !viewingSection.value) return ''

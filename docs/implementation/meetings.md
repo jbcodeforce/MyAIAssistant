@@ -43,13 +43,15 @@ Flow inside the handler:
 * DB insert: crud.create_meeting_ref with the returned file_ref string plus metadata.
 
 #### Filesystem (MeetingNotesService)
-* Root: settings.notes_root, default docs/meetings (see app/core/config.py and config.yaml), resolved relative to the process working directory unless configured as absolute.
+* Root: settings.notes_root, default **docs/notes** (see app/core/config.py and config.yaml), resolved relative to the process working directory unless configured as absolute.
 * Relative path (_build_file_path → save_note):
-  * Folders: sanitized org name, else general / sanitized project name, else general.
+  * Folders: **{org}/meetings/{project}** with sanitized org and project names, or **general/meetings/general** when org/project are missing.
   * File name: {YYYY-MM-DD}-{sanitized_meeting_id}.md (date defaults to “now”).
 * I/O: mkdir -p on the parent directory, then write_text for the markdown.
 
-on disk you get: {notes_root}/{org_or_general}/{project_or_general}/{date}-{meeting_id}.md,
+On disk: `{notes_root}/{org}/meetings/{project}/{date}-{meeting_id}.md`.
+
+Organization **Strategy / Notes**: the database stores **`description_path`** (path relative to `notes_root`, e.g. `acme/notes/strategy.md`); the markdown **content** lives only in that file. GET responses still expose `description` as the file body for the UI, plus `description_path` for the reference. See `app/services/organization_notes.py` and `tools/migrate_org_description_to_path.py` for legacy DB migration.
 
 #### Database (crud.create_meeting_ref)
 * `app/db/crud/meeting.py` builds a Meeting row: meeting_id, file_ref (relative path under notes_root), project_id, org_id, attendees, then add → commit → refresh.
@@ -73,18 +75,23 @@ on disk you get: {notes_root}/{org_or_general}/{project_or_general}/{date}-{meet
 
 ## File Storage Structure
 
-Meeting files are stored in a structured directory hierarchy:
+Meeting files and org strategy notes live under `notes_root` (default `{workspace}/docs/notes`):
 
 ```
-{workspace}/docs/meetings/
+{workspace}/docs/notes/
 ├── {organization-slug}/
-│   ├── {project-slug}/
-│   │   ├── {date}-{meeting-id}.md
-│   │   └── {date}-{meeting-id}.md
-│   └── general/
-│       └── {date}-{meeting-id}.md
+│   ├── notes/
+│   │   ├── strategy.md          # organization description (Strategy / Notes)
+│   │   └── images/              # images for strategy markdown
+│   └── meetings/
+│       ├── {project-slug}/
+│       │   └── {date}-{meeting-id}.md
+│       └── general/
+│           └── {date}-{meeting-id}.md
 └── general/
-    └── {date}-{meeting-id}.md
+    └── meetings/
+        └── general/
+            └── {date}-{meeting-id}.md
 ```
 
 ## Frontend View

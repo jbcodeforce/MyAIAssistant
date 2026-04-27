@@ -196,7 +196,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { organizationsApi, uploadNotesImage } from '@/services/api'
-import { insertMarkdownAtCursor, renderMarkdownForNotes, sanitizeOrgNameForPath } from '@/utils/markdownNotes'
+import { insertMarkdownAtCursor, renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
 
 const route = useRoute()
 
@@ -237,9 +237,11 @@ const backLink = computed(() => (orgId.value ? { name: 'OrganizationDetail', par
 
 const isFormValid = computed(() => formData.value.name && formData.value.name.trim().length > 0)
 
-const notesImagesContextBase = computed(() =>
-  organization.value?.name ? sanitizeOrgNameForPath(organization.value.name) : ''
-)
+const notesImagesContextBase = computed(() => {
+  const raw = (formData.value.name || organization.value?.name || '').trim()
+  if (!raw) return ''
+  return organizationNotesContextBase(raw)
+})
 const formRenderedStakeholders = computed(() =>
   renderMarkdownForNotes(formData.value.stakeholders || '', notesImagesContextBase.value)
 )

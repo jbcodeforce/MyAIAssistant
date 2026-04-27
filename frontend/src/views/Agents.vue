@@ -22,7 +22,7 @@
       <div v-if="agents.length === 0" class="empty-state">
         <p>No agents found</p>
         <p class="empty-state-hint">
-          Configure agent_service_url and ensure the agent service exposes GET /myai/agents
+          Set agent_service_url in backend config and ensure the agent service is running (GET /myai/agents)
         </p>
       </div>
 

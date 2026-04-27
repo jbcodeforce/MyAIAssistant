@@ -44,12 +44,12 @@ class TestCreateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-2026-01-10-test",
-            file_ref="docs/meetings/mtg-2026-01-10-test.md",
+            file_ref="general/meetings/general/mtg-2026-01-10-test.md",
         )
         
         assert meeting_ref.id is not None
         assert meeting_ref.meeting_id == "mtg-2026-01-10-test"
-        assert meeting_ref.file_ref == "docs/meetings/mtg-2026-01-10-test.md"
+        assert meeting_ref.file_ref == "general/meetings/general/mtg-2026-01-10-test.md"
         assert meeting_ref.project_id is None
         assert meeting_ref.org_id is None
         assert meeting_ref.attendees is None
@@ -64,7 +64,7 @@ class TestCreateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-project",
-            file_ref="docs/meetings/mtg-project.md",
+            file_ref="general/meetings/general/mtg-project.md",
             project_id=project.id,
         )
         
@@ -78,7 +78,7 @@ class TestCreateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-org",
-            file_ref="docs/meetings/mtg-org.md",
+            file_ref="general/meetings/general/mtg-org.md",
             org_id=organization.id,
         )
         
@@ -90,7 +90,7 @@ class TestCreateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-attendees",
-            file_ref="docs/meetings/mtg-attendees.md",
+            file_ref="general/meetings/general/mtg-attendees.md",
             attendees="John Doe, Jane Smith, Bob Wilson",
         )
         
@@ -104,14 +104,14 @@ class TestCreateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-full",
-            file_ref="docs/meetings/org/project/mtg-full.md",
+            file_ref="org/meetings/project/mtg-full.md",
             project_id=project.id,
             org_id=organization.id,
             attendees="Alice; Bob; Carol",
         )
         
         assert meeting_ref.meeting_id == "mtg-full"
-        assert meeting_ref.file_ref == "docs/meetings/org/project/mtg-full.md"
+        assert meeting_ref.file_ref == "org/meetings/project/mtg-full.md"
         assert meeting_ref.project_id == project.id
         assert meeting_ref.org_id == organization.id
         assert meeting_ref.attendees == "Alice; Bob; Carol"
@@ -126,7 +126,7 @@ class TestGetMeetingRef:
         created = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-get-test",
-            file_ref="docs/meetings/mtg-get-test.md",
+            file_ref="general/meetings/general/mtg-get-test.md",
         )
         
         retrieved = await crud.get_meeting_ref(db=db_session, meeting_ref_id=created.id)
@@ -152,7 +152,7 @@ class TestGetMeetingRefByMeetingId:
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-unique-id",
-            file_ref="docs/meetings/mtg-unique-id.md",
+            file_ref="general/meetings/general/mtg-unique-id.md",
         )
         
         retrieved = await crud.get_meeting_ref_by_meeting_id(
@@ -190,7 +190,7 @@ class TestGetMeetingRefs:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-list-{i}",
-                file_ref=f"docs/meetings/mtg-list-{i}.md",
+                file_ref=f"general/meetings/general/mtg-list-{i}.md",
             )
         
         refs, total = await crud.get_meeting_refs(db=db_session)
@@ -205,7 +205,7 @@ class TestGetMeetingRefs:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-page-{i}",
-                file_ref=f"docs/meetings/mtg-page-{i}.md",
+                file_ref=f"general/meetings/general/mtg-page-{i}.md",
             )
         
         refs, total = await crud.get_meeting_refs(db=db_session, skip=2, limit=2)
@@ -222,19 +222,19 @@ class TestGetMeetingRefs:
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-with-project-1",
-            file_ref="docs/mtg-with-project-1.md",
+            file_ref="general/meetings/general/mtg-with-project-1.md",
             project_id=project.id,
         )
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-with-project-2",
-            file_ref="docs/mtg-with-project-2.md",
+            file_ref="general/meetings/general/mtg-with-project-2.md",
             project_id=project.id,
         )
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-without-project",
-            file_ref="docs/mtg-without-project.md",
+            file_ref="general/meetings/general/mtg-without-project.md",
         )
         
         refs, total = await crud.get_meeting_refs(db=db_session, project_id=project.id)
@@ -253,19 +253,19 @@ class TestGetMeetingRefs:
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-with-org-1",
-            file_ref="docs/mtg-with-org-1.md",
+            file_ref="general/meetings/general/mtg-with-org-1.md",
             org_id=organization.id,
         )
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-with-org-2",
-            file_ref="docs/mtg-with-org-2.md",
+            file_ref="general/meetings/general/mtg-with-org-2.md",
             org_id=organization.id,
         )
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-without-org",
-            file_ref="docs/mtg-without-org.md",
+            file_ref="general/meetings/general/mtg-without-org.md",
         )
         
         refs, total = await crud.get_meeting_refs(db=db_session, org_id=organization.id)
@@ -282,7 +282,7 @@ class TestGetMeetingRefs:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-order-{i}",
-                file_ref=f"docs/mtg-order-{i}.md",
+                file_ref=f"general/meetings/general/mtg-order-{i}.md",
             )
         
         refs, _ = await crud.get_meeting_refs(db=db_session)
@@ -303,7 +303,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-update-project",
-            file_ref="docs/mtg-update-project.md",
+            file_ref="general/meetings/general/mtg-update-project.md",
         )
         
         updated = await crud.update_meeting_ref(
@@ -324,7 +324,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-update-org",
-            file_ref="docs/mtg-update-org.md",
+            file_ref="general/meetings/general/mtg-update-org.md",
         )
         
         updated = await crud.update_meeting_ref(
@@ -343,7 +343,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-update-attendees",
-            file_ref="docs/mtg-update-attendees.md",
+            file_ref="general/meetings/general/mtg-update-attendees.md",
             attendees="Original Attendee",
         )
         
@@ -365,7 +365,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-clear-project",
-            file_ref="docs/mtg-clear-project.md",
+            file_ref="general/meetings/general/mtg-clear-project.md",
             project_id=project.id,
         )
         
@@ -385,7 +385,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-clear-attendees",
-            file_ref="docs/mtg-clear-attendees.md",
+            file_ref="general/meetings/general/mtg-clear-attendees.md",
             attendees="Some Attendee",
         )
         
@@ -407,7 +407,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-no-change",
-            file_ref="docs/mtg-no-change.md",
+            file_ref="general/meetings/general/mtg-no-change.md",
             attendees="Original",
         )
         
@@ -445,7 +445,7 @@ class TestUpdateMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-multi-update",
-            file_ref="docs/mtg-multi-update.md",
+            file_ref="general/meetings/general/mtg-multi-update.md",
         )
         
         updated = await crud.update_meeting_ref(
@@ -474,7 +474,7 @@ class TestDeleteMeetingRef:
         meeting_ref = await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-delete",
-            file_ref="docs/mtg-delete.md",
+            file_ref="general/meetings/general/mtg-delete.md",
         )
         
         result = await crud.delete_meeting_ref(db=db_session, meeting_ref_id=meeting_ref.id)
@@ -504,14 +504,14 @@ class TestGetMeetingRefsByProject:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-proj-{i}",
-                file_ref=f"docs/mtg-proj-{i}.md",
+                file_ref=f"general/meetings/general/mtg-proj-{i}.md",
                 project_id=project.id,
             )
         # Create one without project
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-no-proj",
-            file_ref="docs/mtg-no-proj.md",
+            file_ref="general/meetings/general/mtg-no-proj.md",
         )
         
         refs, total = await crud.get_meeting_refs_by_project(
@@ -530,7 +530,7 @@ class TestGetMeetingRefsByProject:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-proj-page-{i}",
-                file_ref=f"docs/mtg-proj-page-{i}.md",
+                file_ref=f"general/meetings/general/mtg-proj-page-{i}.md",
                 project_id=project.id,
             )
         
@@ -555,14 +555,14 @@ class TestGetMeetingRefsByOrganization:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-org-{i}",
-                file_ref=f"docs/mtg-org-{i}.md",
+                file_ref=f"general/meetings/general/mtg-org-{i}.md",
                 org_id=organization.id,
             )
         # Create one without organization
         await crud.create_meeting_ref(
             db=db_session,
             meeting_id="mtg-no-org",
-            file_ref="docs/mtg-no-org.md",
+            file_ref="general/meetings/general/mtg-no-org.md",
         )
         
         refs, total = await crud.get_meeting_refs_by_organization(
@@ -581,7 +581,7 @@ class TestGetMeetingRefsByOrganization:
             await crud.create_meeting_ref(
                 db=db_session,
                 meeting_id=f"mtg-org-page-{i}",
-                file_ref=f"docs/mtg-org-page-{i}.md",
+                file_ref=f"general/meetings/general/mtg-org-page-{i}.md",
                 org_id=organization.id,
             )
         

@@ -21,6 +21,7 @@ from app.api.config import router as config_router
 from app.api.tags import router as tags_router
 from app.api.weekly_todos import router as weekly_todos_router
 from app.api.notes_files import router as notes_files_router
+from app.api.myai_agents import router as myai_agents_router
 
 
 @asynccontextmanager
@@ -73,6 +74,7 @@ def create_app() -> FastAPI:
     application.include_router(tags_router, prefix="/api")
     application.include_router(weekly_todos_router, prefix="/api")
     application.include_router(notes_files_router, prefix="/api")
+    application.include_router(myai_agents_router, prefix="/api")
 
     return application
 

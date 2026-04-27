@@ -8,7 +8,8 @@ class OrganizationBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Organization name")
     stakeholders: Optional[str] = Field(None, description="Key stakeholders at the organization")
     team: Optional[str] = Field(None, description="Team members working with this organization")
-    description: Optional[str] = Field(None, description="Organization strategy and notes")
+    # Create/Update: markdown body. Response: file content (source is description_path on disk).
+    description: Optional[str] = Field(None, description="Strategy / notes (request body: markdown; response: from file)")
     related_products: Optional[str] = Field(None, description="Products related to this organization")
     is_top_active: bool = Field(False, description="Mark as top-active organization")
 
@@ -52,6 +53,10 @@ class OrganizationResponse(OrganizationBase):
     id: int
     created_at: datetime
     updated_at: datetime
+    description_path: Optional[str] = Field(
+        None,
+        description="Path to strategy markdown relative to notes_root (e.g. acme/notes/strategy.md)",
+    )
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -64,6 +69,9 @@ class OrganizationListResponse(BaseModel):
 
 
 class OrganizationExportResponse(BaseModel):
-    path: str = Field(..., description="Relative path to the exported file, e.g. docs/org-name/index.md")
+    path: str = Field(
+        ...,
+        description="Relative path to the exported file, e.g. docs/notes/org-name/full_export.md",
+    )
     absolute_path: Optional[str] = Field(None, description="Absolute path on the server (if available)")
 

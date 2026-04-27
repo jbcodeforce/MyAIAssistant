@@ -1,13 +1,13 @@
 """Meeting notes service for persisting meeting content to file system."""
 
 import logging
-import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
 from app.core.config import get_settings
+from app.core.utils import sanitize_path_segment
 
 logger = logging.getLogger(__name__)
 
@@ -32,23 +32,6 @@ class MeetingNotesService:
         self.notes_root = Path(notes_root or settings.notes_root)
         logger.debug(f"MeetingNotesService initialized with notes_root: {self.notes_root}")
 
-    def _sanitize_name(self, name: str) -> str:
-        """
-        Sanitize a name for use in file paths.
-        
-        Converts to lowercase, replaces spaces with hyphens,
-        and removes invalid characters.
-        """
-        # Convert to lowercase and replace spaces with hyphens
-        sanitized = name.lower().replace(" ", "-")
-        # Remove any characters that are not alphanumeric, hyphens, or underscores
-        sanitized = re.sub(r"[^a-z0-9\-_]", "", sanitized)
-        # Remove multiple consecutive hyphens
-        sanitized = re.sub(r"-+", "-", sanitized)
-        # Remove leading/trailing hyphens
-        sanitized = sanitized.strip("-")
-        return sanitized or "unknown"
-
     def _build_file_path(
         self,
         meeting_id: str,
@@ -59,17 +42,19 @@ class MeetingNotesService:
         """
         Build the relative file path for a meeting note.
         
-        Structure: org_name/project_name/YYYY-MM-DD-meeting_id.md
+        Structure: org_name/meetings/project_name/YYYY-MM-DD-meeting_id.md
         Falls back to 'general' for missing org/project.
         """
         date_str = (meeting_date or datetime.now()).strftime("%Y-%m-%d")
         
         # Build path components
-        org_folder = self._sanitize_name(org_name) if org_name else "general"
-        project_folder = self._sanitize_name(project_name) if project_name else "general"
-        filename = f"{date_str}-{self._sanitize_name(meeting_id)}.md"
+        org_folder = sanitize_path_segment(org_name) if org_name else "general"
+        project_folder = (
+            sanitize_path_segment(project_name) if project_name else "general"
+        )
+        filename = f"{date_str}-{sanitize_path_segment(meeting_id)}.md"
         
-        return f"{org_folder}/{project_folder}/{filename}"
+        return f"{org_folder}/meetings/{project_folder}/{filename}"
 
     async def save_note(
         self,
