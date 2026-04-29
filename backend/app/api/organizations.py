@@ -289,7 +289,8 @@ async def list_organization_todos(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieve all todos linked to projects belonging to this organization.
+    Retrieve todos directly linked to this organization (todos.organization_id) or
+    linked via a project whose organization_id is this organization.
     """
     # Verify organization exists
     organization = await crud.get_organization(db=db, organization_id=organization_id)

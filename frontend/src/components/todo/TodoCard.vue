@@ -32,6 +32,31 @@
             </svg>
           </router-link>
         </span>
+        <span
+          v-if="showOrganizationBadge && organizationName"
+          :title="'Organization: ' + organizationName"
+          class="project-tooltip-wrapper"
+        >
+          <router-link
+            :to="`/organizations/${todo.organization_id}/todos`"
+            class="action-btn org-btn"
+            @click.stop
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+              <path d="M9 22v-4h6v4"/>
+              <path d="M8 6h.01"/>
+              <path d="M16 6h.01"/>
+              <path d="M12 6h.01"/>
+              <path d="M12 10h.01"/>
+              <path d="M12 14h.01"/>
+              <path d="M16 10h.01"/>
+              <path d="M16 14h.01"/>
+              <path d="M8 10h.01"/>
+              <path d="M8 14h.01"/>
+            </svg>
+          </router-link>
+        </span>
         <button 
           class="action-btn chat-btn" 
           @click.stop="$emit('chat', todo)"
@@ -95,6 +120,10 @@ const props = defineProps({
   projects: {
     type: Array,
     default: () => []
+  },
+  organizations: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -106,6 +135,25 @@ const projectName = computed(() => {
   if (!props.todo.project_id || !props.projects.length) return null
   const project = props.projects.find(p => p.id === props.todo.project_id)
   return project?.name || null
+})
+
+const projectOrgId = computed(() => {
+  if (!props.todo.project_id || !props.projects.length) return null
+  const project = props.projects.find(p => p.id === props.todo.project_id)
+  return project?.organization_id != null ? project.organization_id : null
+})
+
+const showOrganizationBadge = computed(() => {
+  if (!props.todo.organization_id) return false
+  const po = projectOrgId.value
+  if (po == null) return true
+  return po !== props.todo.organization_id
+})
+
+const organizationName = computed(() => {
+  if (!props.todo.organization_id || !props.organizations.length) return null
+  const org = props.organizations.find((o) => o.id === props.todo.organization_id)
+  return org?.name || null
 })
 
 const renderedDescription = computed(() => {
@@ -240,6 +288,15 @@ function onDragEnd() {
 
 .action-btn.project-btn:hover {
   color: #047857;
+  opacity: 1;
+}
+
+.action-btn.org-btn {
+  color: #0d9488;
+}
+
+.action-btn.org-btn:hover {
+  color: #0f766e;
   opacity: 1;
 }
 

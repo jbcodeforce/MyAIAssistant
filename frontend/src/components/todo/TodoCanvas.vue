@@ -26,6 +26,7 @@
                 :key="todo.id"
                 :todo="todo"
                 :projects="projects"
+                :organizations="organizations"
                 @view="$emit('view', todo)"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
@@ -111,6 +112,7 @@
                 :key="todo.id"
                 :todo="todo"
                 :projects="projects"
+                :organizations="organizations"
                 @view="$emit('view', todo)"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
@@ -196,6 +198,7 @@
                 :key="todo.id"
                 :todo="todo"
                 :projects="projects"
+                :organizations="organizations"
                 @view="$emit('view', todo)"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
@@ -281,6 +284,7 @@
                 :key="todo.id"
                 :todo="todo"
                 :projects="projects"
+                :organizations="organizations"
                 @view="$emit('view', todo)"
                 @edit="$emit('edit', todo)"
                 @delete="$emit('delete', todo)"
@@ -378,6 +382,10 @@ const props = defineProps({
     default: () => []
   },
   projects: {
+    type: Array,
+    default: () => []
+  },
+  organizations: {
     type: Array,
     default: () => []
   }

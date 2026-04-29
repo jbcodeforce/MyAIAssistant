@@ -122,6 +122,11 @@ class Todo(Base):
     project_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("projects.id"), nullable=True
     )
+
+    # Direct link to organization (optional; e.g. org-level work without a project)
+    organization_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True
+    )
     
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -151,6 +156,7 @@ class Todo(Base):
 
     # Relationships
     project: Mapped[Optional["Project"]] = relationship("Project", back_populates="todos")
+    organization: Mapped[Optional["Organization"]] = relationship("Organization", backref="todos")
 
     def __repr__(self) -> str:
         return f"Todo(id={self.id!r}, title={self.title!r}, status={self.status!r})"

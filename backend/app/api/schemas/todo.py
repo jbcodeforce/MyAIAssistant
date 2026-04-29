@@ -13,6 +13,7 @@ class TodoBase(BaseModel):
     category: Optional[str] = Field(None, max_length=100, description="Category for grouping todos")
     tags: Optional[str] = Field(None, max_length=500, description="Comma-separated tags for classification")
     project_id: Optional[int] = Field(None, description="Related project ID")
+    organization_id: Optional[int] = Field(None, description="Related organization ID (direct link)")
     due_date: Optional[datetime] = Field(None, description="Due date for the todo")
     source_type: Optional[str] = Field(None, max_length=50, description="Source type (e.g., meeting, knowledge)")
     source_id: Optional[int] = Field(None, description="Source reference ID")
@@ -46,6 +47,7 @@ class TodoUpdate(BaseModel):
     category: Optional[str] = Field(None, max_length=100)
     tags: Optional[str] = Field(None, max_length=500)
     project_id: Optional[int] = None
+    organization_id: Optional[int] = None
     due_date: Optional[datetime] = None
     source_type: Optional[str] = Field(None, max_length=50)
     source_id: Optional[int] = None

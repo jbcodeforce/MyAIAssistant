@@ -230,23 +230,33 @@ async def get_todos_by_organization(
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Todo], int]:
-    """Get all todos for all projects belonging to a specific organization."""
-    query = select(Todo).join(
-        Project, Todo.project_id == Project.id
-    ).where(
-        Project.organization_id == organization_id
+    """Get todos with direct organization_id or linked via a project in this organization."""
+    org_filter = or_(
+        Todo.organization_id == organization_id,
+        Project.organization_id == organization_id,
     )
-    
-    # Get total count
-    count_query = select(func.count()).select_from(query.subquery())
-    total_result = await db.execute(count_query)
-    total = total_result.scalar_one()
-    
-    # Get paginated results
-    query = query.order_by(Todo.created_at.desc()).offset(skip).limit(limit)
+    ids_subq = (
+        select(Todo.id)
+        .outerjoin(Project, Todo.project_id == Project.id)
+        .where(org_filter)
+        .distinct()
+        .subquery()
+    )
+    count_result = await db.execute(select(func.count()).select_from(ids_subq))
+    total = count_result.scalar_one()
+
+    query = (
+        select(Todo)
+        .outerjoin(Project, Todo.project_id == Project.id)
+        .where(org_filter)
+        .distinct()
+        .order_by(Todo.created_at.desc())
+        .offset(skip)
+        .limit(limit)
+    )
     result = await db.execute(query)
     todos = list(result.scalars().all())
-    
+
     return todos, total
 
 

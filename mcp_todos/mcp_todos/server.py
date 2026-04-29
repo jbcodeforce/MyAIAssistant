@@ -29,7 +29,7 @@ def _body_for_create(args: dict[str, Any]) -> dict[str, Any]:
     body: dict[str, Any] = {"title": args["title"]}
     for key in (
         "description", "status", "urgency", "importance",
-        "category", "tags", "project_id", "due_date", "source_type", "source_id",
+        "category", "tags", "project_id", "organization_id", "due_date", "source_type", "source_id",
     ):
         if key in args and args[key] is not None:
             body[key] = args[key]
@@ -41,7 +41,7 @@ def _body_for_update(args: dict[str, Any]) -> dict[str, Any]:
     body: dict[str, Any] = {}
     for key in (
         "title", "description", "status", "urgency", "importance",
-        "category", "tags", "project_id", "due_date", "source_type", "source_id",
+        "category", "tags", "project_id", "organization_id", "due_date", "source_type", "source_id",
     ):
         if key in args and args[key] is not None:
             body[key] = args[key]

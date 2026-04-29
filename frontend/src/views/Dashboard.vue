@@ -115,6 +115,7 @@
           :not-urgent-important-todos="todoStore.notUrgentImportant"
           :not-urgent-not-important-todos="todoStore.notUrgentNotImportant"
           :projects="projects"
+          :organizations="organizations"
           @update="handleUpdatePriority"
           @view="handleView"
           @edit="handleEdit"
@@ -135,6 +136,7 @@
             :key="todo.id"
             :todo="todo"
             :projects="projects"
+            :organizations="organizations"
             @view="handleView"
             @edit="handleEdit"
             @delete="handleDelete"
@@ -189,6 +191,7 @@
       :show="showDetailModal"
       :todo="viewingTodo || {}"
       :projects="projects"
+      :organizations="organizations"
       @close="closeDetailModal"
       @edit="handleDetailEdit"
       @chat="handleDetailChat"
@@ -206,7 +209,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import { useUiStore } from '@/stores/uiStore'
-import { projectsApi, getConfig } from '@/services/api'
+import { projectsApi, organizationsApi, getConfig } from '@/services/api'
 import TodoCanvas from '@/components/todo/TodoCanvas.vue'
 import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
@@ -220,6 +223,7 @@ const todoStore = useTodoStore()
 const uiStore = useUiStore()
 const user_name = ref(null)
 const projects = ref([])
+const organizations = ref([])
 const searchTerm = ref('')
 const hasSearched = ref(false)
 
@@ -259,7 +263,7 @@ onMounted(async () => {
     const c = await getConfig()
     if (c.user_name) user_name.value = c.user_name
   } catch (_) {}
-  await Promise.all([loadTodos(), loadProjects()])
+  await Promise.all([loadTodos(), loadProjects(), loadOrganizations()])
 })
 
 async function loadTodos() {
@@ -296,6 +300,15 @@ async function loadProjects() {
     projects.value = response.data.projects
   } catch (err) {
     console.error('Failed to load projects:', err)
+  }
+}
+
+async function loadOrganizations() {
+  try {
+    const response = await organizationsApi.list({ limit: 500 })
+    organizations.value = response.data.organizations
+  } catch (err) {
+    console.error('Failed to load organizations:', err)
   }
 }
 

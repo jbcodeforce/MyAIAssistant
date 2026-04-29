@@ -28,6 +28,42 @@ async def test_create_todo(client: AsyncClient):
 
 
 @pytest.mark.asyncio
+async def test_create_todo_with_organization_id(client: AsyncClient):
+    org_r = await client.post("/api/organizations/", json={"name": "Org For Todo Link"})
+    assert org_r.status_code == 201
+    org_id = org_r.json()["id"]
+    response = await client.post(
+        "/api/todos/",
+        json={
+            "title": "Org-linked Todo",
+            "status": "Open",
+            "organization_id": org_id,
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert data["organization_id"] == org_id
+
+
+@pytest.mark.asyncio
+async def test_update_todo_organization_id(client: AsyncClient):
+    org_r = await client.post("/api/organizations/", json={"name": "Another Org"})
+    org_id = org_r.json()["id"]
+    create_response = await client.post(
+        "/api/todos/",
+        json={"title": "Todo to relink", "status": "Open"},
+    )
+    todo_id = create_response.json()["id"]
+    response = await client.put(
+        f"/api/todos/{todo_id}",
+        json={"organization_id": org_id},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    assert data["organization_id"] == org_id
+
+
+@pytest.mark.asyncio
 async def test_create_todo_with_tags(client: AsyncClient):
     response = await client.post(
         "/api/todos/",

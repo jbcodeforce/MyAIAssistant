@@ -66,7 +66,12 @@
     <div class="form-row">
       <div class="form-group">
         <label for="project">Project</label>
-        <select id="project" v-model="form.project_id" class="form-input" :disabled="loadingProjects">
+        <select
+          id="project"
+          v-model="form.project_id"
+          class="form-input"
+          :disabled="loadingProjects"
+        >
           <option :value="null">No project</option>
           <option v-for="project in projects" :key="project.id" :value="project.id">
             {{ project.name }}
@@ -74,6 +79,26 @@
         </select>
       </div>
 
+      <div class="form-group">
+        <label for="organization_id">
+          Organization
+          <span v-if="organizationLockedByProject" class="org-hint">(from project)</span>
+        </label>
+        <select
+          id="organization_id"
+          v-model="form.organization_id"
+          class="form-input"
+          :disabled="loadingOrganizations || organizationLockedByProject"
+        >
+          <option :value="null">No organization</option>
+          <option v-for="org in organizations" :key="org.id" :value="org.id">
+            {{ org.name }}
+          </option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row form-row-asset">
       <div class="form-group form-group-asset">
         <label for="asset_id">Asset</label>
         <select id="asset_id" v-model="form.asset_id" class="form-input" :disabled="loadingAssets">
@@ -109,7 +134,7 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
-import { projectsApi, assetsApi } from '@/services/api'
+import { projectsApi, assetsApi, organizationsApi } from '@/services/api'
 
 const props = defineProps({
   initialData: {
@@ -130,6 +155,8 @@ const isTitleEmpty = computed(() => {
 
 const projects = ref([])
 const loadingProjects = ref(false)
+const organizations = ref([])
+const loadingOrganizations = ref(false)
 const assets = ref([])
 const loadingAssets = ref(false)
 
@@ -141,12 +168,19 @@ const form = ref({
   importance: null,
   category: '',
   project_id: null,
+  organization_id: null,
   asset_id: null,
   due_date: ''
 })
 
+const organizationLockedByProject = computed(() => {
+  if (!form.value.project_id) return false
+  const proj = projects.value.find((p) => p.id === form.value.project_id)
+  return !!(proj && proj.organization_id)
+})
+
 onMounted(async () => {
-  await Promise.all([loadProjects(), loadAssets()])
+  await Promise.all([loadProjects(), loadOrganizations(), loadAssets()])
 })
 
 async function loadProjects() {
@@ -158,6 +192,18 @@ async function loadProjects() {
     console.error('Failed to load projects:', err)
   } finally {
     loadingProjects.value = false
+  }
+}
+
+async function loadOrganizations() {
+  loadingOrganizations.value = true
+  try {
+    const response = await organizationsApi.list({ limit: 500 })
+    organizations.value = response.data.organizations
+  } catch (err) {
+    console.error('Failed to load organizations:', err)
+  } finally {
+    loadingOrganizations.value = false
   }
 }
 
@@ -173,6 +219,15 @@ async function loadAssets() {
   }
 }
 
+function applyOrganizationFromSelectedProject() {
+  const id = form.value.project_id
+  if (!id) return
+  const proj = projects.value.find((p) => p.id === id)
+  if (proj && proj.organization_id) {
+    form.value.organization_id = proj.organization_id
+  }
+}
+
 watch(
   () => props.initialData,
   (newData) => {
@@ -185,12 +240,20 @@ watch(
         importance: newData.importance || null,
         category: newData.category || '',
         project_id: newData.project_id || null,
+        organization_id: newData.organization_id != null ? newData.organization_id : null,
         asset_id: newData.asset_id || null,
         due_date: newData.due_date ? formatDateTimeLocal(newData.due_date) : ''
       }
     }
   },
   { immediate: true }
+)
+
+watch(
+  () => [form.value.project_id, projects.value],
+  () => {
+    applyOrganizationFromSelectedProject()
+  }
 )
 
 function formatDateTimeLocal(dateString) {
@@ -210,6 +273,7 @@ function handleSubmit() {
     due_date: form.value.due_date || null,
     category: form.value.category || null,
     project_id: form.value.project_id || null,
+    organization_id: form.value.organization_id != null ? form.value.organization_id : null,
     asset_id: form.value.asset_id || null
   }
   
@@ -239,6 +303,11 @@ function handleSubmit() {
   gap: 1rem;
 }
 
+/* Asset row: one full-width column */
+.form-row-asset {
+  grid-template-columns: 1fr;
+}
+
 /* Asset select: prevent clipping; ensure full width within grid cell */
 .form-group-asset {
   min-width: 0;
@@ -254,6 +323,12 @@ label {
   font-weight: 600;
   color: #374151;
   font-size: 0.875rem;
+}
+
+.org-hint {
+  font-weight: 400;
+  color: #6b7280;
+  font-size: 0.8125rem;
 }
 
 .form-input {
@@ -324,9 +399,9 @@ textarea.form-input {
   }
 }
 
-/* When modal is ~800px (wide), give Project/Asset row more room so Asset select is not clipped */
+/* When modal is ~800px (wide), give Project/Organization/Asset rows more room so selects are not clipped */
 @media (max-width: 860px) {
-  .form-row:has(.form-group-asset) {
+  .form-row-asset:has(.form-group-asset) {
     grid-template-columns: 1fr;
   }
 }

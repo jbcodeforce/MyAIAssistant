@@ -34,6 +34,8 @@
           v-for="todo in sortedTodos"
           :key="todo.id"
           :todo="todo"
+          :projects="projects"
+          :organizations="organizations"
           @click="handleEdit(todo)"
           @edit="handleEdit"
           @delete="handleDelete"
@@ -87,6 +89,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useTodoStore } from '@/stores/todoStore'
 import { useUiStore } from '@/stores/uiStore'
+import { projectsApi, organizationsApi } from '@/services/api'
 import TodoCard from '@/components/todo/TodoCard.vue'
 import TodoForm from '@/components/todo/TodoForm.vue'
 import Modal from '@/components/common/Modal.vue'
@@ -96,6 +99,8 @@ const todoStore = useTodoStore()
 const uiStore = useUiStore()
 
 const unclassifiedTodos = ref([])
+const projects = ref([])
+const organizations = ref([])
 const totalCount = ref(0)
 const currentSkip = ref(0)
 const limit = 20
@@ -123,8 +128,22 @@ const hasMore = computed(() => {
 })
 
 onMounted(() => {
+  loadReferenceData()
   loadUnclassified()
 })
+
+async function loadReferenceData() {
+  try {
+    const [pr, or] = await Promise.all([
+      projectsApi.list({ limit: 500 }),
+      organizationsApi.list({ limit: 500 })
+    ])
+    projects.value = pr.data.projects
+    organizations.value = or.data.organizations
+  } catch (err) {
+    console.error('Failed to load projects/organizations:', err)
+  }
+}
 
 async function loadUnclassified() {
   try {

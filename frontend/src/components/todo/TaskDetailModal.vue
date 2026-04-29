@@ -43,6 +43,13 @@
                 </svg>
                 {{ projectName }}
               </span>
+              <span v-if="showOrganizationBadge && organizationName" class="meta-badge organization">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="16" height="20" x="4" y="2" rx="2" ry="2"/>
+                  <path d="M9 22v-4h6v4"/>
+                </svg>
+                {{ organizationName }}
+              </span>
             </div>
 
             <div v-if="todo.urgency || todo.importance" class="priority-badges">
@@ -131,6 +138,10 @@ const props = defineProps({
   projects: {
     type: Array,
     default: () => []
+  },
+  organizations: {
+    type: Array,
+    default: () => []
   }
 })
 
@@ -143,6 +154,25 @@ const projectName = computed(() => {
   if (!props.todo.project_id || !props.projects.length) return null
   const project = props.projects.find(p => p.id === props.todo.project_id)
   return project?.name || null
+})
+
+const projectOrgId = computed(() => {
+  if (!props.todo.project_id || !props.projects.length) return null
+  const project = props.projects.find((p) => p.id === props.todo.project_id)
+  return project?.organization_id != null ? project.organization_id : null
+})
+
+const showOrganizationBadge = computed(() => {
+  if (!props.todo.organization_id) return false
+  const po = projectOrgId.value
+  if (po == null) return true
+  return po !== props.todo.organization_id
+})
+
+const organizationName = computed(() => {
+  if (!props.todo.organization_id || !props.organizations.length) return null
+  const org = props.organizations.find((o) => o.id === props.todo.organization_id)
+  return org?.name || null
 })
 
 const renderedDescription = computed(() => {
@@ -361,6 +391,16 @@ async function loadTaskPlan() {
 :global(.dark) .meta-badge.project {
   background: #064e3b;
   color: #6ee7b7;
+}
+
+.meta-badge.organization {
+  background: #ccfbf1;
+  color: #0f766e;
+}
+
+:global(.dark) .meta-badge.organization {
+  background: #134e4a;
+  color: #5eead4;
 }
 
 .priority-badges {

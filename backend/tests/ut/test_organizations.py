@@ -211,3 +211,37 @@ async def test_organization_is_top_active(client: AsyncClient):
     list_active_after = await client.get("/api/organizations/?top_active=true")
     assert not any(o["id"] == organization_id for o in list_active_after.json()["organizations"])
 
+
+@pytest.mark.asyncio
+async def test_list_organization_todos_unions_direct_and_project_links(client: AsyncClient):
+    org_r = await client.post(
+        "/api/organizations/", json={"name": "Union Test Org"}
+    )
+    assert org_r.status_code == 201
+    org_id = org_r.json()["id"]
+    project_r = await client.post(
+        "/api/projects/",
+        json={"name": "Project In Org", "organization_id": org_id, "status": "Active"},
+    )
+    assert project_r.status_code == 201
+    project_id = project_r.json()["id"]
+
+    r1 = await client.post(
+        "/api/todos/",
+        json={"title": "Via project", "status": "Open", "project_id": project_id},
+    )
+    assert r1.status_code == 201
+    r2 = await client.post(
+        "/api/todos/",
+        json={"title": "Direct org", "status": "Open", "organization_id": org_id},
+    )
+    assert r2.status_code == 201
+
+    list_r = await client.get(f"/api/organizations/{org_id}/todos")
+    assert list_r.status_code == 200
+    data = list_r.json()
+    assert data["total"] == 2
+    titles = {t["title"] for t in data["todos"]}
+    assert "Via project" in titles
+    assert "Direct org" in titles
+
