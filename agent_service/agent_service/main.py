@@ -88,4 +88,6 @@ async def root():
     return {"service": "myai-agent-service", "message": "MyAIAssistant Agent Service; use /health, /chat/todo, /chat/generic"}
 
 if __name__ == "__main__":
-    agent_os.serve(app="main:app", port=8100, reload=True)
+    _port = int(os.environ.get("AGENT_SERVICE_PORT", "8100").strip())
+    logger.info("Serving on port %s (set AGENT_SERVICE_PORT to override)", _port)
+    agent_os.serve(app="main:app", port=_port, reload=True)

@@ -15,17 +15,16 @@ runner = CliRunner()
 
 
 def _make_mock_response():
-    """Build a fixed IndexParserResponse without calling the LLM."""
-    from agent_core.agents.note_parser_agent import (
-        NoteParserResponse,
+    """Build a fixed NoteParseResult without calling the LLM."""
+    from ai_assist_cli.agents.note_parse_models import (
+        MeetingExtract,
+        NoteParseResult,
         OrganizationExtract,
         PersonExtract,
         ProjectExtract,
-        MeetingExtract,
         StepExtract,
     )
-    return NoteParserResponse(
-        message="",
+    return NoteParseResult(
         organization=OrganizationExtract(name="Acme", description="A company."),
         persons=[PersonExtract(name="John", role="Engineer", context=None)],
         project=ProjectExtract(
@@ -36,7 +35,6 @@ def _make_mock_response():
         ),
         meetings=[MeetingExtract(title="Discovery", content="Notes from discovery.")],
         parse_error=None,
-        agent_type="note_parser",
     )
 
 

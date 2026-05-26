@@ -10,9 +10,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from agent_core.agents.agent_factory import AgentFactory
-from agent_core.agents.base_agent import AgentInput
-
+from ai_assist_cli.agents.note_parser_agno import parse_customer_note
 from ai_assist_cli.services.api_client import BackendClient
 
 app = typer.Typer(help="Customer note commands.")
@@ -33,11 +31,8 @@ def _slug(text: str) -> str:
 
 
 async def _parse_note(content: str):
-    """Run NoteParserAgent on markdown content; return NoteParserResponse."""
-    factory = AgentFactory(config_dir=None)
-    agent = factory.create_agent("NoteParserAgent")
-    response = await agent.execute(AgentInput(query=content))
-    return response
+    """Run Agno note parser on markdown content; return NoteParseResult."""
+    return await parse_customer_note(content)
 
 
 def _show_dry_run(response):
@@ -179,7 +174,7 @@ def parse_note(
         console.print("[yellow]File is empty.[/yellow]")
         raise typer.Exit(0)
 
-    console.print("[dim]Parsing note with NoteParserAgent...[/dim]")
+    console.print("[dim]Parsing note with Agno...[/dim]")
     response = _run_async(_parse_note(content))
 
     if response.parse_error and not response.organization and not response.persons:

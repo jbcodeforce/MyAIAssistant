@@ -17,7 +17,7 @@ A command-line tool built with Typer for managing AI Assistant workspaces, globa
 | CLI Framework | Typer | >=0.15.0 |
 | Rich Output | Rich | >=13.0.0 |
 | Config Format | PyYAML | >=6.0.0 |
-| LLM/RAG | agent-core | local package |
+| LLM/RAG | Agno | >=2.0.0 |
 | Package Manager | uv | - |
 
 ## Project Structure
@@ -28,13 +28,14 @@ ai_assist_cli/
 │   ├── __init__.py
 │   ├── cli.py              # Main entry point, Typer app
 │   ├── commands/           # Command implementations
-│   │   ├── __init__.py
-│   │   ├── init.py         # ai_assist init
-│   │   ├── workspace.py    # ai_assist workspace *
-│   │   └── global_cmd.py   # ai_assist global *
-│   └── services/           # Business logic
-│       ├── __init__.py
-│       └── workspace.py    # WorkspaceManager class
+│   │   ├── init.py
+│   │   ├── workspace.py
+│   │   ├── global_cmd.py
+│   │   ├── note_cmd.py
+│   │   ├── org_cmd.py
+│   │   └── ...
+│   ├── agents/             # Agno agents and toolkits
+│   └── services/           # Business logic (workspace, API client, db_url, llm)
 ├── pyproject.toml
 └── README.md
 ```

@@ -3,7 +3,7 @@
 import typer
 from rich.console import Console
 
-from ai_assist_cli.commands import init, workspace, global_cmd, knowledge, note_cmd, run
+from ai_assist_cli.commands import init, workspace, global_cmd, knowledge, note_cmd, org_cmd, run
 
 app = typer.Typer(
     name="ai_assist",
@@ -18,6 +18,7 @@ app.add_typer(workspace.app, name="workspace", help="Workspace management comman
 app.add_typer(global_cmd.app, name="global", help="Global resources management")
 app.add_typer(knowledge.app, name="knowledge", help="Knowledge management commands")
 app.add_typer(note_cmd.app, name="note", help="Customer note commands")
+app.add_typer(org_cmd.app, name="org", help="Organization-wide challenges report")
 
 # Register top-level init command with explicit name
 app.command(name="init")(init.init_command)

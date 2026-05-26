@@ -11,11 +11,9 @@ An intelligent personal productivity and knowledge management tool that integrat
 | Kanban-style Todo Management | Completed | Todos categorized by Importance/Urgency (Eisenhower Matrix) |
 | Organization Management | Completed | Track organizations with stakeholders, team, strategy |
 | Project Management | Completed | Manage projects with status lifecycle (Draft, Active, On Hold, Completed, Cancelled) linked to organizations |
-| Knowledge Base | Completed | Metadata storage referencing documents, notes, and website links |
-| Semantic Search (RAG) | Completed | AI-powered search across the knowledge base using embeddings |
-| LLM Chat Support | Completed | AI chat for task planning and knowledge base queries |
-| Asset management | To list assets that you are developing and need recurring activities | 
+| Asset management | Completed | To list assets that you are developing and need recurring activities | 
 | Task/Note Integration | Planned | Automatic linking of Todos to relevant knowledge artifacts |
+| Meeting notes | completed | manage meeting notes linked to orgs |
 
 ## Quick Start
 
@@ -62,6 +60,8 @@ docker compose up -d
     # - API Docs: http://localhost:8000/docs
     ```
 
+* **Database file vs API:** Edits from the UI go to whatever URL is in `database_url` for the running backend (see `CONFIG_FILE`, `backend/app/config.yaml`, or `http://localhost:8000/debug/config`). If you inspect `workspaces/biz-db/data/biz-assistant.db` with SQLite, ensure the backend is actually configured with that file (for example `database_url: "sqlite+aiosqlite:///./data/biz-assistant.db"` in the workspace `config.yaml` used by `CONFIG_FILE`, with uvicorn started from that workspace so relative paths resolve). Otherwise the API may be writing to Postgres or another SQLite path and the file you open will look unchanged.
+
 * **If `uv sync` is slow:** First run is often slow (dependency resolution and downloads). Subsequent runs use the lock file and are faster. To see where time goes, run `uv sync --verbose`. You can try: `uv upgrade` (use a recent uv); on fast networks `UV_CONCURRENT_DOWNLOADS=50 uv sync`; behind a proxy, lower concurrency or use a direct PyPI URL. On macOS, the first run after a cold start can be much slower than later runs.
 
 * Build docker images:
@@ -81,9 +81,8 @@ Full documentation available at [https://jeromeboyer.net/myaiassistant](https://
 | ----- | ---------- |
 | Frontend | Vue.js 3 with Vite |
 | Backend | Python FastAPI |
-| Database | SQLite (PostgreSQL-ready) |
+| Database | SQLite |
 | Vector Store | ChromaDB |
-| Embeddings | sentence-transformers (local) |
 
 ## Project Structure
 
@@ -91,8 +90,10 @@ Full documentation available at [https://jeromeboyer.net/myaiassistant](https://
 MyAIAssistant/
 ├── backend/        # FastAPI application
 ├── frontend/       # Vue.js application
-├── mcp_todos/      # MCP server for todos (Cursor / agents)
+├── agent_service/     # Agent framework on top of Agno
+├── mcp_todos/     # mcp server on top of the ai-assistant services
 ├── docs/           # MkDocs documentation
+├── worksapces     # content of database, notes and wiki
 └── docker-compose.yml
 ```
 

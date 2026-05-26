@@ -4,7 +4,7 @@ from typing import Optional
 from sqlalchemy import select, func, or_, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Todo, Knowledge, Project
+from app.db.models import Todo, Knowledge, Project, Meeting
 from app.api.schemas.todo import TodoCreate, TodoUpdate
 
 
@@ -230,14 +230,20 @@ async def get_todos_by_organization(
     skip: int = 0,
     limit: int = 100,
 ) -> tuple[list[Todo], int]:
-    """Get todos with direct organization_id or linked via a project in this organization."""
+    """Get todos linked by organization_id, by a project in this org, or by meeting source (Meeting.org_id)."""
+    meeting_join = and_(
+        func.lower(Todo.source_type) == "meeting",
+        Todo.source_id == Meeting.id,
+    )
     org_filter = or_(
         Todo.organization_id == organization_id,
         Project.organization_id == organization_id,
+        Meeting.org_id == organization_id,
     )
     ids_subq = (
         select(Todo.id)
         .outerjoin(Project, Todo.project_id == Project.id)
+        .outerjoin(Meeting, meeting_join)
         .where(org_filter)
         .distinct()
         .subquery()
@@ -248,6 +254,7 @@ async def get_todos_by_organization(
     query = (
         select(Todo)
         .outerjoin(Project, Todo.project_id == Project.id)
+        .outerjoin(Meeting, meeting_join)
         .where(org_filter)
         .distinct()
         .order_by(Todo.created_at.desc())

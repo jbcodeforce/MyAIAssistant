@@ -132,7 +132,7 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted, computed } from 'vue'
+import { ref, watch, onMounted, computed, nextTick } from 'vue'
 import RichTextEditor from '@/components/common/RichTextEditor.vue'
 import { projectsApi, assetsApi, organizationsApi } from '@/services/api'
 
@@ -188,6 +188,7 @@ async function loadProjects() {
   try {
     const response = await projectsApi.list({ limit: 500 })
     projects.value = response.data.projects
+    applyOrganizationFromSelectedProject()
   } catch (err) {
     console.error('Failed to load projects:', err)
   } finally {
@@ -244,13 +245,16 @@ watch(
         asset_id: newData.asset_id || null,
         due_date: newData.due_date ? formatDateTimeLocal(newData.due_date) : ''
       }
+      nextTick(() => {
+        applyOrganizationFromSelectedProject()
+      })
     }
   },
   { immediate: true }
 )
 
 watch(
-  () => [form.value.project_id, projects.value],
+  () => form.value.project_id,
   () => {
     applyOrganizationFromSelectedProject()
   }

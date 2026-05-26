@@ -289,8 +289,9 @@ async def list_organization_todos(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Retrieve todos directly linked to this organization (todos.organization_id) or
-    linked via a project whose organization_id is this organization.
+    Retrieve todos directly linked to this organization (todos.organization_id),
+    linked via a project whose organization_id matches, or linked via a meeting
+    reference (todos.source_type meeting + meetings.org_id).
     """
     # Verify organization exists
     organization = await crud.get_organization(db=db, organization_id=organization_id)

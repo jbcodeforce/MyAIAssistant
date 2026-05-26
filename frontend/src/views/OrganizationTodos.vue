@@ -116,6 +116,7 @@
       @close="closeCreateModal"
     >
       <TodoForm
+        :initial-data="todoFormInitialData"
         @submit="handleCreate"
         @cancel="closeCreateModal"
       />
@@ -124,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { organizationsApi, todosApi } from '@/services/api'
 import { useUiStore } from '@/stores/uiStore'
@@ -179,9 +180,22 @@ const hasMore = computed(() => {
   return todos.value.length < totalCount.value
 })
 
+const todoFormInitialData = computed(() => {
+  const n = Number.parseInt(String(route.params.id), 10)
+  if (Number.isNaN(n)) return null
+  return { organization_id: n }
+})
+
 onMounted(() => {
   loadOrganizationTodos()
 })
+
+watch(
+  () => route.params.id,
+  () => {
+    loadOrganizationTodos()
+  }
+)
 
 async function loadOrganizationTodos() {
   const organizationId = route.params.id

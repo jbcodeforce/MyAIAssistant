@@ -9,9 +9,6 @@ Command-line tool for managing AI Assistant's workspaces and global cross worksp
 ### Using uv (recommended)
 
 ```bash
-cd ../agent_core
-uv build
-
 cd ai_assist_cli
 uv build
 uv tool install dist/ai_assist_cli-0.1.0-py3-none-any.whl --force
@@ -54,6 +51,35 @@ ai_assist workspace list
 # Clean workspace data (history, summaries)
 ai_assist workspace clean
 ```
+
+### Organization-wide challenges report (Agno)
+
+The `org report` command runs an [Agno](https://github.com/agno-agi/agno) agent with read-only SQL tools (SQLAlchemy) against the app database and tools to list and read markdown under the workspace `notes/` directory. It produces a table of **challenges**, **next steps**, and **issues** keyed by account (organization name or top-level notes folder).
+
+Prerequisites:
+
+- A initialized workspace (`.ai_assist_workspace` at the workspace root).
+- `LLM_API_KEY`, `LLM_BASE_URL` (or `OLLAMA_BASE_URL`), and `LLM_MODEL` set for an OpenAI-compatible endpoint (same conventions as the MyAI Assistant agent service).
+- For database-backed rows: a SQLite file at `data/app.db` under the workspace (default when using Docker Compose: `./data` maps to the backend data directory). Relative `DATABASE_URL` values such as `sqlite+aiosqlite:///./data/app.db` are resolved against the workspace root.
+
+```bash
+# Validate configuration without calling the LLM
+ai_assist org report --dry-run
+
+# Notes only (no SQLite tools)
+ai_assist org report --skip-db
+
+# JSON output
+ai_assist org report --json
+
+# Custom database URL (PostgreSQL or absolute SQLite)
+ai_assist org report --database-url "postgresql://user:pass@localhost/mydb"
+
+# Custom notes root
+ai_assist org report --notes-root /path/to/notes
+```
+
+If `data/app.db` is missing and you did not pass `--skip-db`, the command exits with an error.
 
 ### Running services
 
@@ -245,16 +271,9 @@ uv run ai_assist --help
 To build and install:
 
 ```bash
-# Build agent_core first
-cd ../agent_core
+cd ai_assist_cli
 uv build
-
-# Build and install CLI
-cd ../ai_assist_cli
-uv build
-uv tool install dist/ai_assist_cli-0.1.0-py3-none-any.whl \
-  --with ../agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
-  --force
+uv tool install dist/ai_assist_cli-0.1.0-py3-none-any.whl --force
 ```
 
 ## Packaging for PyPI
@@ -270,53 +289,9 @@ Before publishing to PyPI, ensure you have:
    uv pip install build twine
    ```
 
-### Handling agent-core Dependency
+### PyPI dependencies
 
-Since `agent-core` is not published to PyPI, you have two options:
-
-#### Option 1: Include agent-core in the Package (Recommended)
-
-Copy the `agent_core` code directly into your package or use a build script to include it:
-
-1. **Update pyproject.toml** to remove the local path dependency:
-   ```toml
-   # Remove or comment out:
-   # [tool.uv.sources]
-   # agent-core = { path = "../agent_core", editable = true }
-   
-   # Keep in dependencies (it will be included in the package):
-   dependencies = [
-       "typer>=0.15.0",
-       "rich>=13.0.0",
-       "pyyaml>=6.0.0",
-       # agent-core will be bundled, so remove from dependencies or mark as optional
-   ]
-   ```
-
-2. **Include agent_core in the package**: Update `pyproject.toml` to include agent_core files:
-   ```toml
-   [tool.hatch.build.targets.wheel]
-   packages = ["ai_assist_cli", "agent_core"]
-   ```
-
-
-#### Option 2: Remove agent-core from Dependencies
-
-If you want to make agent-core optional or handle it differently:
-
-1. **Remove from dependencies** in `pyproject.toml`:
-   ```toml
-   dependencies = [
-       "typer>=0.15.0",
-       "rich>=13.0.0",
-       "pyyaml>=6.0.0",
-       # agent-core removed - users must install separately
-   ]
-   ```
-
-2. **Document installation**: Users will need to install agent-core separately (e.g., from source or a private repository).
-
-**Note**: The current setup uses a local path dependency for development. For PyPI packaging, you'll need to choose one of the above approaches.
+The CLI depends on standard published packages (Typer, Rich, Agno, SQLAlchemy, Pydantic, and so on). It does not bundle or require a local `agent_core` install.
 
 ### Building the Package
 
@@ -429,6 +404,6 @@ After publishing:
 
 - **"Package already exists"**: Version already published - increment version number
 - **"Invalid distribution"**: Check that all required files are included in the package
-- **"Missing dependencies"**: If agent-core is not bundled, ensure it's installed separately or included in the package
+- **"Missing dependencies"**: Run `uv sync` (or `pip install -e .`) so declared packages resolve from PyPI
 - **Build errors**: Ensure `pyproject.toml` is valid and all dependencies are specified correctly
-- **Import errors for agent-core**: Verify that agent-core is either bundled in the package or available in the Python path
+- **Import errors for Agno/OpenAI**: Ensure `openai` is installed (declared dependency); check your virtual environment

@@ -1,3 +1,5 @@
+import uuid
+
 import pytest
 from httpx import AsyncClient
 
@@ -244,4 +246,42 @@ async def test_list_organization_todos_unions_direct_and_project_links(client: A
     titles = {t["title"] for t in data["todos"]}
     assert "Via project" in titles
     assert "Direct org" in titles
+
+
+@pytest.mark.asyncio
+async def test_list_organization_todos_includes_meeting_source(client: AsyncClient):
+    org_r = await client.post(
+        "/api/organizations/", json={"name": "Meeting Org For Todos API"}
+    )
+    assert org_r.status_code == 201
+    org_id = org_r.json()["id"]
+
+    meeting_id = f"mtg-org-api-{uuid.uuid4().hex[:12]}"
+    meet_r = await client.post(
+        "/api/meeting-refs/",
+        json={
+            "meeting_id": meeting_id,
+            "org_id": org_id,
+            "content": "# Test meeting\n\nNotes for org todos.",
+        },
+    )
+    assert meet_r.status_code == 201
+    meeting_db_id = meet_r.json()["id"]
+
+    todo_r = await client.post(
+        "/api/todos/",
+        json={
+            "title": "Via meeting source",
+            "status": "Open",
+            "source_type": "meeting",
+            "source_id": meeting_db_id,
+        },
+    )
+    assert todo_r.status_code == 201
+
+    list_r = await client.get(f"/api/organizations/{org_id}/todos")
+    assert list_r.status_code == 200
+    data = list_r.json()
+    titles = {t["title"] for t in data["todos"]}
+    assert "Via meeting source" in titles
 
