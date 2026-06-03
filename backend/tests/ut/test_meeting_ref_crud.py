@@ -116,6 +116,22 @@ class TestCreateMeetingRef:
         assert meeting_ref.org_id == organization.id
         assert meeting_ref.attendees == "Alice; Bob; Carol"
 
+    @pytest.mark.asyncio
+    async def test_create_meeting_ref_with_steps(self, db_session: AsyncSession):
+        """Test creating a meeting ref with past_steps and next_steps."""
+        past = [{"what": "Kickoff held", "who": "Team"}]
+        nxt = [{"what": "Follow up", "who": "Alice", "todo_id": 42}]
+        meeting_ref = await crud.create_meeting_ref(
+            db=db_session,
+            meeting_id="mtg-steps",
+            file_ref="general/meetings/general/mtg-steps.md",
+            past_steps=past,
+            next_steps=nxt,
+        )
+
+        assert meeting_ref.past_steps == past
+        assert meeting_ref.next_steps == nxt
+
 
 class TestGetMeetingRef:
     """Tests for get_meeting_ref function."""

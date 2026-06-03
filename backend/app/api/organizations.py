@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import crud
+from app.db.errors import DuplicateOrganizationError
 from app.api.schemas.organization import (
     OrganizationCreate,
     OrganizationUpdate,
@@ -73,7 +74,10 @@ async def create_organization(
     Create a new organization. Optional `description` in the body is written to the file
     at description_path (default: {org}/notes/strategy.md under notes_root); the DB stores only the path.
     """
-    created = await crud.create_organization(db=db, organization=organization)
+    try:
+        created = await crud.create_organization(db=db, organization=organization)
+    except DuplicateOrganizationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     return _organization_to_response(created)
 
 
@@ -148,9 +152,12 @@ async def update_organization(
         update_payload["description"] if "description" in update_keys else None
     )
 
-    organization = await crud.update_organization(
-        db=db, organization_id=organization_id, organization_update=organization_update
-    )
+    try:
+        organization = await crud.update_organization(
+            db=db, organization_id=organization_id, organization_update=organization_update
+        )
+    except DuplicateOrganizationError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
     if not organization:
         raise HTTPException(status_code=404, detail="Organization not found")
 

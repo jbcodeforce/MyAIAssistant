@@ -36,6 +36,11 @@ def get_or_create_organization(client: httpx.Client, backend: str, org_body: dic
     if r.status_code != 404:
         r.raise_for_status()
     r = client.post(f"{backend}/api/organizations/", json=org_body)
+    if r.status_code == 409:
+        retry = client.get(f"{backend}/api/organizations/search/by-name", params={"name": name})
+        retry.raise_for_status()
+        logger.info("Organization already exists (409): %s (id=%s)", name, retry.json().get("id"))
+        return retry.json()
     r.raise_for_status()
     logger.info("Created organization: %s (id=%s)", name, r.json().get("id"))
     return r.json()

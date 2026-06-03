@@ -59,7 +59,11 @@
       <button @click="loadOrganization" class="btn-primary">Retry</button>
     </div>
 
-    <div v-else-if="organization && fullPagePreview" class="full-page-preview">
+    <div
+      v-else-if="organization && fullPagePreview"
+      class="full-page-preview"
+      @click="handleNotesDocClick"
+    >
       <div class="preview-section">
         <h3 class="preview-section-title">Organization Name</h3>
         <p class="preview-name">{{ formData.name || '—' }}</p>
@@ -114,7 +118,12 @@
 - **John Doe** - CTO, decision maker
 - **Jane Smith** - PM, technical lead"
           />
-          <div v-else class="markdown-preview form-preview" v-html="formRenderedStakeholders"></div>
+          <div
+            v-else
+            class="markdown-preview form-preview"
+            v-html="formRenderedStakeholders"
+            @click="handleNotesDocClick"
+          ></div>
         </div>
       </div>
 
@@ -137,7 +146,12 @@
 - **Account Manager**: Alex Johnson
 - **Technical Lead**: Sarah Chen"
           />
-          <div v-else class="markdown-preview form-preview" v-html="formRenderedTeam"></div>
+          <div
+            v-else
+            class="markdown-preview form-preview"
+            v-html="formRenderedTeam"
+            @click="handleNotesDocClick"
+          ></div>
         </div>
       </div>
 
@@ -162,7 +176,12 @@
 - Upsell enterprise features"
             @keydown="(e) => handleTabInTextarea(e, 'description')"
           />
-          <div v-else class="markdown-preview form-preview" v-html="formRenderedDescription"></div>
+          <div
+            v-else
+            class="markdown-preview form-preview"
+            v-html="formRenderedDescription"
+            @click="handleNotesDocClick"
+          ></div>
         </div>
       </div>
 
@@ -185,10 +204,25 @@
 - **Flink SQL** - Production
 - **Kafka Streams** - Evaluation"
           />
-          <div v-else class="markdown-preview form-preview" v-html="formRenderedProducts"></div>
+          <div
+            v-else
+            class="markdown-preview form-preview"
+            v-html="formRenderedProducts"
+            @click="handleNotesDocClick"
+          ></div>
         </div>
       </div>
     </form>
+
+    <NotesDocumentModal
+      :show="showDocModal"
+      :title="docModalTitle"
+      :html="docModalHtml"
+      :loading="docModalLoading"
+      :error="docModalError"
+      @close="closeDocModal"
+      @content-click="onDocModalContentClick"
+    />
   </div>
 </template>
 
@@ -196,7 +230,13 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { organizationsApi, uploadNotesImage } from '@/services/api'
-import { insertMarkdownAtCursor, renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
+import {
+  insertMarkdownAtCursor,
+  renderMarkdownForNotesWithDocLinks,
+  organizationNotesContextBase
+} from '@/utils/markdownNotes'
+import { useNotesDocLinkModal } from '@/composables/useNotesDocLinkModal'
+import NotesDocumentModal from '@/components/NotesDocumentModal.vue'
 
 const route = useRoute()
 
@@ -242,17 +282,32 @@ const notesImagesContextBase = computed(() => {
   if (!raw) return ''
   return organizationNotesContextBase(raw)
 })
+const {
+  showDocModal,
+  docModalTitle,
+  docModalHtml,
+  docModalLoading,
+  docModalError,
+  closeDocModal,
+  onMarkdownClick,
+  onDocModalContentClick
+} = useNotesDocLinkModal()
+
+function handleNotesDocClick(event) {
+  onMarkdownClick(event, notesImagesContextBase.value)
+}
+
 const formRenderedStakeholders = computed(() =>
-  renderMarkdownForNotes(formData.value.stakeholders || '', notesImagesContextBase.value)
+  renderMarkdownForNotesWithDocLinks(formData.value.stakeholders || '', notesImagesContextBase.value)
 )
 const formRenderedTeam = computed(() =>
-  renderMarkdownForNotes(formData.value.team || '', notesImagesContextBase.value)
+  renderMarkdownForNotesWithDocLinks(formData.value.team || '', notesImagesContextBase.value)
 )
 const formRenderedDescription = computed(() =>
-  renderMarkdownForNotes(formData.value.description || '', notesImagesContextBase.value)
+  renderMarkdownForNotesWithDocLinks(formData.value.description || '', notesImagesContextBase.value)
 )
 const formRenderedProducts = computed(() =>
-  renderMarkdownForNotes(formData.value.related_products || '', notesImagesContextBase.value)
+  renderMarkdownForNotesWithDocLinks(formData.value.related_products || '', notesImagesContextBase.value)
 )
 
 const defaultStakeholders = `## Key Contacts

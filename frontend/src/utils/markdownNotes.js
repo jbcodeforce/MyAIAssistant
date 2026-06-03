@@ -3,7 +3,7 @@
  * Supports {width=600px} (or %, em, rem) on images for max-width.
  */
 import { Marked } from 'marked'
-import { getNotesFileUrl } from '@/services/api'
+import { getNotesFileUrl, resolveNotesDocRelativePath } from '@/services/api'
 
 /** Sanitize organization name for path (match backend). */
 export function sanitizeOrgNameForPath(name) {
@@ -111,6 +111,49 @@ export function parseNoteMarkdown(md) {
 export function renderMarkdownForNotes(content, contextBase) {
   const html = parseNoteMarkdown(content || '')
   return renderMarkdownWithNoteImages(html, contextBase)
+}
+
+/**
+ * Whether href resolves to a note document under contextBase.
+ * @param {string} href
+ * @param {string} contextBase
+ */
+export function isNotesDocLink(href, contextBase) {
+  return resolveNotesDocRelativePath(href, contextBase) != null
+}
+
+/**
+ * Mark internal note-document links for modal preview (class + data attributes).
+ * @param {string} html
+ * @param {string} contextBase
+ */
+export function renderMarkdownWithNoteDocLinks(html, contextBase) {
+  if (!html || typeof html !== 'string') return html || ''
+  if (!contextBase) return html
+
+  const parser = new DOMParser()
+  const doc = parser.parseFromString(html, 'text/html')
+  const links = doc.querySelectorAll('a[href]')
+  links.forEach((anchor) => {
+    const href = anchor.getAttribute('href')
+    if (!href) return
+    const relPath = resolveNotesDocRelativePath(href, contextBase)
+    if (!relPath) return
+    anchor.setAttribute('href', '#')
+    anchor.setAttribute('data-notes-doc', relPath)
+    const label = (anchor.textContent || '').trim()
+    if (label) anchor.setAttribute('data-notes-doc-label', label)
+    anchor.classList.add('notes-doc-link')
+  })
+  return doc.body?.innerHTML ?? html
+}
+
+/**
+ * Full pipeline: images, then note-document link markers for modal preview.
+ */
+export function renderMarkdownForNotesWithDocLinks(content, contextBase) {
+  const withImages = renderMarkdownForNotes(content, contextBase)
+  return renderMarkdownWithNoteDocLinks(withImages, contextBase)
 }
 
 /**

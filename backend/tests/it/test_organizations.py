@@ -249,6 +249,44 @@ async def test_list_organization_todos_unions_direct_and_project_links(client: A
 
 
 @pytest.mark.asyncio
+async def test_create_duplicate_organization_case_insensitive_returns_409(client: AsyncClient):
+    first = await client.post("/api/organizations/", json={"name": "ResMed"})
+    assert first.status_code == 201
+
+    duplicate = await client.post("/api/organizations/", json={"name": "resmed"})
+    assert duplicate.status_code == 409
+    assert "already exists" in duplicate.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_update_organization_rename_conflict_returns_409(client: AsyncClient):
+    await client.post("/api/organizations/", json={"name": "Org Alpha"})
+    beta = await client.post("/api/organizations/", json={"name": "Org Beta"})
+    beta_id = beta.json()["id"]
+
+    conflict = await client.put(
+        f"/api/organizations/{beta_id}",
+        json={"name": "org alpha"},
+    )
+    assert conflict.status_code == 409
+    assert "already exists" in conflict.json()["detail"].lower()
+
+
+@pytest.mark.asyncio
+async def test_get_organization_by_name_case_insensitive(client: AsyncClient):
+    created = await client.post("/api/organizations/", json={"name": "Case Org"})
+    assert created.status_code == 201
+    org_id = created.json()["id"]
+
+    found = await client.get(
+        "/api/organizations/search/by-name",
+        params={"name": "case org"},
+    )
+    assert found.status_code == 200
+    assert found.json()["id"] == org_id
+
+
+@pytest.mark.asyncio
 async def test_list_organization_todos_includes_meeting_source(client: AsyncClient):
     org_r = await client.post(
         "/api/organizations/", json={"name": "Meeting Org For Todos API"}

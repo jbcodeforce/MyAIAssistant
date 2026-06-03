@@ -374,13 +374,27 @@
       @close="closeSectionViewer"
     >
       <div class="section-viewer-content">
-        <div class="markdown-preview view-mode" v-html="renderedSectionContent"></div>
+        <div
+          class="markdown-preview view-mode"
+          v-html="renderedSectionContent"
+          @click="handleNotesDocClick"
+        ></div>
       </div>
       <template #footer>
         <button type="button" class="btn-secondary" @click="closeSectionViewer">Close</button>
         <button type="button" class="btn-primary" @click="editFromViewer">Edit</button>
       </template>
     </Modal>
+
+    <NotesDocumentModal
+      :show="showDocModal"
+      :title="docModalTitle"
+      :html="docModalHtml"
+      :loading="docModalLoading"
+      :error="docModalError"
+      @close="closeDocModal"
+      @content-click="onDocModalContentClick"
+    />
 
   </div>
 </template>
@@ -389,8 +403,10 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { organizationsApi } from '@/services/api'
-import { renderMarkdownForNotes, organizationNotesContextBase } from '@/utils/markdownNotes'
+import { renderMarkdownForNotesWithDocLinks, organizationNotesContextBase } from '@/utils/markdownNotes'
+import { useNotesDocLinkModal } from '@/composables/useNotesDocLinkModal'
 import Modal from '@/components/common/Modal.vue'
+import NotesDocumentModal from '@/components/NotesDocumentModal.vue'
 
 const router = useRouter()
 
@@ -457,10 +473,26 @@ const sectionViewerTitle = computed(() => {
 const notesImagesContextBase = computed(() =>
   viewingOrganization.value?.name ? organizationNotesContextBase(viewingOrganization.value.name) : ''
 )
+
+const {
+  showDocModal,
+  docModalTitle,
+  docModalHtml,
+  docModalLoading,
+  docModalError,
+  closeDocModal,
+  onMarkdownClick,
+  onDocModalContentClick
+} = useNotesDocLinkModal()
+
+function handleNotesDocClick(event) {
+  onMarkdownClick(event, notesImagesContextBase.value)
+}
+
 const renderedSectionContent = computed(() => {
   if (!viewingOrganization.value || !viewingSection.value) return ''
   const content = viewingOrganization.value[viewingSection.value] || ''
-  return renderMarkdownForNotes(content, notesImagesContextBase.value)
+  return renderMarkdownForNotesWithDocLinks(content, notesImagesContextBase.value)
 })
 
 onMounted(async () => {

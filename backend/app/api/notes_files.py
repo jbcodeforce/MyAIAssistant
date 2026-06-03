@@ -4,7 +4,7 @@ import logging
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
@@ -97,6 +97,16 @@ async def serve_note_file(path: str):
     resolved = service.resolve_serve_path(path)
     if not resolved:
         raise HTTPException(status_code=404, detail="File not found")
+
+    suffix = resolved.suffix.lower()
+    if suffix in (".md", ".markdown"):
+        text = resolved.read_text(encoding="utf-8")
+        return Response(
+            content=text,
+            media_type="text/markdown; charset=utf-8",
+            headers={"Content-Disposition": "inline"},
+        )
+
     return FileResponse(
         resolved,
         media_type=None,

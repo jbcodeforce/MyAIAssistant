@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Optional, TypedDict
 
-from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON, UniqueConstraint
+from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON, UniqueConstraint, Index, text
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -17,6 +17,13 @@ DimensionType = dict[str, int]
 
 class Organization(Base):
     __tablename__ = "organizations"
+    __table_args__ = (
+        Index(
+            "ix_organizations_name_lower",
+            text("lower(name)"),
+            unique=True,
+        ),
+    )
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)

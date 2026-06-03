@@ -105,6 +105,8 @@ async def create_meeting_ref(
         project_id=meeting_ref.project_id,
         org_id=meeting_ref.org_id,
         attendees=meeting_ref.attendees,
+        past_steps=_steps_to_db_payload(meeting_ref.past_steps),
+        next_steps=_steps_to_db_payload(meeting_ref.next_steps),
     )
     
     return db_meeting_ref

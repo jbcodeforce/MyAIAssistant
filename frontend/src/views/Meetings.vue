@@ -167,6 +167,11 @@
             <span class="info-value file-path">{{ editingItem?.file_ref }}</span>
           </div>
         </div>
+        <MeetingStepsView
+          :past-steps="editingItem?.past_steps || []"
+          :next-steps="editingItem?.next_steps || []"
+          :project-id="editingItem?.project_id"
+        />
         <div class="content-view">
           <div class="markdown-preview view-mode" v-html="renderedViewContent"></div>
         </div>
@@ -272,6 +277,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { renderMarkdownForNotes, meetingNotesContextBaseFromFileRef } from '@/utils/markdownNotes'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
 import Modal from '@/components/common/Modal.vue'
+import MeetingStepsView from '@/components/meeting/MeetingStepsView.vue'
 
 const router = useRouter()
 const route = useRoute()

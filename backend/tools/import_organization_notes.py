@@ -220,11 +220,15 @@ class OrganizationNotesImporter:
             raise
 
     async def _create_organization(self, client: httpx.AsyncClient, data: dict) -> dict:
-        """Create a new organization via API."""
+        """Create a new organization via API. On 409, return the existing org by name."""
         response = await client.post(
             f"{self.backend_base_url}/api/organizations/",
             json=data
         )
+        if response.status_code == 409:
+            existing = await self._get_organization_by_name(client, data["name"])
+            if existing:
+                return existing
         response.raise_for_status()
         return response.json()
 

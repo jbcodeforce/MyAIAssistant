@@ -100,6 +100,28 @@ async def test_serve_note_file(client: AsyncClient, tmp_notes_root):
 
 
 @pytest.mark.asyncio
+async def test_serve_markdown_file(client: AsyncClient, tmp_notes_root):
+    """Serve returns markdown text for .md files under org notes."""
+    create_resp = await client.post("/api/organizations/", json={"name": "Md Org"})
+    assert create_resp.status_code == 201
+    org_id = create_resp.json()["id"]
+    files = {"file": ("pic.png", io.BytesIO(b"\x89PNG\r\n\x1a\n"), "image/png")}
+    data = {"context_type": "organization", "organization_id": org_id}
+    up = await client.post("/api/notes-files/upload", data=data, files=files)
+    assert up.status_code == 200
+    context_base = up.json()["context_base"]
+    service = notes_files_module.get_notes_images_service()
+    md_path = service.docs_root / context_base / "analysis.md"
+    md_path.parent.mkdir(parents=True, exist_ok=True)
+    md_path.write_text("# Analysis\n\nBody text.", encoding="utf-8")
+    get_path = f"{context_base}/analysis.md"
+    resp = await client.get(f"/api/notes-files/{get_path}")
+    assert resp.status_code == 200
+    assert "text/markdown" in resp.headers.get("content-type", "")
+    assert "# Analysis" in resp.text
+
+
+@pytest.mark.asyncio
 async def test_serve_blocks_path_traversal(client: AsyncClient):
     """Serve rejects path traversal."""
     resp = await client.get("/api/notes-files/../etc/passwd")

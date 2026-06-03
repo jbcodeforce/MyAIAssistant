@@ -62,6 +62,11 @@
         <h3 class="preview-section-title">Meeting Notes</h3>
         <div class="markdown-preview form-preview" v-html="formRenderedContent"></div>
       </div>
+      <MeetingStepsView
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+        :project-id="formData.project_id"
+      />
     </div>
 
     <form v-else @submit.prevent="handleCreate" class="meeting-form">
@@ -140,6 +145,14 @@
           <div v-else class="markdown-preview form-preview" v-html="formRenderedContent"></div>
         </div>
       </div>
+
+      <MeetingStepsEditor
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+        :project-todos="projectTodos"
+        @update:past-steps="formData.past_steps = $event"
+        @update:next-steps="formData.next_steps = $event"
+      />
     </form>
   </div>
 </template>
@@ -149,6 +162,10 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { useMeetingRefStore } from '@/stores/meetingRefStore'
+import { projectsApi } from '@/services/api'
+import MeetingStepsEditor from '@/components/meeting/MeetingStepsEditor.vue'
+import MeetingStepsView from '@/components/meeting/MeetingStepsView.vue'
+import { normalizeStepsForPayload } from '@/utils/meetingSteps'
 
 const router = useRouter()
 const store = useMeetingRefStore()
@@ -158,12 +175,15 @@ const formData = ref({
   org_id: null,
   project_id: null,
   presents: '',
-  content: ''
+  content: '',
+  past_steps: [],
+  next_steps: []
 })
 
 const editorTab = ref('write')
 const fullPagePreview = ref(false)
 const submitting = ref(false)
+const projectTodos = ref([])
 
 const organizations = computed(() => store.organizations)
 const filteredProjects = computed(() => {
@@ -199,6 +219,28 @@ watch(() => formData.value.org_id, () => {
   formData.value.project_id = null
 })
 
+async function loadProjectTodos() {
+  const pid = formData.value.project_id
+  if (!pid) {
+    projectTodos.value = []
+    return
+  }
+  try {
+    const res = await projectsApi.getTodos(pid, { limit: 500 })
+    projectTodos.value = res.data.todos || []
+  } catch (err) {
+    console.error('Failed to load project todos:', err)
+    projectTodos.value = []
+  }
+}
+
+watch(
+  () => formData.value.project_id,
+  () => {
+    loadProjectTodos()
+  }
+)
+
 onMounted(async () => {
   await Promise.all([store.fetchOrganizations(), store.fetchProjects()])
 })
@@ -212,7 +254,9 @@ async function handleCreate() {
       org_id: formData.value.org_id,
       project_id: formData.value.project_id,
       content: formData.value.content,
-      attendees: formData.value.presents?.trim() || null
+      attendees: formData.value.presents?.trim() || null,
+      past_steps: normalizeStepsForPayload(formData.value.past_steps),
+      next_steps: normalizeStepsForPayload(formData.value.next_steps)
     }
     const created = await store.createItem(payload)
     router.push({ name: 'MeetingEdit', params: { id: created.id } })

@@ -35,6 +35,14 @@ class MeetingRefCreate(BaseModel):
     org_id: Optional[int] = Field(None, description="Associated organization ID")
     attendees: Optional[str] = Field(None, max_length=2048, description="Comma or semicolon separated list of attendees")
     content: str = Field(..., min_length=1, max_length=1000000, description="Meeting note content in markdown")
+    past_steps: Optional[list[MeetingStepSchema]] = Field(
+        None,
+        description="Structured past steps for this meeting only",
+    )
+    next_steps: Optional[list[MeetingStepSchema]] = Field(
+        None,
+        description="Structured next steps for this meeting only",
+    )
 
     @model_validator(mode="after")
     def require_org_or_project(self) -> Self:

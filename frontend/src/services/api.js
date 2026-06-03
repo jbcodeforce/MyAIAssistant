@@ -620,6 +620,57 @@ export function getNotesFileUrl(contextBase, relativePath) {
   return full.replace(/([^:]\/)\/+/g, '$1')
 }
 
+const NOTES_DOC_EXT = /\.(md|markdown)$/i
+
+/**
+ * Resolve a markdown link href to a path relative to the note serve context (e.g. analysis.md).
+ * Supports short paths (./analysis.md) and repo-style (./docs/notes/{org}/notes/analysis.md).
+ *
+ * @param {string} href - Link target from markdown
+ * @param {string} contextBase - e.g. 'notes/best-buy-health/notes'
+ * @returns {string|null} Relative .md path for getNotesFileUrl, or null if not a notes doc link
+ */
+export function resolveNotesDocRelativePath(href, contextBase) {
+  if (!href || typeof href !== 'string' || !contextBase) return null
+  const t = href.trim().replace(/\\/g, '/')
+  if (/^(https?:|mailto:|#)/i.test(t)) return null
+  if (t.startsWith('/')) return null
+
+  let rel = t.replace(/^(\.\/)+/, '')
+  const fullMatch = rel.match(/^docs\/notes\/[^/]+\/notes\/(.+)$/i)
+  if (fullMatch) {
+    rel = fullMatch[1]
+  }
+
+  if (!NOTES_DOC_EXT.test(rel)) return null
+  if (rel.split('/').some((seg) => seg === '..')) return null
+
+  const servePath = resolveNotesImageServePath(contextBase, rel)
+  if (!servePath) return null
+
+  return rel
+}
+
+/**
+ * Fetch markdown text for a note document under docs/notes via the notes-files API.
+ *
+ * @param {string} contextBase - e.g. 'notes/best-buy-health/notes'
+ * @param {string} relativePath - e.g. 'analysis.md'
+ * @returns {Promise<string>}
+ */
+export async function fetchNotesMarkdown(contextBase, relativePath) {
+  const url = getNotesFileUrl(contextBase, relativePath)
+  if (!url || url === relativePath) {
+    throw new Error('Invalid note document path')
+  }
+  const res = await fetch(url)
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.detail || res.statusText || 'Failed to load document')
+  }
+  return res.text()
+}
+
 export const meetingRefsApi = {
   list(params = {}) {
     return api.get('/meeting-refs/', { params })

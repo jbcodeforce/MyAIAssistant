@@ -102,7 +102,7 @@
         </div>
       </div>
 
-      <div class="sections-grid">
+      <div class="sections-grid" @click="handleNotesDocClick">
         <div class="section-card" v-if="organization.stakeholders">
           <div class="section-header">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -164,14 +164,29 @@
         </router-link>
       </div>
     </div>
+
+    <NotesDocumentModal
+      :show="showDocModal"
+      :title="docModalTitle"
+      :html="docModalHtml"
+      :loading="docModalLoading"
+      :error="docModalError"
+      @close="closeDocModal"
+      @content-click="onDocModalContentClick"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
+import {
+  renderMarkdownForNotesWithDocLinks,
+  organizationNotesContextBase
+} from '@/utils/markdownNotes'
+import { useNotesDocLinkModal } from '@/composables/useNotesDocLinkModal'
+import NotesDocumentModal from '@/components/NotesDocumentModal.vue'
 
 const route = useRoute()
 
@@ -182,11 +197,37 @@ const exporting = ref(false)
 const exportMessage = ref('')
 const exportError = ref(false)
 
-// Computed for rendered markdown (view mode)
-const renderedStakeholders = computed(() => marked(organization.value?.stakeholders || ''))
-const renderedTeam = computed(() => marked(organization.value?.team || ''))
-const renderedDescription = computed(() => marked(organization.value?.description || ''))
-const renderedProducts = computed(() => marked(organization.value?.related_products || ''))
+const notesContextBase = computed(() =>
+  organization.value?.name ? organizationNotesContextBase(organization.value.name) : ''
+)
+
+const {
+  showDocModal,
+  docModalTitle,
+  docModalHtml,
+  docModalLoading,
+  docModalError,
+  closeDocModal,
+  onMarkdownClick,
+  onDocModalContentClick
+} = useNotesDocLinkModal()
+
+function handleNotesDocClick(event) {
+  onMarkdownClick(event, notesContextBase.value)
+}
+
+const renderedStakeholders = computed(() =>
+  renderMarkdownForNotesWithDocLinks(organization.value?.stakeholders || '', notesContextBase.value)
+)
+const renderedTeam = computed(() =>
+  renderMarkdownForNotesWithDocLinks(organization.value?.team || '', notesContextBase.value)
+)
+const renderedDescription = computed(() =>
+  renderMarkdownForNotesWithDocLinks(organization.value?.description || '', notesContextBase.value)
+)
+const renderedProducts = computed(() =>
+  renderMarkdownForNotesWithDocLinks(organization.value?.related_products || '', notesContextBase.value)
+)
 
 const hasContent = computed(() => {
   if (!organization.value) return false

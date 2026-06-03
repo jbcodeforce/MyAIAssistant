@@ -13,6 +13,8 @@ async def create_meeting_ref(
     project_id: Optional[int] = None,
     org_id: Optional[int] = None,
     attendees: Optional[str] = None,
+    past_steps: Optional[list[dict[str, Any]]] = None,
+    next_steps: Optional[list[dict[str, Any]]] = None,
 ) -> Meeting:
     """Create a new meeting reference."""
     db_meeting_ref = Meeting(
@@ -21,6 +23,8 @@ async def create_meeting_ref(
         project_id=project_id,
         org_id=org_id,
         attendees=attendees,
+        past_steps=past_steps,
+        next_steps=next_steps,
     )
     db.add(db_meeting_ref)
     await db.commit()
