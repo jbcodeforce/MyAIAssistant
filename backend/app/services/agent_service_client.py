@@ -1,17 +1,26 @@
-"""HTTP client for the agent-service. Used by backend for RAG index, meeting extract, and task tag. Chat and RAG search/stats/delete are called directly by the frontend when agent_service_url is set."""
+"""HTTP client for the agent-service. Used by backend for RAG index, meeting extract, and task tag."""
 
 import logging
 from typing import Any
 
 import httpx
+from fastapi import HTTPException
 
 from app.core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
 
+def require_agent_service_url() -> str:
+    """Return configured agent_service_url or raise 503."""
+    url = (get_settings().agent_service_url or "").strip()
+    if not url:
+        raise HTTPException(status_code=503, detail="agent_service_url is not configured")
+    return url.rstrip("/")
+
+
 def _base_url() -> str:
-    return get_settings().agent_service_url.rstrip("/")
+    return require_agent_service_url()
 
 
 async def rag_index(

@@ -1,6 +1,0 @@
-name: KBAgent
-description: A knowledge based agent to support Q&A over the knowledge base
-class: agent_core.agents.kb_agent.KBAgent
-model: lfm2.5-1.2b-thinking-mlx-8bit
-temperature: 0.2
-max_tokens: 4096

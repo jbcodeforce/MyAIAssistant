@@ -13,11 +13,10 @@ The product goal is to connect **tasks**, **customer/org context**, and **knowle
 | Frontend | Vue 3 + Vite + Pinia (port 3000 dev) |
 | Backend | FastAPI + SQLAlchemy async (port 8000) |
 | Agent microservice | Agno AgentOS (port 8100) |
-| Legacy agent library | `agent_core` (YAML agents, ChromaDB RAG) |
 | CLI | `ai_assist_cli` (Typer + Agno tools) |
 | MCP | `mcp_todos` (todo CRUD for Cursor) |
 | Database | SQLite (default) or PostgreSQL per workspace |
-| Vector store | ChromaDB (backend / agent_core) or LanceDB (agent_service) |
+| Vector store | LanceDB (agent_service) |
 
 Published docs: [MyAIAssistant documentation](https://jbcodeforce.github.io/MyAIAssistant). In-repo detail lives under `docs/`.
 
@@ -27,8 +26,7 @@ Published docs: [MyAIAssistant documentation](https://jbcodeforce.github.io/MyAI
 MyAIAssistant/
 ├── backend/           # FastAPI app: todos, orgs, projects, meetings, knowledge, RAG proxy
 ├── frontend/          # Vue SPA; calls backend and (when configured) agent_service directly
-├── agent_service/     # Agno + AgentOS microservice — primary direction for new AI work
-├── agent_core/        # Config-driven agent framework (QueryClassifier, AgentRouter, RAG)
+├── agent_service/     # Agno + AgentOS microservice — all AI features
 ├── ai_assist_cli/     # Workspace CLI; Agno agents for notes, org reports, etc.
 ├── mcp_todos/         # MCP server exposing todo APIs to Cursor
 ├── workspaces/        # Isolated deployment configs (DB, Chroma, ports)
@@ -88,7 +86,6 @@ cd mcp_todos && uv sync && uv run python -m mcp_todos
 
 ```bash
 cd backend && uv run pytest
-cd agent_core && uv run pytest
 cd agent_service && uv run pytest tests/ut -v
 cd agent_service && uv run pytest tests/it -v   # requires agent_service running
 cd ai_assist_cli && uv run pytest
@@ -117,17 +114,15 @@ When `agent_service_url` is set in backend config, the frontend reads it from `G
 | Projects | `/api/projects` | Linked to orgs, status lifecycle |
 | Meetings | `/api/meeting-refs` | Meeting notes linked to org/project |
 | Knowledge | `/api/knowledge` | Metadata records pointing to markdown/website URIs |
-| RAG | `/api/rag` | Index/search; delegates to agent_service or agent_core |
-| Chat | `/api/chat` | In-process fallback via agent_core when no agent_service |
-| Agents | `/api/agents` | Read-only list from agent_core factory |
+| RAG | `/api/rag` | Index via backend proxy to agent_service; search/stats on agent_service |
+| Chat | `/api/chat` | Health only; frontend uses agent_service for chat |
+| Agents | `/api/myai/agents` | Proxy list from agent_service |
 
 Business logic belongs in services/CRUD, not route handlers. Follow async SQLAlchemy 2.0 patterns throughout.
 
-## AI implementation — two stacks
+## AI implementation — agent_service
 
-This repo is mid-migration. Know which stack you are touching.
-
-### 1. `agent_service` (Agno + AgentOS) — preferred for new work
+All LLM, RAG, extract, and tag features run in `agent_service` (Agno + AgentOS). The backend proxies RAG index (after loading document content), meeting extract, and task tagging.
 
 Location: `agent_service/agent_service/`
 
@@ -152,22 +147,9 @@ Key env vars:
 | `AGENT_CONFIG_DIR` | package `agents/config` | YAML agent definitions |
 | `CORS_ORIGINS` | localhost:3000 | Required for frontend-direct mode |
 
-### 2. `agent_core` — legacy in-process framework
+### `ai_assist_cli` — Agno at the CLI boundary
 
-Location: `agent_core/agent_core/`
-
-Marked **DEPRECATED** in its README but still wired into backend chat/RAG fallback and `/api/agents`.
-
-- **AgentFactory** + YAML under `agents/config/` (QueryClassifier, GeneralAgent, CodeAgent, TaskAgent, …).
-- **AgentRouter** classifies intent → routes to specialized agent.
-- **RAGService** + ChromaDB + sentence-transformers embeddings.
-- **Providers**: HuggingFace InferenceClient, Ollama, MLX adapters.
-
-Do not extend agent_core for major new features unless explicitly maintaining the fallback path. Port patterns to `agent_service` instead.
-
-### 3. `ai_assist_cli` — Agno at the CLI boundary
-
-Standalone Typer CLI using Agno agents (note parsing, org challenges report). Depends on published packages, not `agent_core`. Uses SQLAlchemy sync URLs for read-only DB tools against the workspace database.
+Standalone Typer CLI using Agno agents (note parsing, org challenges report). Uses SQLAlchemy sync URLs for read-only DB tools against the workspace database.
 
 ## Relationship to km-agent
 
@@ -227,16 +209,15 @@ Backend settings (highest first):
 3. `CONFIG_FILE` YAML (workspace)
 4. `backend/app/config.yaml` defaults
 
-Important backend keys: `database_url`, `chroma_persist_directory`, `agent_service_url`, `agent_config_dir`, `llm_*`.
+Important backend keys: `database_url`, `agent_service_url`, `notes_root`, `llm_*`.
 
 ## Gotchas
 
-- **Two agent factories**: `agent_core.agents.agent_factory` vs `agent_service.agents.agent_factory` — different classes, configs, and lifecycles.
-- **Frontend dual mode**: Check `agent_service_url` in `/api/config` before assuming chat hits `/api/chat` on the backend.
+- **agent_service_url required**: Backend AI endpoints return 503 if unset; frontend reads URL from `GET /api/config`.
+- **Frontend dual mode**: Chat and RAG search call agent_service directly when `agent_service_url` is set.
 - **DB path vs running server**: SQLite files under `workspaces/*/data/` only reflect UI changes if `CONFIG_FILE` points there and uvicorn cwd resolves relative paths correctly.
 - **Ollama on host**: Docker Compose reaches it via `host.docker.internal:11434`, not a containerized Ollama service.
-- **Embedding dimensions**: Changing embedder model may require re-indexing or wiping vector store (same class of issue as km-agent pgvector migrations).
-- **agent_core package path**: Backend refuses to save agent overrides into `agent_core` package paths; use a workspace `agent_config_dir`.
+- **Embedding dimensions**: Changing embedder model may require re-indexing or wiping LanceDB (`VS_DB_URL`).
 
 ## Cursor rules in this repo
 
@@ -244,9 +225,8 @@ Module-specific rules live in `.cursor/rules/`:
 
 | Rule | Scope |
 | ---- | ----- |
-| `backend.mdc` | FastAPI, SQLAlchemy, agent_core integration |
+| `backend.mdc` | FastAPI, SQLAlchemy, agent_service proxy |
 | `frontend.mdc` | Vue 3, Pinia, API client |
-| `agent_core.mdc` | Legacy agent/RAG library |
 | `ai_assist_cli.mdc` | CLI commands and workspace services |
 | `tdd.mdc` | Test-driven development expectations |
 | `build.mdc` | Checkpoint commits, verification commands |
@@ -259,7 +239,6 @@ Prefer those rules when editing files they glob-match.
 | Topic | Path |
 | ----- | ---- |
 | Agent service overview | `agent_service/README.md` |
-| Agent core architecture | `docs/implementation/agent_core.md` |
 | Agent UI/API | `docs/implementation/agents.md` |
 | Knowledge model | `docs/implementation/knowledge.md` |
 | Deployment / config | `docs/deployment/configuration.md` |
@@ -271,4 +250,3 @@ Prefer those rules when editing files they glob-match.
 
 - Chat architecture docs under `docs/implementation/chat.md` are partly **planned**; runtime behavior follows agent_service + backend proxy code.
 - Not every workspace in `workspaces/` is fully populated in git (some are local-only deployment configs).
-- `agent_core` README says DEPRECATED — treat new AI features as agent_service work unless fixing the in-process fallback.

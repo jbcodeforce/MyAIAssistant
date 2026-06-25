@@ -108,9 +108,8 @@ nav:
       - Knowledge Base: implementation/knowledge.md
       - Meeting Notes: implementation/meetings.md
       - Assets: implementation/assets.md
-      - Agent Core: implementation/agent_core.md
-      - Agent mgt: implementation/agents.md
       - RAG System: implementation/rag.md
+      - Agent mgt: implementation/agents.md
       - Chat: implementation/chat.md
       - Frontend: implementation/frontend.md
       - How-tos: implementation/development_tricks.md

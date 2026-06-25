@@ -377,25 +377,20 @@ async def test_tag_task_not_found(client: AsyncClient):
 
 @pytest.mark.asyncio
 async def test_tag_task_mock_agent(client: AsyncClient):
-    """POST /api/todos/{id}/tag returns tags from agent (mocked to avoid Claude call)."""
+    """POST /api/todos/{id}/tag returns tags from agent-service (mocked)."""
     create_response = await client.post(
         "/api/todos/",
         json={"title": "Task to tag", "description": "Review docs", "status": "Open"},
     )
     todo_id = create_response.json()["id"]
 
-    mock_response = type("R", (), {})()
-    mock_response.message = "Tagged with planning, documentation."
-    mock_response.metadata = {"tags": ["planning", "documentation"]}
-    mock_response.agent_type = "task_tagging"
+    async def fake_tag_task(**kwargs):
+        return {
+            "message": "Tagged with planning, documentation.",
+            "tags": ["planning", "documentation"],
+        }
 
-    mock_agent = AsyncMock()
-    mock_agent.execute = AsyncMock(return_value=mock_response)
-
-    mock_factory = type("F", (), {})()
-    mock_factory.create_agent = lambda name, **kw: mock_agent
-
-    with patch("app.api.todos.get_agent_factory", return_value=mock_factory):
+    with patch("app.api.todos.agent_service_client.tag_task", fake_tag_task):
         response = await client.post(f"/api/todos/{todo_id}/tag")
     assert response.status_code == 200
     data = response.json()

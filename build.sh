@@ -33,9 +33,6 @@ fi
 echo "Building backend image..."
 docker buildx build ${BUILD_ARGS} -t "${IMAGE_PREFIX}-backend:${TAG}" -f backend/Dockerfile backend/
 
-# Cleanup agent_core wheel from backend directory
-rm -f backend/agent_core-*.whl
-
 echo "Building frontend image..."
 mkdocs build
 docker buildx build ${BUILD_ARGS} -t "${IMAGE_PREFIX}-frontend:${TAG}" -f frontend/Dockerfile .

@@ -15,13 +15,11 @@ dependencies = [
     "greenlet>=3.0.0",
     "pyyaml>=6.0.0",
     "httpx>=0.27.0",
-    # Agent core library
-    "agent-core",
     "aiofiles>=25.1.0",
+    "beautifulsoup4>=4.12.0",
+    "markdownify>=0.13.0",
+    "python-multipart>=0.0.9",
 ]
-
-[tool.uv.sources]
-agent-core = { path = "../agent_core", editable = true }
 
 [project.optional-dependencies]
 dev = [

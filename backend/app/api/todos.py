@@ -10,8 +10,6 @@ from app.db.database import get_db
 from app.db import crud
 from app.api.schemas.todo import TodoCreate, TodoUpdate, TodoResponse, TodoListResponse
 from app.api.schemas.task_plan import TaskPlanCreate, TaskPlanUpdate, TaskPlanResponse
-from app.core.config import get_settings, resolve_agent_config_dir
-from app.tagging.service import BackendTaskTaggingToolProvider
 from app.services import agent_service_client
 
 
@@ -143,44 +141,27 @@ async def tag_task(
     db: AsyncSession = Depends(get_db),
 ):
     """
-    Tag this todo. When AGENT_SERVICE_URL is set, uses agent-service for suggestions and backend applies tags.
+    Tag this todo via agent-service; backend applies suggested tags to the todo.
     """
     todo = await crud.get_todo(db=db, todo_id=todo_id)
     if not todo:
         raise HTTPException(status_code=404, detail="Todo not found")
-    if get_settings().agent_service_url:
-        try:
-            data = await agent_service_client.tag_task(
-                task_title=todo.title,
-                task_description=todo.description,
-            )
-        except httpx.HTTPStatusError as e:
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        tags = data.get("tags") or []
-        if tags:
-            tags_str = ",".join(str(t).strip() for t in tags if str(t).strip())
-            await crud.update_todo(db=db, todo_id=todo_id, todo_update=TodoUpdate(tags=tags_str or None))
-        return TagTaskResponse(
-            message=data.get("message", ""),
-            tags=tags,
-            agent_type="task_tagging",
+    agent_service_client.require_agent_service_url()
+    try:
+        data = await agent_service_client.tag_task(
+            task_title=todo.title,
+            task_description=todo.description,
         )
-    from agent_core.agents.agent_factory import get_agent_factory
-    from agent_core.agents.base_agent import AgentInput
-    settings = get_settings()
-    config_dir = resolve_agent_config_dir(settings.agent_config_dir)
-    factory = get_agent_factory(config_dir=config_dir)
-    provider = BackendTaskTaggingToolProvider(db=db)
-    agent = factory.create_agent("TaskTaggingAgent", tool_provider=provider)
-    response = await agent.execute(AgentInput(
-        query="Tag this task based on its title and description. Use get_available_tags first, then update_task with the chosen tags.",
-        context={"todo_id": todo_id, "task_title": todo.title, "task_description": todo.description or ""},
-    ))
-    tags = response.metadata.get("tags") or []
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+    tags = data.get("tags") or []
+    if tags:
+        tags_str = ",".join(str(t).strip() for t in tags if str(t).strip())
+        await crud.update_todo(db=db, todo_id=todo_id, todo_update=TodoUpdate(tags=tags_str or None))
     return TagTaskResponse(
-        message=response.message,
+        message=data.get("message", ""),
         tags=tags,
-        agent_type=response.agent_type or "task_tagging",
+        agent_type="task_tagging",
     )
 
 

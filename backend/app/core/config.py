@@ -108,10 +108,7 @@ class Settings(BaseSettings):
     # Meeting and org note files (meeting markdown under {org}/meetings/...; org strategy under {org}/notes/...)
     notes_root: str = "docs/notes"  # Root folder relative to CWD; default docs/notes
 
-    # Agent configuration directory
-    agent_config_dir: Optional[str] = None  # Path to agent config directory (defaults to agent_core/agent_core/agents/config)
-
-    # Agent service (Agno/AgentOS microservice). When set, chat/knowledge/rag are proxied to this URL.
+    # Agent service (Agno/AgentOS microservice). Required for chat, RAG, extract, and tag.
     agent_service_url: Optional[str] = "http://localhost:8100"  # e.g. http://localhost:8100
 
     # Optional: user identity for UI and future AI tools (e.g. send email)
@@ -253,28 +250,6 @@ def setup_logging() -> None:
     logger.info(f"Logging to file: {log_path.resolve()}")
 
 
-def resolve_agent_config_dir(agent_config_dir: Optional[str]) -> Path:
-    """
-    Resolve the agent configuration directory path.
-    
-    Args:
-        agent_config_dir: Optional path from settings. If None, uses default.
-        
-    Returns:
-        Resolved absolute path as string.
-    """
-    if agent_config_dir is None:
-        # Default to current hardcoded path relative to workspace root
-        # This assumes the workspace root is the current working directory
-        return Path.cwd() / "config"
-    
-    path = Path(agent_config_dir)
-    if path.is_absolute():
-        return path
-    else:
-        # Resolve relative to workspace root (current working directory)
-        return Path.cwd() / path
-
 def get_config_info() -> dict[str, Any]:
     """
     Get information about the current configuration for debugging.
@@ -306,7 +281,6 @@ def get_config_info() -> dict[str, Any]:
         "app_version": settings.app_version,
         "agent_service_url": settings.agent_service_url,
         "notes_root": settings.notes_root,
-        "agent_config_dir": settings.agent_config_dir,
         "user_name": settings.user_name,
         "email": settings.email,
         "config_file": _loaded_config_file,

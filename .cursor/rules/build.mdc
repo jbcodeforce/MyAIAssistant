@@ -56,7 +56,7 @@ cd backend && uv sync && uv run pytest
 cd frontend && npm install && npm run build
 
 # Agent Core
-cd agent_core && uv sync && uv run pytest
+cd agent_service && uv sync && uv run pytest tests/ut
 ```
 
 ## Pre-Commit Checklist

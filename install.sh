@@ -260,16 +260,11 @@ install_cli() {
     fi
     
     # Download CLI package
-    print_info "Building agent_core..."
-    cd $INSTALL_DIR/code/agent_core
-    uv build
     print_info "Building ai_assist_cli..."
-    cd ../ai_assist_cli
+    cd $INSTALL_DIR/code/ai_assist_cli
     uv build
     print_info "Installing ai_assist_cli..."
-    uv tool install ./dist/ai_assist_cli-0.1.0-py3-none-any.whl \
-    --with ../agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
-    --force
+    uv tool install ./dist/ai_assist_cli-0.1.0-py3-none-any.whl --force
 
     
     if command -v ai_assist &> /dev/null; then

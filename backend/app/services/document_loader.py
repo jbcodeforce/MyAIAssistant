@@ -1,6 +1,5 @@
 """Document loader for parsing knowledge base sources."""
 
-from ast import List
 import hashlib
 import re
 from pathlib import Path

@@ -7,7 +7,7 @@ on:
     paths:
       - 'backend/**'
       - 'frontend/**'
-      - 'agent_core/**'
+      - 'agent_service/**'
       - '.github/workflows/docker-publish.yaml'
   workflow_dispatch:
     inputs:
@@ -36,12 +36,6 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@v4
-
-      - name: Build agent_core wheel
-        working-directory: agent_core
-        run: |
-          uv build --wheel
-          cp dist/agent_core-*.whl ../backend/
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -89,7 +83,4 @@ jobs:
             ${{ env.IMAGE_PREFIX }}-frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-      - name: Cleanup
-        run: rm -f backend/agent_core-*.whl
 

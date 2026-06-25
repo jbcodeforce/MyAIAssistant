@@ -165,4 +165,4 @@ async for message in query(prompt="...", options=options):
 ## Additional resources
 
 - For longer examples (e.g. api_request tool, multi-tool client), see [reference.md](reference.md).
-- For project-specific prompts, see [agent_core/agent_core/agents/meta-prompts/claude-agent-sdk.md](agent_core/agent_core/agents/meta-prompts/claude-agent-sdk.md).
+- For project-specific prompts, see `agent_service/agent_service/agents/config/` and [AGENT.md](../../../AGENT.md).

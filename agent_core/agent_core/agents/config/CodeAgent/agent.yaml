@@ -1,6 +1,0 @@
-name: CodeAgent
-description: Code assistance agent for programming questions, code review, debugging, and technical implementation guidanc
-temperature: 0.3
-max_tokens: 4096
-class: agent_core.agents.base_agent.BaseAgent
-model: qwen3-coder-30b-a3b-instruct-mlx-4bit

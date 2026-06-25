@@ -188,16 +188,11 @@ Read-only UI to view configured agents (name, description, model, temperature, m
 
 [Learn more about Agent Management](agents.md)
 
-### Agent Core
+### Agent Service
 
-Config-driven framework for building agentic AI applications with unified LLM integration.
+Separate FastAPI microservice (Agno + AgentOS) that runs LLM chat, RAG vector search, meeting extract, and task tagging. The backend proxies index requests and forwards AI workloads when `agent_service_url` is set.
 
-- YAML-based agent configuration
-- Intelligent query routing and classification
-- RAG integration for knowledge retrieval
-- Extensible agent architecture
-
-[Learn more about Agent Core](agent_core.md)
+See `agent_service/README.md` and [AGENT.md](../../AGENT.md).
 
 ### Reporting
 

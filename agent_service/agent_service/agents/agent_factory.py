@@ -169,7 +169,7 @@ class AgentFactory():
         
         Args:
             fully_qualified_name: Full module path and class name
-                                 (e.g., 'agent_core.agents.base_agent.BaseAgent')
+                                 (e.g., 'agent_service.agents.base_ai_agent.AIAgent')
             
         Returns:
             The imported class

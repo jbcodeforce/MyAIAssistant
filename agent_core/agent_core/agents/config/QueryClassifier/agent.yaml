@@ -1,6 +1,0 @@
-name: QueryClassifier
-description: A query classifier agent that classifies user queries for future routing to the appropriate agent.
-class: agent_core.agents.query_classifier.QueryClassifier
-model: lfm2.5-1.2b-thinking-mlx-8bit
-temperature: 0.1
-max_tokens: 2048

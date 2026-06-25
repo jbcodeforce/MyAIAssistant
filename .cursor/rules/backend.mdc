@@ -18,7 +18,7 @@ A FastAPI backend providing REST APIs for task management, knowledge base operat
 | ORM | SQLAlchemy | >=2.0.0 (async) |
 | Database | PostgreSQL | via asyncpg |
 | Validation | Pydantic | >=2.0.0 |
-| LLM/RAG | agent-core | local package |
+| LLM/RAG | agent_service (HTTP) | proxied via httpx |
 | HTTP Client | httpx | >=0.27.0 |
 | Package Manager | uv | - |
 | Testing | pytest + pytest-asyncio | >=8.0.0 |
@@ -54,42 +54,35 @@ backend/
 │   │       ├── todo.py
 │   │       ├── knowledge.py
 │   │       └── ...
-│   └── chat/
-│       └── service.py       # Chat service using agent_core
+│   ├── services/
+│   │   ├── agent_service_client.py  # HTTP client for agent-service
+│   │   └── document_loader.py       # Load knowledge URIs for RAG index proxy
+│   └── api/
+│       └── ...
 ├── tests/
-│   ├── conftest.py          # Test fixtures, DB/RAG overrides
-│   └── ut/                   # Unit tests
+│   ├── conftest.py          # Test fixtures, DB overrides, mock agent_service
+│   └── ut/
 └── pyproject.toml
 ```
 
-## Integration with agent_core
+## Integration with agent_service
 
-The backend uses the `agent_core` library for LLM integration. RAG service, and agent routing:
+The backend proxies AI work to the `agent_service` microservice when `agent_service_url` is set (required for chat, RAG index, meeting extract, task tagging):
 
 ```python
-# LLM Client
-from agent_core import LLMClient, LLMConfig, Message as LLMMessage
+from app.services import agent_service_client
 
-config = LLMConfig(
-    provider=settings.llm_provider,
-    model=settings.llm_model,
-    api_key=settings.llm_api_key,
-    base_url=settings.llm_base_url
+agent_service_client.require_agent_service_url()
+result = await agent_service_client.rag_index(
+    knowledge_id=1,
+    title="Doc",
+    uri="file:///path/doc.md",
+    document_type="markdown",
+    content=loaded_text,
 )
-client = LLMClient(config)
-
-# RAG Service
-from agent_core.services.rag.service import RAGService, get_rag_service
-
-rag = get_rag_service()
-results = await rag.search(query, n_results=5)
-
-# Agent Routing
-from agent_core.agents.agent_router import AgentRouter, get_agent_router
-
-router = get_agent_router()
-response = await router.route(query, conversation_history)
 ```
+
+Frontend calls agent_service directly for chat and RAG search/stats when `GET /api/config` returns `agent_service_url`.
 
 ## Core Patterns
 
@@ -160,21 +153,9 @@ from app.core.config import get_settings
 settings = get_settings()
 ```
 
-### Chat Service with Agent Routing
+### Chat and RAG (agent_service)
 
-```python
-from app.chat.service import get_chat_service
-
-chat = get_chat_service()
-
-# Direct chat (no routing)
-response = await chat.chat_with_rag(user_message, history)
-
-# With agent routing (intelligent query handling)
-response = await chat.route_query(user_message, history)
-print(response.intent)      # QueryIntent value
-print(response.agent_type)  # Which agent handled it
-```
+Chat endpoints on the backend return 503; the frontend calls `agent_service_url` from `GET /api/config`. RAG index loads document content in the backend and proxies to agent-service.
 
 ## API Conventions
 
@@ -238,4 +219,4 @@ curl http://localhost:8000/debug/config
 6. **Keep routes thin** - business logic in services, not route handlers
 7. **Use type hints everywhere** - enables IDE support and validation
 8. **Log important operations** - use the logging module, not print
-9. **Use agent_core** - prefer agent_core types and services over duplicating logic
+9. **Use agent_service** - proxy AI via `agent_service_client`; do not embed LLM logic in the backend

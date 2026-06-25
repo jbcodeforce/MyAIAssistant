@@ -17,15 +17,14 @@ Usage:
 import argparse
 import asyncio
 import logging
+import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
 import httpx
 from pydantic import BaseModel, Field
-
-from agent_core.agents.agent_config import AgentConfig
-from agent_core.agents._llm_default import DefaultHFAdapter
 
 # Configure logging
 logging.basicConfig(
@@ -107,8 +106,18 @@ class ExtractedData(BaseModel):
 
 
 def _use_v1_endpoint(url: str) -> bool:
-    """True if URL ends with /v1 (use HF InferenceClient); else use direct /chat/completions."""
+    """True if URL ends with /v1 (OpenAI-compatible chat completions)."""
     return url.rstrip("/").endswith("/v1")
+
+
+@dataclass
+class _LLMSettings:
+    base_url: str
+    model: str
+    temperature: float
+    max_tokens: int
+    api_key: str = "no-key"
+    timeout: float = 180.0
 
 
 class OrganizationNotesImporter:
@@ -123,24 +132,17 @@ class OrganizationNotesImporter:
     ):
         self.llm_base_url = llm_base_url.rstrip("/")
         self._use_v1 = _use_v1_endpoint(llm_base_url)
-        if self._use_v1:
-            base_url = self.llm_base_url if self.llm_base_url.endswith("/v1") else f"{self.llm_base_url}/v1"
-            self._llm_config = AgentConfig(
-                base_url=base_url,
-                model=model,
-                temperature=temperature,
-                max_tokens=4096,
-                timeout=180.0,
-            )
-            self._llm_client = DefaultHFAdapter()
-        else:
-            self._llm_config = AgentConfig(
-                base_url=self.llm_base_url,
-                model=model,
-                temperature=temperature,
-                max_tokens=4096,
-                timeout=180.0,
-            )
+        base_url = self.llm_base_url if self.llm_base_url.endswith("/v1") else f"{self.llm_base_url}/v1"
+        if not self._use_v1:
+            base_url = self.llm_base_url
+        self._llm_settings = _LLMSettings(
+            base_url=base_url,
+            model=model,
+            temperature=temperature,
+            max_tokens=4096,
+            api_key=os.getenv("LLM_API_KEY", "no-key"),
+            timeout=180.0,
+        )
         self.backend_base_url = backend_base_url.rstrip("/")
         self.model = model
         self._temperature = temperature
@@ -168,7 +170,7 @@ class OrganizationNotesImporter:
                 "messages": messages,
                 "stream": False,
                 "temperature": self._temperature,
-                "max_tokens": self._llm_config.max_tokens,
+                "max_tokens": self._llm_settings.max_tokens,
             }
             if fmt is not None:
                 b["response_format"] = fmt
@@ -190,15 +192,34 @@ class OrganizationNotesImporter:
             return (data["message"].get("content") if isinstance(data["message"], dict) else str(data["message"])) or ""
         raise ValueError(f"Unexpected response shape: {list(data.keys())}")
 
+    async def _call_llm_v1(self, messages: list[dict], response_format: Optional[dict] = None) -> str:
+        """Call OpenAI-compatible /v1/chat/completions endpoint."""
+        url = f"{self._llm_settings.base_url.rstrip('/')}/chat/completions"
+        body: dict = {
+            "model": self._llm_settings.model,
+            "messages": messages,
+            "stream": False,
+            "temperature": self._llm_settings.temperature,
+            "max_tokens": self._llm_settings.max_tokens,
+        }
+        if response_format is not None:
+            body["response_format"] = response_format
+        headers = {"Authorization": f"Bearer {self._llm_settings.api_key}"}
+        async with httpx.AsyncClient(timeout=self._llm_settings.timeout) as client:
+            resp = await client.post(url, json=body, headers=headers)
+            if resp.status_code == 500 and response_format is not None:
+                body.pop("response_format", None)
+                resp = await client.post(url, json=body, headers=headers)
+            resp.raise_for_status()
+            data = resp.json()
+        if "choices" in data and data["choices"]:
+            return (data["choices"][0].get("message") or {}).get("content") or ""
+        raise ValueError(f"Unexpected response shape: {list(data.keys())}")
+
     async def _call_llm(self, messages: list[dict], response_format: Optional[dict] = None) -> str:
-        """Call LLM: agent_core DefaultHFAdapter when URL has /v1, else direct /chat/completions."""
+        """Call LLM via OpenAI-compatible /v1 or direct /chat/completions."""
         if self._use_v1:
-            config = self._llm_config
-            if response_format is not None:
-                config = self._llm_config.model_copy(update={"response_format": response_format})
-            response = await self._llm_client.chat_async(messages=messages, config=config)
-            print("response", response)
-            return response.content or ""
+            return await self._call_llm_v1(messages, response_format)
         return await self._call_llm_direct(messages, response_format)
 
     async def _get_organization_by_name(self, client: httpx.AsyncClient, name: str) -> Optional[dict]:

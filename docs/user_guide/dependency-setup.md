@@ -9,17 +9,12 @@ The dependent libraries and tools necessary can be installed with the `.install.
 
 ## Step 1: Install the ai_assist CLI
 
-From the project root, build and install the CLI (and its dependency `agent_core`):
+From the project root, build and install the CLI:
 
 ```bash
-cd agent_core
+cd ai_assist_cli
 uv build
-
-cd ../ai_assist_cli
-uv build
-uv tool install ./dist/ai_assist_cli-0.1.0-py3-none-any.whl \
-  --with ../agent_core/dist/agent_core-0.1.0-py3-none-any.whl \
-  --force
+uv tool install ./dist/ai_assist_cli-0.1.0-py3-none-any.whl --force
 ```
 
 Verify the installation:

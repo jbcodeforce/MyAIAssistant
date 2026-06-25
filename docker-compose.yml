@@ -10,8 +10,7 @@ services:
       - "8000:8000"
     environment:
       - CONFIG_FILE=/workspace/config.yaml
-      # Optional: proxy chat, RAG, knowledge, extract, tag to agent-service
-      # - AGENT_SERVICE_URL=http://agent-service:8100
+      - AGENT_SERVICE_URL=http://agent-service:8100
     volumes:
       - ./data:/app/data
     restart: unless-stopped

@@ -61,8 +61,8 @@ def create_app() -> FastAPI:
     # Include routers
     application.include_router(todos_router, prefix="/api")
     application.include_router(knowledge_router, prefix="/api")
-    #application.include_router(rag_router, prefix="/api")
-    #application.include_router(chat_router, prefix="/api")
+    application.include_router(rag_router, prefix="/api")
+    application.include_router(chat_router, prefix="/api")
     application.include_router(organizations_router, prefix="/api")
     application.include_router(projects_router, prefix="/api")
     application.include_router(metrics_router, prefix="/api")

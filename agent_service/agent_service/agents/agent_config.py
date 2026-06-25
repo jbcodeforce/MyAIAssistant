@@ -102,7 +102,7 @@ class AgentConfig(BaseModel):
         return cls(
             name=data.get('name', yaml_path.parent.name),
             description=data.get('description', 'A general purpose agent.'),
-            agent_class=data.get('agent_class', 'agent_core.agents.base_agent.BaseAgent'),  # None if not specified, resolved by _resolve_agent_class
+            agent_class=data.get('agent_class', data.get('class', 'agent_service.agents.base_ai_agent.AIAgent')),
             model=data.get('model', get_llm_model()),
             api_key=data.get('api_key'),
             base_url=base_url,

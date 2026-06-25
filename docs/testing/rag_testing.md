@@ -269,4 +269,4 @@ After successful testing:
 
 - [RAG System Documentation](../implementation/rag.md)
 - [Knowledge Base Documentation](../implementation/knowledge.md)
-- [Agent Core Documentation](../implementation/agent_core.md)
+- [Agent Service](../../agent_service/README.md)

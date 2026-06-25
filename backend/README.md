@@ -70,11 +70,9 @@ curl http://localhost:8000/debug/config
 | Setting | Description | Default |
 | ------- | ----------- | ------- |
 | `database_url` | PostgreSQL connection string | `postgresql+asyncpg://postgres:postgres@localhost:5432/myaiassistant` |
-| `chroma_persist_directory` | ChromaDB storage path | `./data/chroma` |
-| `chroma_collection_name` | Vector store collection name | `knowledge_base` |
-| `AGENT_SERVICE_URL` | Agent microservice base URL. When set, the frontend calls it directly for chat and RAG search/stats/delete; backend still proxies RAG index, meeting extract, and task tag. | unset (in-process) |
+| `agent_service_url` | Agent microservice base URL (required for AI). Frontend calls it for chat and RAG search/stats/delete; backend proxies RAG index, meeting extract, and task tag. | `http://localhost:8100` (see `app/config.yaml`) |
 
-When `AGENT_SERVICE_URL` is set (e.g. `http://localhost:8100`), the frontend fetches `GET /api/config` and then calls the agent-service directly for chat and RAG search/stats/delete (CORS must be enabled on the agent-service). The backend continues to proxy RAG index/index-all (it loads document content and sends it to the agent-service), meeting extract, and task tagging. See `agent_service/README.md` for running the agent-service and CORS.
+When `agent_service_url` is set, the frontend fetches `GET /api/config` and calls agent_service for chat and RAG search/stats/delete (CORS must be enabled on agent_service). The backend proxies RAG index/index-all (loads document content first), meeting extract, and task tagging. See `agent_service/README.md`.
 
 Note: For Docker Compose deployments, use `postgres` as the hostname (the service name).
 

@@ -1,5 +1,4 @@
 import logging
-import json
 from typing import Optional
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -19,21 +18,10 @@ from app.api.schemas.meeting_ref import (
 )
 from app.services.meeting_notes import MeetingNotesService, get_meeting_notes_service
 from app.api.schemas.project import ProjectEntity, Step
-from app.core.config import get_settings, resolve_agent_config_dir
 from app.services import agent_service_client
 from app.services.organization_notes import read_description_file
 
 logger = logging.getLogger(__name__)
-
-try:
-    from agent_core.agents.agent_factory import AgentFactory
-    from agent_core.agents.base_agent import AgentInput
-    from agent_core.agents.meeting_agent import MeetingAgentResponse
-except ImportError:
-    AgentFactory = None
-    AgentInput = None
-    MeetingAgentResponse = None
-
 
 router = APIRouter(prefix="/meeting-refs", tags=["meeting-refs"])
 
@@ -259,7 +247,7 @@ async def extract_meeting_info(
     notes_service: MeetingNotesService = Depends(get_notes_service),
 ):
     """
-    Extract structured information from a meeting note. When AGENT_SERVICE_URL is set, uses agent-service.
+    Extract structured information from a meeting note via agent-service.
     """
     meeting_ref = await crud.get_meeting_ref(db=db, meeting_ref_id=meeting_ref_id)
     if not meeting_ref:
@@ -280,114 +268,64 @@ async def extract_meeting_info(
         if project:
             project_description = project.description or ""
 
-    if get_settings().agent_service_url:
-        try:
-            data = await agent_service_client.extract_meeting(
-                content=content,
-                organization=org_description or None,
-                project=project_description or None,
-                attendees=meeting_ref.attendees,
-            )
-        except httpx.HTTPStatusError as e:
-            logger.error("Agent service extract failed: %s", e.response.text)
-            raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
-        next_steps = data.get("next_steps") or []
-        key_points = data.get("key_points") or []
-        attendees_list = data.get("attendees") or []
-        cleaned_notes = data.get("cleaned_notes", "")
-        attendees_str = ""
-        for person in attendees_list:
-            name = person.get("name", str(person)) if isinstance(person, dict) else str(person)
-            last_met = person.get("last_met_date") if isinstance(person, dict) else None
-            logger.info("Creating person: %s", name)
-            await crud.create_person(
-                db=db,
-                name=name,
-                last_met_date=last_met or datetime.now().isoformat(),
-            )
-            attendees_str += f"{name}, "
-        if next_steps and meeting_ref.project_id:
-            steps = [
-                Step(what=ns.get("what", ""), who=ns.get("who", "to_be_decided"))
-                for ns in next_steps
-            ]
-            await crud.update_project(
-                db=db,
-                project_id=meeting_ref.project_id,
-                project_update=ProjectEntity(next_steps=steps),
-            )
-        notes_with_sections = cleaned_notes
-        if key_points:
-            notes_with_sections += "\n## Key Points\n" + "\n".join([f"- {kp.get('point', '')}" for kp in key_points]) + "\n"
-        if next_steps:
-            notes_with_sections += "\n## Next Steps\n" + "\n".join([f"- {ns.get('what', '')} (assigned to {ns.get('who', 'to_be_decided')})" for ns in next_steps]) + "\n"
-        await notes_service.update_note(
-            file_ref=meeting_ref.file_ref,
-            content="# Notes updated by AI: " + notes_with_sections + "\n---\n" + "# Original: " + content,
-        )
-        await crud.update_meeting_ref(
-            db=db,
-            meeting_ref_id=meeting_ref_id,
-            project_id=meeting_ref.project_id,
-            org_id=meeting_ref.org_id,
-            attendees=attendees_str,
-            update_attendees=bool(attendees_list),
-        )
-        return MeetingAgentOutputResponse(
-            meeting_ref_id=meeting_ref_id,
-            meeting_id=meeting_ref.meeting_id,
-            attendees=attendees_str,
-            next_steps=[NextStepResponse(what=ns.get("what", ""), who=ns.get("who", "to_be_decided")) for ns in next_steps],
-            key_points=[KeyPointResponse(point=kp.get("point", "")) for kp in key_points],
-            notes=cleaned_notes,
-        )
-
-    settings = get_settings()
-    config_dir = resolve_agent_config_dir(settings.agent_config_dir)
-    factory = AgentFactory(config_dir=config_dir)
-    agent = factory.create_agent("MeetingAgent")
-    context = {"organization": org_description, "project": project_description, "attendees": meeting_ref.attendees}
+    agent_service_client.require_agent_service_url()
     try:
-        input_data = AgentInput(query=content, context=context)
-        agent_response = await agent.execute(input_data=input_data)
-    except Exception as e:
-        logger.error("MeetingAgent execution failed: %s", e)
-        raise HTTPException(status_code=500, detail=f"Agent execution failed: {str(e)}")
-    logger.info("Agent response: %s", json.dumps(agent_response.__dict__, indent=2, default=str))
-    if agent_response.key_points:
-        agent_response.cleaned_notes += "\n## Key Points\n" + "\n".join(f"- {kp.point}" for kp in agent_response.key_points) + "\n"
-    if agent_response.next_steps:
-        agent_response.cleaned_notes += "\n## Next Steps\n" + "\n".join(f"- {ns.what} (assigned to {ns.who})" for ns in agent_response.next_steps) + "\n"
-        steps = [Step(what=ns.what, who=ns.who) for ns in agent_response.next_steps]
-        await crud.update_project(db=db, project_id=meeting_ref.project_id, project_update=ProjectEntity(next_steps=steps))
+        data = await agent_service_client.extract_meeting(
+            content=content,
+            organization=org_description or None,
+            project=project_description or None,
+            attendees=meeting_ref.attendees,
+        )
+    except httpx.HTTPStatusError as e:
+        logger.error("Agent service extract failed: %s", e.response.text)
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+    next_steps = data.get("next_steps") or []
+    key_points = data.get("key_points") or []
+    attendees_list = data.get("attendees") or []
+    cleaned_notes = data.get("cleaned_notes", "")
+    attendees_str = ""
+    for person in attendees_list:
+        name = person.get("name", str(person)) if isinstance(person, dict) else str(person)
+        last_met = person.get("last_met_date") if isinstance(person, dict) else None
+        logger.info("Creating person: %s", name)
+        await crud.create_person(
+            db=db,
+            name=name,
+            last_met_date=last_met or datetime.now().isoformat(),
+        )
+        attendees_str += f"{name}, "
+    if next_steps and meeting_ref.project_id:
+        steps = [
+            Step(what=ns.get("what", ""), who=ns.get("who", "to_be_decided"))
+            for ns in next_steps
+        ]
+        await crud.update_project(
+            db=db,
+            project_id=meeting_ref.project_id,
+            project_update=ProjectEntity(next_steps=steps),
+        )
+    notes_with_sections = cleaned_notes
+    if key_points:
+        notes_with_sections += "\n## Key Points\n" + "\n".join([f"- {kp.get('point', '')}" for kp in key_points]) + "\n"
+    if next_steps:
+        notes_with_sections += "\n## Next Steps\n" + "\n".join([f"- {ns.get('what', '')} (assigned to {ns.get('who', 'to_be_decided')})" for ns in next_steps]) + "\n"
     await notes_service.update_note(
         file_ref=meeting_ref.file_ref,
-        content="# Notes updated by AI: " + agent_response.cleaned_notes + "\n---\n" + "# Original: " + content,
+        content="# Notes updated by AI: " + notes_with_sections + "\n---\n" + "# Original: " + content,
     )
-    attendees_str = ""
-    if agent_response.attendees:
-        for person in agent_response.attendees:
-            logger.info("Creating person: %s", person.name)
-            await crud.create_person(
-                db=db,
-                name=person.name,
-                last_met_date=person.last_met_date or datetime.now().isoformat(),
-            )
-            attendees_str += f"{person.name}, "
     await crud.update_meeting_ref(
         db=db,
         meeting_ref_id=meeting_ref_id,
         project_id=meeting_ref.project_id,
         org_id=meeting_ref.org_id,
         attendees=attendees_str,
-        update_attendees=bool(agent_response.attendees),
+        update_attendees=bool(attendees_list),
     )
     return MeetingAgentOutputResponse(
         meeting_ref_id=meeting_ref_id,
         meeting_id=meeting_ref.meeting_id,
         attendees=attendees_str,
-        next_steps=[NextStepResponse(what=ns.what, who=ns.who) for ns in agent_response.next_steps],
-        key_points=[KeyPointResponse(point=kp.point) for kp in agent_response.key_points],
-        notes=agent_response.cleaned_notes,
+        next_steps=[NextStepResponse(what=ns.get("what", ""), who=ns.get("who", "to_be_decided")) for ns in next_steps],
+        key_points=[KeyPointResponse(point=kp.get("point", "")) for kp in key_points],
+        notes=cleaned_notes,
     )
-    
