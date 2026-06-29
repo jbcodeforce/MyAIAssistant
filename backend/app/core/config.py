@@ -3,7 +3,7 @@ Configuration management with singleton pattern.
 
 Loading priority (highest to lowest):
 1. Environment variables
-2. .env file
+2. MyAIAssistant/.env (repo root, shared with agent_service)
 3. Init kwargs
 4. CONFIG_FILE yaml (user overrides) + default app/config.yaml
 
@@ -20,11 +20,27 @@ from pathlib import Path
 from typing import Any, ClassVar, Optional
 
 import yaml
+from dotenv import load_dotenv
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+def _resolve_repo_root() -> Path:
+    explicit = os.environ.get("MYAIASSISTANT_ROOT", "").strip()
+    if explicit:
+        return Path(explicit).resolve()
+    start = Path(__file__).resolve()
+    for parent in start.parents:
+        if (parent / "backend").is_dir() and (parent / "agent_service").is_dir():
+            return parent
+    return start.parents[3]
+
+
+PROJECT_ENV_FILE = _resolve_repo_root() / ".env"
+load_dotenv(PROJECT_ENV_FILE, override=False)
 
 # Default config file shipped with the app
 DEFAULT_CONFIG_FILE = Path(__file__).parent.parent / "config.yaml"
@@ -116,7 +132,7 @@ class Settings(BaseSettings):
     email: Optional[str] = None  # For future AI tools (e.g. sending email)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(PROJECT_ENV_FILE),
         env_file_encoding="utf-8",
         case_sensitive=False,
     )

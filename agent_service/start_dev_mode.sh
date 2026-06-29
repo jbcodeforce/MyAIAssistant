@@ -17,17 +17,28 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+ENV_FILE="$PROJECT_ROOT/.env"
+if [ -f "$ENV_FILE" ]; then
+    echo -e "\n${GREEN}Loading environment from${NC} $ENV_FILE"
+    set -a
+    # shellcheck disable=SC1090
+    source "$ENV_FILE"
+    set +a
+else
+    echo -e "\n${YELLOW}No .env at${NC} $ENV_FILE ${YELLOW}(copy .env.example to .env)${NC}"
+fi
+
 echo -e "\n${YELLOW}Configuration:${NC}"
 echo -e "  Project Root:  $PROJECT_ROOT"
 echo -e "  Database:      $AGENT_SERVICE_DIR/test_wksp/content.db"
 echo -e "  LanceDB:       $AGENT_SERVICE_DIR/test_wksp/vs.db"
 
-# Export config for backend and agent service URL when running agent_service in this script
-export AI_DB_FILE="$AGENT_SERVICE_DIR/test_wksp/memory.db"
-export VS_DB_URL="$AGENT_SERVICE_DIR/test_wksp/vs.db"
-export AGENT_SERVICE_URL="http://localhost:8100"
-export AGNO_DEBUG=1
-export TRACE_LLM_PROMPT=1
+# Dev workspace overrides (take precedence over .env)
+export AI_DB_FILE="${AI_DB_FILE:-$AGENT_SERVICE_DIR/test_wksp/memory.db}"
+export VS_DB_URL="${VS_DB_URL:-$AGENT_SERVICE_DIR/test_wksp/vs.db}"
+export AGENT_SERVICE_URL="${AGENT_SERVICE_URL:-http://localhost:8100}"
+export AGNO_DEBUG="${AGNO_DEBUG:-1}"
+export TRACE_LLM_PROMPT="${TRACE_LLM_PROMPT:-1}"
 
 
 # Function to cleanup on exit (only kills processes we started)

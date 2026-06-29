@@ -65,6 +65,7 @@
               <th class="col-presents">Attendees</th>
               <th class="col-file">File Reference</th>
               <th class="col-date">Created</th>
+              <th class="col-date">Updated</th>
               <th class="col-actions">Actions</th>
             </tr>
           </thead>
@@ -96,6 +97,9 @@
               </td>
               <td class="col-date">
                 {{ formatDate(item.created_at) }}
+              </td>
+              <td class="col-date">
+                {{ formatDate(item.updated_at) }}
               </td>
               <td class="col-actions">
                 <button class="btn-icon" @click="openViewModal(item)" title="View Content">

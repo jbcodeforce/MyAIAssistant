@@ -241,6 +241,7 @@
             <tr>
               <th class="col-name">Name</th>
               <th class="col-created">Created</th>
+              <th class="col-created">Updated</th>
               <th class="col-sections">Sections</th>
               <th class="col-actions">Actions</th>
             </tr>
@@ -262,6 +263,7 @@
                 </div>
               </td>
               <td class="col-created">{{ formatDate(organization.created_at) }}</td>
+              <td class="col-created">{{ formatDate(organization.updated_at) }}</td>
               <td class="col-sections">
                 <span class="sections-summary">{{ getSectionsSummary(organization) }}</span>
               </td>

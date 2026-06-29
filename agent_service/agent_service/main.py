@@ -1,5 +1,9 @@
 """Agent service FastAPI app: Agno AgentOS + compatibility routes for backend proxy."""
 
+from agent_service.project_env import load_project_env
+
+load_project_env()
+
 import logging
 import os
 import sys

@@ -287,6 +287,21 @@ class TestSettingsDefaults:
             assert "http://localhost:3000" in settings.cors_origins
 
 
+class TestProjectEnvFile:
+    """Test shared MyAIAssistant repo-root .env resolution."""
+
+    def test_project_env_file_points_to_repo_root(self):
+        """Backend loads .env from MyAIAssistant root, not backend/.env."""
+        from app.core.config import PROJECT_ENV_FILE
+
+        assert PROJECT_ENV_FILE.name == ".env"
+        assert (PROJECT_ENV_FILE.parent / "backend").is_dir()
+        assert (PROJECT_ENV_FILE.parent / "agent_service").is_dir()
+        assert (
+            PROJECT_ENV_FILE.parent / "agent_service" / "agent_service" / "project_env.py"
+        ).is_file()
+
+
 class TestSingletonPattern:
     """Test the get_settings() singleton pattern."""
 
