@@ -45,6 +45,8 @@ def _organization_to_response(org) -> OrganizationResponse:
         description_path=org.description_path,
         related_products=org.related_products,
         is_top_active=bool(org.is_top_active),
+        past_steps=org.past_steps,
+        next_steps=org.next_steps,
         created_at=org.created_at,
         updated_at=org.updated_at,
     )
@@ -230,6 +232,12 @@ async def export_organization(
         sections.append(f"## Strategy / Notes\n\n{strategy_text}\n")
     if organization.related_products:
         sections.append(f"## Related Products\n\n{organization.related_products.strip()}\n")
+    org_past = _format_steps(organization.past_steps)
+    if org_past:
+        sections.append(f"## Past Steps\n\n{org_past}\n")
+    org_next = _format_steps(organization.next_steps)
+    if org_next:
+        sections.append(f"## Next Steps\n\n{org_next}\n")
 
     # Projects section
     sections.append("## Projects\n")

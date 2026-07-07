@@ -15,8 +15,8 @@
               {{ step.who }}
             </div>
             <router-link
-              v-if="step.todo_id && projectId"
-              :to="{ path: `/projects/${projectId}/todos`, query: { highlight: step.todo_id } }"
+              v-if="step.todo_id && taskTodosLink(step.todo_id)"
+              :to="taskTodosLink(step.todo_id)"
               class="step-task-link"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -45,7 +45,7 @@
               {{ step.who }}
             </div>
             <button
-              v-if="showCreateTask && projectId && !step.todo_id"
+              v-if="showCreateTask && hasTaskContext && !step.todo_id"
               type="button"
               @click="$emit('create-task', step, index)"
               class="step-create-task-btn"
@@ -57,8 +57,8 @@
               Create Task
             </button>
             <router-link
-              v-else-if="step.todo_id && projectId"
-              :to="{ path: `/projects/${projectId}/todos`, query: { highlight: step.todo_id } }"
+              v-else-if="step.todo_id && taskTodosLink(step.todo_id)"
+              :to="taskTodosLink(step.todo_id)"
               class="step-task-link"
             >
               <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -75,7 +75,9 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from 'vue'
+
+const props = defineProps({
   pastSteps: {
     type: Array,
     default: () => []
@@ -88,6 +90,10 @@ defineProps({
     type: [Number, String],
     default: null
   },
+  organizationId: {
+    type: [Number, String],
+    default: null
+  },
   showCreateTask: {
     type: Boolean,
     default: false
@@ -95,6 +101,19 @@ defineProps({
 })
 
 defineEmits(['create-task'])
+
+const hasTaskContext = computed(() => !!(props.projectId || props.organizationId))
+
+function taskTodosLink(todoId) {
+  if (!todoId) return null
+  if (props.projectId) {
+    return { path: `/projects/${props.projectId}/todos`, query: { highlight: todoId } }
+  }
+  if (props.organizationId) {
+    return { path: `/organizations/${props.organizationId}/todos`, query: { highlight: todoId } }
+  }
+  return null
+}
 </script>
 
 <style scoped>

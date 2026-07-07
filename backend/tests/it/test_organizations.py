@@ -323,3 +323,75 @@ async def test_list_organization_todos_includes_meeting_source(client: AsyncClie
     titles = {t["title"] for t in data["todos"]}
     assert "Via meeting source" in titles
 
+
+@pytest.mark.asyncio
+async def test_create_organization_with_steps(client: AsyncClient):
+    response = await client.post(
+        "/api/organizations/",
+        json={
+            "name": "Steps Org",
+            "past_steps": [{"what": "Kickoff meeting", "who": "Alice"}],
+            "next_steps": [{"what": "Send proposal", "who": "Bob"}],
+        },
+    )
+    assert response.status_code == 201
+    data = response.json()
+    assert len(data["past_steps"]) == 1
+    assert data["past_steps"][0]["what"] == "Kickoff meeting"
+    assert len(data["next_steps"]) == 1
+    assert data["next_steps"][0]["who"] == "Bob"
+
+
+@pytest.mark.asyncio
+async def test_update_organization_steps(client: AsyncClient):
+    create_response = await client.post(
+        "/api/organizations/",
+        json={"name": "Steps Update Org"},
+    )
+    organization_id = create_response.json()["id"]
+
+    update_response = await client.put(
+        f"/api/organizations/{organization_id}",
+        json={
+            "past_steps": [{"what": "Completed review", "who": "Team"}],
+            "next_steps": [{"what": "Schedule follow-up", "who": "Jane"}],
+        },
+    )
+    assert update_response.status_code == 200
+    data = update_response.json()
+    assert data["past_steps"][0]["what"] == "Completed review"
+    assert data["next_steps"][0]["what"] == "Schedule follow-up"
+
+    clear_response = await client.put(
+        f"/api/organizations/{organization_id}",
+        json={"past_steps": None, "next_steps": None},
+    )
+    assert clear_response.status_code == 200
+    cleared = clear_response.json()
+    assert cleared["past_steps"] is None
+    assert cleared["next_steps"] is None
+
+
+@pytest.mark.asyncio
+async def test_export_organization_includes_org_steps(client: AsyncClient):
+    create_response = await client.post(
+        "/api/organizations/",
+        json={
+            "name": "Export Steps Org",
+            "past_steps": [{"what": "Org past action", "who": "Alice"}],
+            "next_steps": [{"what": "Org next action", "who": "Bob"}],
+        },
+    )
+    assert create_response.status_code == 201
+    organization_id = create_response.json()["id"]
+
+    export_response = await client.post(f"/api/organizations/{organization_id}/export")
+    assert export_response.status_code == 200
+    export_path = export_response.json()["absolute_path"]
+    assert export_path
+    content = open(export_path, encoding="utf-8").read()
+    assert "## Past Steps" in content
+    assert "Org past action (Alice)" in content
+    assert "## Next Steps" in content
+    assert "Org next action (Bob)" in content
+

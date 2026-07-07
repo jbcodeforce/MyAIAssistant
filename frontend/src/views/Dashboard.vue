@@ -145,6 +145,54 @@
           />
         </div>
       </div>
+
+        <div v-if="overdueTodos.length > 0" class="overdue-section">
+          <div class="section-header">
+            <h3>Overdue Tasks ({{ overdueTodos.length }})</h3>
+            <p class="section-description">Open or started tasks past their due date</p>
+          </div>
+          <div class="search-results-table-wrapper">
+            <table class="search-results-table overdue-tasks-table">
+              <thead>
+                <tr>
+                  <th>Title</th>
+                  <th>Due date</th>
+                  <th>Days late</th>
+                  <th>Status</th>
+                  <th>Urgency</th>
+                  <th>Importance</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="todo in overdueTodos"
+                  :key="todo.id"
+                  class="search-result-row overdue-row"
+                >
+                  <td class="col-title">
+                    <button type="button" class="todo-title-link" @click="handleView(todo)">
+                      {{ todo.title }}
+                    </button>
+                  </td>
+                  <td class="col-due overdue-date">{{ formatDueDate(todo.due_date) }}</td>
+                  <td class="col-days-late">{{ daysLateLabel(todo) }}</td>
+                  <td>{{ todo.status }}</td>
+                  <td>{{ todo.urgency || '–' }}</td>
+                  <td>{{ todo.importance || '–' }}</td>
+                  <td class="col-actions todo-actions-cell">
+                    <button type="button" class="row-action-btn view" @click="handleView(todo)" title="View Details">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    </button>
+                    <button type="button" class="row-action-btn" @click="handleEdit(todo)" title="Edit">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
       </template>
     </div>
 
@@ -257,6 +305,39 @@ const unclassifiedOpenTodos = computed(() => {
     (!todo.urgency || !todo.importance)
   )
 })
+
+const overdueTodos = computed(() => {
+  return todoStore.todos
+    .filter(isOverdue)
+    .sort((a, b) => new Date(a.due_date) - new Date(b.due_date))
+})
+
+function isOverdue(todo) {
+  if (!todo.due_date || todo.status === 'Completed' || todo.status === 'Cancelled') {
+    return false
+  }
+  return new Date(todo.due_date) < new Date()
+}
+
+function formatDueDate(dateString) {
+  if (!dateString) return '–'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  })
+}
+
+function daysLateLabel(todo) {
+  if (!todo.due_date) return '–'
+  const due = new Date(todo.due_date)
+  const now = new Date()
+  const diffMs = now - due
+  if (diffMs <= 0) return '–'
+  const days = Math.ceil(diffMs / (1000 * 60 * 60 * 24))
+  return days === 1 ? '1 day' : `${days} days`
+}
 
 onMounted(async () => {
   try {
@@ -762,6 +843,108 @@ defineExpose({
   background: #2563eb;
 }
 
+.overdue-section {
+  margin: 0 2rem 2rem;
+  padding-bottom: 2rem;
+}
+
+.todo-actions-cell {
+  white-space: nowrap;
+  text-align: right;
+}
+
+.row-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin-left: 2px;
+  background: none;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.15s;
+}
+
+.row-action-btn:hover {
+  background-color: #e5e7eb;
+  color: #111827;
+}
+
+.row-action-btn.view {
+  color: #0891b2;
+}
+
+.row-action-btn.view:hover {
+  background-color: #ecfeff;
+  color: #0e7490;
+}
+
+:global(.dark) .row-action-btn {
+  color: #94a3b8;
+}
+
+:global(.dark) .row-action-btn:hover {
+  background-color: #334155;
+  color: #f1f5f9;
+}
+
+:global(.dark) .row-action-btn.view {
+  color: #22d3ee;
+}
+
+:global(.dark) .row-action-btn.view:hover {
+  background-color: rgba(34, 211, 238, 0.15);
+  color: #67e8f9;
+}
+
+.overdue-row .col-due.overdue-date {
+  color: #dc2626;
+  font-weight: 500;
+}
+
+:global(.dark) .overdue-row .col-due.overdue-date {
+  color: #f87171;
+}
+
+.col-days-late {
+  color: #dc2626;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+:global(.dark) .col-days-late {
+  color: #f87171;
+}
+
+.todo-title-link {
+  padding: 0;
+  border: none;
+  background: none;
+  color: #2563eb;
+  font-weight: 500;
+  font-size: inherit;
+  text-align: left;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.todo-title-link:hover {
+  color: #1d4ed8;
+}
+
+:global(.dark) .todo-title-link {
+  color: #60a5fa;
+}
+
+:global(.dark) .todo-title-link:hover {
+  color: #93c5fd;
+}
+
 .search-no-results {
   margin: 1.5rem 0 0;
   color: #64748b;
@@ -802,6 +985,10 @@ defineExpose({
 }
 
 @media (max-width: 768px) {
+  .overdue-section {
+    margin: 0 1rem 2rem;
+  }
+
   .unclassified-section {
     padding: 0 1rem 2rem;
   }

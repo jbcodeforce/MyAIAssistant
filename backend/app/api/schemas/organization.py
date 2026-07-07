@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, ConfigDict
 
+from app.api.schemas.project import Step
+
 
 class OrganizationBase(BaseModel):
     name: str = Field(..., min_length=1, max_length=255, description="Organization name")
@@ -12,6 +14,14 @@ class OrganizationBase(BaseModel):
     description: Optional[str] = Field(None, description="Strategy / notes (request body: markdown; response: from file)")
     related_products: Optional[str] = Field(None, description="Products related to this organization")
     is_top_active: bool = Field(False, description="Mark as top-active organization")
+    past_steps: Optional[list[Step]] = Field(
+        None,
+        description="Past steps taken at the organization level",
+    )
+    next_steps: Optional[list[Step]] = Field(
+        None,
+        description="Next steps planned at the organization level",
+    )
 
 
 class OrganizationCreate(OrganizationBase):
@@ -37,6 +47,8 @@ class OrganizationUpdate(BaseModel):
     description: Optional[str] = None
     related_products: Optional[str] = None
     is_top_active: Optional[bool] = None
+    past_steps: Optional[list[Step]] = None
+    next_steps: Optional[list[Step]] = None
 
     model_config = ConfigDict(
         json_schema_extra={

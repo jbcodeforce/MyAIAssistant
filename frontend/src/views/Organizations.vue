@@ -197,6 +197,30 @@
               </svg>
               Products
             </div>
+
+            <div 
+              v-if="organization.past_steps && organization.past_steps.length > 0" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'past_steps')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                <path d="M3 3v5h5"/>
+              </svg>
+              Past Steps ({{ organization.past_steps.length }})
+            </div>
+
+            <div 
+              v-if="organization.next_steps && organization.next_steps.length > 0" 
+              class="section-chip"
+              @click="openSectionViewer(organization, 'next_steps')"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 12h14"/>
+                <path d="m12 5 7 7-7 7"/>
+              </svg>
+              Next Steps ({{ organization.next_steps.length }})
+            </div>
           </div>
 
           <div class="organization-footer">
@@ -376,7 +400,28 @@
       @close="closeSectionViewer"
     >
       <div class="section-viewer-content">
+        <div v-if="viewingSection === 'past_steps' || viewingSection === 'next_steps'" class="steps-viewer">
+          <div v-if="viewingSectionSteps.length === 0" class="empty-steps">
+            No steps recorded
+          </div>
+          <div v-else class="steps-list-view">
+            <div v-for="(step, index) in viewingSectionSteps" :key="index" class="step-view-item">
+              <div class="step-number">{{ index + 1 }}</div>
+              <div class="step-content">
+                <div class="step-what">{{ step.what }}</div>
+                <div class="step-who" v-if="step.who">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                    <circle cx="12" cy="7" r="4"/>
+                  </svg>
+                  {{ step.who }}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
         <div
+          v-else
           class="markdown-preview view-mode"
           v-html="renderedSectionContent"
           @click="handleNotesDocClick"
@@ -464,7 +509,9 @@ const sectionLabels = {
   stakeholders: 'Stakeholders',
   team: 'Team',
   description: 'Strategy / Notes',
-  related_products: 'Related Products'
+  related_products: 'Related Products',
+  past_steps: 'Past Steps',
+  next_steps: 'Next Steps'
 }
 
 const sectionViewerTitle = computed(() => {
@@ -493,8 +540,15 @@ function handleNotesDocClick(event) {
 
 const renderedSectionContent = computed(() => {
   if (!viewingOrganization.value || !viewingSection.value) return ''
+  if (viewingSection.value === 'past_steps' || viewingSection.value === 'next_steps') return ''
   const content = viewingOrganization.value[viewingSection.value] || ''
   return renderMarkdownForNotesWithDocLinks(content, notesImagesContextBase.value)
+})
+
+const viewingSectionSteps = computed(() => {
+  if (!viewingOrganization.value || !viewingSection.value) return []
+  const steps = viewingOrganization.value[viewingSection.value]
+  return Array.isArray(steps) ? steps : []
 })
 
 onMounted(async () => {
@@ -542,6 +596,8 @@ function getSectionsSummary(organization) {
   if (organization.team) parts.push('Team')
   if (organization.description) parts.push('Strategy')
   if (organization.related_products) parts.push('Products')
+  if (organization.past_steps?.length) parts.push('Past Steps')
+  if (organization.next_steps?.length) parts.push('Next Steps')
   return parts.length ? parts.join(', ') : '—'
 }
 
@@ -1128,6 +1184,82 @@ async function removeFromTopActive(org) {
 }
 
 .section-chip svg {
+  opacity: 0.7;
+}
+
+.steps-viewer {
+  padding: 0.5rem 0;
+}
+
+.empty-steps {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.steps-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.step-view-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+:global(.dark) .step-view-item {
+  background: #1e293b;
+  border-left-color: #60a5fa;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: #3b82f6;
+  color: white;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-what {
+  font-size: 0.9375rem;
+  color: #111827;
+  line-height: 1.5;
+}
+
+:global(.dark) .step-what {
+  color: #f1f5f9;
+}
+
+.step-who {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+:global(.dark) .step-who {
+  color: #94a3b8;
+}
+
+.step-who svg {
   opacity: 0.7;
 }
 

@@ -152,6 +152,94 @@
           </div>
           <div class="section-content markdown-preview" v-html="renderedProducts"></div>
         </div>
+
+        <div class="section-card" v-if="organization.past_steps && organization.past_steps.length > 0">
+          <div class="section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+              <path d="M3 3v5h5"/>
+            </svg>
+            <h3>Past Steps</h3>
+          </div>
+          <div class="section-content">
+            <div class="steps-list-view">
+              <div v-for="(step, index) in organization.past_steps" :key="index" class="step-view-item">
+                <div class="step-number">{{ index + 1 }}</div>
+                <div class="step-content">
+                  <div class="step-what">{{ step.what }}</div>
+                  <div class="step-who" v-if="step.who">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ step.who }}
+                  </div>
+                  <router-link
+                    v-if="step.todo_id"
+                    :to="{ path: `/organizations/${organization.id}/todos`, query: { highlight: step.todo_id } }"
+                    class="step-task-link"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View Task
+                  </router-link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-card" v-if="organization.next_steps && organization.next_steps.length > 0">
+          <div class="section-header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"/>
+              <path d="m12 5 7 7-7 7"/>
+            </svg>
+            <h3>Next Steps</h3>
+          </div>
+          <div class="section-content">
+            <div class="steps-list-view">
+              <div v-for="(step, index) in organization.next_steps" :key="index" class="step-view-item">
+                <div class="step-number">{{ index + 1 }}</div>
+                <div class="step-content">
+                  <div class="step-what">{{ step.what }}</div>
+                  <div class="step-who" v-if="step.who">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                    {{ step.who }}
+                  </div>
+                  <button
+                    v-if="!step.todo_id"
+                    type="button"
+                    @click="createTaskFromStep(step, index, 'next')"
+                    class="step-create-task-btn"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 5v14"/>
+                      <path d="M5 12h14"/>
+                    </svg>
+                    Create Task
+                  </button>
+                  <router-link
+                    v-else
+                    :to="{ path: `/organizations/${organization.id}/todos`, query: { highlight: step.todo_id } }"
+                    class="step-task-link"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View Task
+                  </router-link>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="empty-content" v-if="!hasContent">
@@ -174,6 +262,19 @@
       @close="closeDocModal"
       @content-click="onDocModalContentClick"
     />
+
+    <Modal
+      :show="showCreateTaskModal"
+      title="Create Task from Step"
+      size="large"
+      @close="closeTaskModal"
+    >
+      <TodoForm
+        :initial-data="taskFromStep?.initialData"
+        @submit="handleTaskCreated"
+        @cancel="closeTaskModal"
+      />
+    </Modal>
   </div>
 </template>
 
@@ -187,6 +288,8 @@ import {
 } from '@/utils/markdownNotes'
 import { useNotesDocLinkModal } from '@/composables/useNotesDocLinkModal'
 import NotesDocumentModal from '@/components/NotesDocumentModal.vue'
+import Modal from '@/components/common/Modal.vue'
+import TodoForm from '@/components/todo/TodoForm.vue'
 
 const route = useRoute()
 
@@ -196,6 +299,8 @@ const error = ref(null)
 const exporting = ref(false)
 const exportMessage = ref('')
 const exportError = ref(false)
+const showCreateTaskModal = ref(false)
+const taskFromStep = ref(null)
 
 const notesContextBase = computed(() =>
   organization.value?.name ? organizationNotesContextBase(organization.value.name) : ''
@@ -231,10 +336,12 @@ const renderedProducts = computed(() =>
 
 const hasContent = computed(() => {
   if (!organization.value) return false
-  return organization.value.stakeholders || 
-         organization.value.team || 
-         organization.value.description || 
-         organization.value.related_products
+  return organization.value.stakeholders ||
+         organization.value.team ||
+         organization.value.description ||
+         organization.value.related_products ||
+         (organization.value.past_steps && organization.value.past_steps.length > 0) ||
+         (organization.value.next_steps && organization.value.next_steps.length > 0)
 })
 
 onMounted(async () => {
@@ -283,6 +390,44 @@ async function handleExport() {
   } finally {
     exporting.value = false
   }
+}
+
+function createTaskFromStep(step, index, type) {
+  taskFromStep.value = {
+    step: { ...step },
+    index,
+    type,
+    initialData: {
+      title: step.what,
+      organization_id: organization.value.id
+    }
+  }
+  showCreateTaskModal.value = true
+}
+
+function closeTaskModal() {
+  showCreateTaskModal.value = false
+  taskFromStep.value = null
+}
+
+async function handleTaskCreated(newTodo) {
+  if (!taskFromStep.value || !organization.value) return
+
+  const { index, type } = taskFromStep.value
+  const steps = type === 'next' ? organization.value.next_steps : organization.value.past_steps
+  steps[index].todo_id = newTodo.id
+
+  try {
+    await organizationsApi.update(organization.value.id, {
+      next_steps: type === 'next' ? steps : organization.value.next_steps,
+      past_steps: type === 'past' ? steps : organization.value.past_steps
+    })
+    await loadOrganization()
+  } catch (err) {
+    console.error('Failed to link task to step:', err)
+  }
+
+  closeTaskModal()
 }
 
 function formatDate(dateString) {
@@ -674,6 +819,130 @@ function formatDate(dateString) {
 
 :global(.dark) .markdown-preview :deep(blockquote) {
   color: #94a3b8;
+}
+
+.steps-list-view {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.step-view-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.875rem;
+  background: #f9fafb;
+  border-radius: 8px;
+  border-left: 3px solid #3b82f6;
+}
+
+:global(.dark) .step-view-item {
+  background: #0f172a;
+  border-left-color: #60a5fa;
+}
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  background: #3b82f6;
+  color: white;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.step-content {
+  flex: 1;
+}
+
+.step-what {
+  font-size: 0.9375rem;
+  color: #111827;
+  line-height: 1.5;
+}
+
+:global(.dark) .step-what {
+  color: #f1f5f9;
+}
+
+.step-who {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  margin-top: 0.375rem;
+  font-size: 0.8125rem;
+  color: #6b7280;
+}
+
+:global(.dark) .step-who {
+  color: #94a3b8;
+}
+
+.step-who svg {
+  opacity: 0.7;
+}
+
+.step-task-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #2563eb;
+  background: #eff6ff;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: all 0.15s;
+}
+
+.step-task-link:hover {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+:global(.dark) .step-task-link {
+  background: rgba(59, 130, 246, 0.15);
+  color: #60a5fa;
+}
+
+:global(.dark) .step-task-link:hover {
+  background: rgba(59, 130, 246, 0.25);
+  color: #93c5fd;
+}
+
+.step-create-task-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  color: #16a34a;
+  background: #f0fdf4;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.step-create-task-btn:hover {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+:global(.dark) .step-create-task-btn {
+  background: rgba(22, 163, 74, 0.15);
+  color: #4ade80;
+}
+
+:global(.dark) .step-create-task-btn:hover {
+  background: rgba(22, 163, 74, 0.25);
+  color: #86efac;
 }
 
 @media (max-width: 768px) {

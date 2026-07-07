@@ -15,6 +15,16 @@ class Base(AsyncAttrs, DeclarativeBase):
 DimensionType = dict[str, int]
 
 
+# Type alias for Step JSON structure
+# Step contains: {"what": str, "who": str, "todo_id": Optional[int]}
+class StepDict(TypedDict, total=False):
+    what: str
+    who: str
+    todo_id: Optional[int]
+
+StepType = StepDict
+
+
 class Organization(Base):
     __tablename__ = "organizations"
     __table_args__ = (
@@ -33,6 +43,8 @@ class Organization(Base):
     description_path: Mapped[Optional[str]] = mapped_column(String(2048), nullable=True)
     related_products: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_top_active: Mapped[bool] = mapped_column(Integer, nullable=False, default=False)
+    past_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
+    next_steps: Mapped[Optional[list[StepType]]] = mapped_column(JSON, nullable=True)
 
     # Timestamps
     created_at: Mapped[datetime] = mapped_column(
@@ -52,16 +64,6 @@ class Organization(Base):
 
     def __repr__(self) -> str:
         return f"Organization(id={self.id!r}, name={self.name!r})"
-
-
-# Type alias for Step JSON structure
-# Step contains: {"what": str, "who": str, "todo_id": Optional[int]}
-class StepDict(TypedDict, total=False):
-    what: str
-    who: str
-    todo_id: Optional[int]
-
-StepType = StepDict
 
 
 class Project(Base):

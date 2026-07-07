@@ -84,6 +84,13 @@
         <h3 class="preview-section-title">Related Products</h3>
         <div class="markdown-preview form-preview" v-html="formRenderedProducts"></div>
       </div>
+      <MeetingStepsView
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+        :organization-id="organization?.id"
+        :show-create-task="true"
+        @create-task="createTaskFromStep"
+      />
     </div>
 
     <form v-else-if="organization" @submit.prevent="saveNow" class="organization-form">
@@ -212,7 +219,19 @@
           ></div>
         </div>
       </div>
+
+      <MeetingStepsEditor
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+        :project-todos="orgTodos"
+        @update:past-steps="formData.past_steps = $event"
+        @update:next-steps="formData.next_steps = $event"
+      />
     </form>
+
+    <Modal :show="showCreateTaskModal" title="Create Task from Step" size="large" @close="closeTaskModal">
+      <TodoForm :initial-data="taskFromStep?.initialData" @submit="handleTaskCreated" @cancel="closeTaskModal" />
+    </Modal>
 
     <NotesDocumentModal
       :show="showDocModal"
@@ -237,6 +256,11 @@ import {
 } from '@/utils/markdownNotes'
 import { useNotesDocLinkModal } from '@/composables/useNotesDocLinkModal'
 import NotesDocumentModal from '@/components/NotesDocumentModal.vue'
+import Modal from '@/components/common/Modal.vue'
+import TodoForm from '@/components/todo/TodoForm.vue'
+import MeetingStepsEditor from '@/components/meeting/MeetingStepsEditor.vue'
+import MeetingStepsView from '@/components/meeting/MeetingStepsView.vue'
+import { normalizeStepsFromApi, normalizeStepsForPayload } from '@/utils/meetingSteps'
 
 const route = useRoute()
 
@@ -249,7 +273,9 @@ const formData = ref({
   stakeholders: '',
   team: '',
   description: '',
-  related_products: ''
+  related_products: '',
+  past_steps: [],
+  next_steps: []
 })
 
 const stakeholdersTab = ref('write')
@@ -268,6 +294,10 @@ const stakeholdersInput = ref(null)
 const teamInput = ref(null)
 const descriptionInput = ref(null)
 const productsInput = ref(null)
+
+const orgTodos = ref([])
+const showCreateTaskModal = ref(false)
+const taskFromStep = ref(null)
 
 const DEBOUNCE_MS = 2500
 let debounceTimer = null
@@ -378,8 +408,54 @@ function fillFormFromOrg(org) {
     stakeholders: org.stakeholders || defaultStakeholders,
     team: org.team || defaultTeam,
     description: org.description || defaultDescription,
-    related_products: org.related_products || defaultProducts
+    related_products: org.related_products || defaultProducts,
+    past_steps: normalizeStepsFromApi(org.past_steps),
+    next_steps: normalizeStepsFromApi(org.next_steps)
   }
+}
+
+async function loadOrgTodos() {
+  if (!organization.value?.id) {
+    orgTodos.value = []
+    return
+  }
+  try {
+    const res = await organizationsApi.getTodos(organization.value.id, { limit: 500 })
+    orgTodos.value = res.data.todos || []
+  } catch (err) {
+    console.error('Failed to load organization todos:', err)
+    orgTodos.value = []
+  }
+}
+
+function createTaskFromStep(step, index) {
+  if (!organization.value?.id) return
+  taskFromStep.value = {
+    step: { ...step },
+    index,
+    initialData: {
+      title: step.what,
+      organization_id: organization.value.id
+    }
+  }
+  showCreateTaskModal.value = true
+}
+
+function closeTaskModal() {
+  showCreateTaskModal.value = false
+  taskFromStep.value = null
+}
+
+function handleTaskCreated(newTodo) {
+  if (!taskFromStep.value) return
+  const { index } = taskFromStep.value
+  const next = [...formData.value.next_steps]
+  if (next[index]) {
+    next[index] = { ...next[index], todo_id: newTodo.id }
+    formData.value.next_steps = next
+  }
+  saveNow()
+  closeTaskModal()
 }
 
 onMounted(async () => {
@@ -407,6 +483,7 @@ async function loadOrganization() {
     const response = await organizationsApi.get(id)
     organization.value = response.data
     fillFormFromOrg(response.data)
+    await loadOrgTodos()
     initialLoadDone.value = true
   } catch (err) {
     if (err.response?.status === 404) {
@@ -430,7 +507,9 @@ async function performSave() {
       stakeholders: formData.value.stakeholders || '',
       team: formData.value.team || '',
       description: formData.value.description || '',
-      related_products: formData.value.related_products || ''
+      related_products: formData.value.related_products || '',
+      past_steps: normalizeStepsForPayload(formData.value.past_steps),
+      next_steps: normalizeStepsForPayload(formData.value.next_steps)
     })
     organization.value = response.data
     lastSavedAt.value = new Date()

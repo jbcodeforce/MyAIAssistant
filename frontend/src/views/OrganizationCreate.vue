@@ -62,6 +62,10 @@
         <h3 class="preview-section-title">Related Products</h3>
         <div class="markdown-preview form-preview" v-html="formRenderedProducts"></div>
       </div>
+      <MeetingStepsView
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+      />
     </div>
 
     <form v-else @submit.prevent="handleCreate" class="organization-form">
@@ -161,6 +165,14 @@
         </div>
         <span class="form-hint">Products, services, or solutions relevant to this organization (supports Markdown)</span>
       </div>
+
+      <MeetingStepsEditor
+        :past-steps="formData.past_steps"
+        :next-steps="formData.next_steps"
+        :show-task-linking="false"
+        @update:past-steps="formData.past_steps = $event"
+        @update:next-steps="formData.next_steps = $event"
+      />
     </form>
   </div>
 </template>
@@ -170,6 +182,9 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { marked } from 'marked'
 import { organizationsApi } from '@/services/api'
+import MeetingStepsEditor from '@/components/meeting/MeetingStepsEditor.vue'
+import MeetingStepsView from '@/components/meeting/MeetingStepsView.vue'
+import { normalizeStepsForPayload } from '@/utils/meetingSteps'
 
 const router = useRouter()
 
@@ -195,7 +210,9 @@ Brief overview of current engagement
 - Action item 2`,
   related_products: `## Products in Use
 - **Product Name** - Status (Production/Evaluation/POC)
-- **Product Name** - Status`
+- **Product Name** - Status`,
+  past_steps: [],
+  next_steps: []
 })
 
 const stakeholdersTab = ref('write')
@@ -216,7 +233,12 @@ async function handleCreate() {
   if (!isFormValid.value) return
   submitting.value = true
   try {
-    const response = await organizationsApi.create(formData.value)
+    const payload = {
+      ...formData.value,
+      past_steps: normalizeStepsForPayload(formData.value.past_steps),
+      next_steps: normalizeStepsForPayload(formData.value.next_steps)
+    }
+    const response = await organizationsApi.create(payload)
     router.push({ name: 'OrganizationDetail', params: { id: response.data.id } })
   } catch (err) {
     console.error('Failed to create organization:', err)

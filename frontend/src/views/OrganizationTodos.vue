@@ -65,7 +65,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="todo in sortedTodos" :key="todo.id" :class="['todo-row', todo.status.toLowerCase()]">
+            <tr v-for="todo in sortedTodos" :key="todo.id" :class="['todo-row', todo.status.toLowerCase(), { highlighted: todo.id === highlightTodoId }]">
               <td class="col-status">
                 <span :class="['status-badge', todo.status.toLowerCase()]">
                   {{ todo.status }}
@@ -125,7 +125,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { organizationsApi, todosApi } from '@/services/api'
 import { useUiStore } from '@/stores/uiStore'
@@ -144,6 +144,7 @@ const limit = 50
 const loading = ref(false)
 const error = ref(null)
 const showCreateModal = ref(false)
+const highlightTodoId = ref(null)
 
 const sortedTodos = computed(() => {
   return [...todos.value].sort((a, b) => {
@@ -212,6 +213,19 @@ async function loadOrganizationTodos() {
     todos.value = todosResponse.data.todos
     totalCount.value = todosResponse.data.total
     currentSkip.value = todosResponse.data.todos.length
+
+    if (route.query.highlight) {
+      const todoId = parseInt(route.query.highlight, 10)
+      highlightTodoId.value = todoId
+      await nextTick()
+      const highlightedElement = document.querySelector('.todo-row.highlighted')
+      if (highlightedElement) {
+        highlightedElement.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }
+      setTimeout(() => {
+        highlightTodoId.value = null
+      }, 3000)
+    }
   } catch (err) {
     error.value = err.response?.data?.detail || 'Failed to load organization tasks'
     console.error('Failed to load organization tasks:', err)
@@ -560,6 +574,21 @@ async function handleCreate(todoData) {
 
 .todo-row.cancelled:hover {
   background: #fef9c3;
+}
+
+.todo-row.highlighted {
+  animation: highlight-pulse 0.6s ease-in-out;
+  outline: 2px solid #2563eb;
+  outline-offset: -2px;
+}
+
+:global(.dark) .todo-row.highlighted {
+  outline-color: #60a5fa;
+}
+
+@keyframes highlight-pulse {
+  0%, 100% { background-color: inherit; }
+  50% { background-color: #dbeafe; }
 }
 
 .col-status {
