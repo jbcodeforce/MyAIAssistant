@@ -90,29 +90,34 @@ export const useMetricsStore = defineStore('metrics', () => {
   })
 
   // Actions
-  async function fetchDashboardMetrics(period = 'daily', days = 30, meetingsDays) {
+  async function fetchDashboardMetrics(period = 'daily', days = 30, ytdDays) {
     loading.value = true
     error.value = null
     try {
-      const meetingsWindow = meetingsDays ?? days
+      const ytdWindow = ytdDays ?? days
       const [
         dashboardResponse,
         orgMonthlyResponse,
+        orgPeriodResponse,
         meetingsMonthlyResponse,
-        meetingsPeriodResponse
+        meetingsPeriodResponse,
+        taskStatusYtdResponse
       ] = await Promise.all([
         metricsApi.getDashboard(period, days),
-        metricsApi.getOrganizationsCreated('monthly', days),
-        metricsApi.getMeetingsCreated('monthly', meetingsWindow),
-        metricsApi.getMeetingsCreated(period, meetingsWindow)
+        metricsApi.getOrganizationsCreated('monthly', ytdWindow),
+        metricsApi.getOrganizationsCreated(period, ytdWindow),
+        metricsApi.getMeetingsCreated('monthly', ytdWindow),
+        metricsApi.getMeetingsCreated(period, ytdWindow),
+        metricsApi.getTaskStatusOverTime(period, ytdWindow)
       ])
       const data = dashboardResponse.data
       projectMetrics.value = data.projects
       taskMetrics.value = data.tasks
       assetMetrics.value = data.assets
       taskCompletion.value = data.tasks_completion
-      taskStatusOverTime.value = data.task_status_over_time
-      organizationsCreated.value = data.organizations_created
+      // Org, meeting, and task-status-over-time use YTD, not the global days selector
+      taskStatusOverTime.value = taskStatusYtdResponse.data
+      organizationsCreated.value = orgPeriodResponse.data
       organizationsCreatedMonthlyChart.value = orgMonthlyResponse.data
       meetingsCreated.value = meetingsPeriodResponse.data
       meetingsCreatedMonthlyChart.value = meetingsMonthlyResponse.data
@@ -130,12 +135,12 @@ export const useMetricsStore = defineStore('metrics', () => {
     }
   }
 
-  async function refreshMeetingMetrics(period = 'daily', days = 30, meetingsDays) {
+  async function refreshMeetingMetrics(period = 'daily', days = 30, ytdDays) {
     refreshingMeetings.value = true
     error.value = null
     try {
       await metricsApi.refreshMeetings()
-      return await fetchDashboardMetrics(period, days, meetingsDays)
+      return await fetchDashboardMetrics(period, days, ytdDays)
     } catch (err) {
       error.value = err.response?.data?.detail || 'Failed to refresh meeting metrics'
       throw err

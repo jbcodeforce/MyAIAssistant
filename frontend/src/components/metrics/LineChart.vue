@@ -1,9 +1,12 @@
 <template>
-  <div class="line-chart" ref="chartContainer">
-    <div class="chart-y-axis">
-      <span class="y-label">{{ yTicks.top }}</span>
-      <span class="y-label">{{ yTicks.middle }}</span>
-      <span class="y-label">{{ yTicks.bottom }}</span>
+  <div class="line-chart">
+    <div class="y-axis-column">
+      <span v-if="yAxisLabel" class="y-axis-unit" :title="yAxisLabel">{{ yAxisLabel }}</span>
+      <div class="chart-y-axis">
+        <span class="y-label">{{ yTicks.top }}</span>
+        <span class="y-label">{{ yTicks.middle }}</span>
+        <span class="y-label">{{ yTicks.bottom }}</span>
+      </div>
     </div>
     <div class="chart-area">
       <div class="grid-lines">
@@ -11,12 +14,11 @@
         <div class="grid-line"></div>
         <div class="grid-line"></div>
       </div>
-      <svg 
-        class="chart-svg" 
+      <svg
+        class="chart-svg"
         :viewBox="`0 0 ${chartWidth} ${chartHeight}`"
         preserveAspectRatio="none"
       >
-        <!-- Area fills -->
         <path
           v-for="(series, index) in seriesData"
           :key="`area-${index}`"
@@ -26,7 +28,6 @@
           class="area-path"
           :style="{ '--delay': index * 0.15 + 's' }"
         />
-        <!-- Lines -->
         <path
           v-for="(series, index) in seriesData"
           :key="`line-${index}`"
@@ -39,7 +40,6 @@
           class="line-path"
           :style="{ '--delay': index * 0.15 + 's' }"
         />
-        <!-- Data points -->
         <g v-for="(series, sIndex) in seriesData" :key="`points-${sIndex}`">
           <circle
             v-for="(point, pIndex) in series.points"
@@ -56,19 +56,18 @@
         </g>
       </svg>
       <div class="x-axis">
-        <span 
-          v-for="(label, index) in xLabels" 
-          :key="index" 
+        <span
+          v-for="(label, index) in xLabels"
+          :key="index"
           class="x-label"
         >
           {{ label }}
         </span>
       </div>
     </div>
-    <!-- Legend -->
     <div class="chart-legend">
-      <div 
-        v-for="(series, index) in seriesData" 
+      <div
+        v-for="(series, index) in seriesData"
         :key="`legend-${index}`"
         class="legend-item"
       >
@@ -81,7 +80,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { computed } from 'vue'
 import { getYAxisTickLabels } from '@/utils/chartYAxis'
 
 const props = defineProps({
@@ -89,7 +88,6 @@ const props = defineProps({
     type: Array,
     required: true,
     default: () => []
-    // Expected format: [{ date: '2025-01-01', open: 3, started: 2, completed: 1, cancelled: 0 }, ...]
   },
   series: {
     type: Array,
@@ -103,36 +101,39 @@ const props = defineProps({
   maxValue: {
     type: Number,
     default: 10
+  },
+  yAxisLabel: {
+    type: String,
+    default: ''
   }
 })
 
 const yTicks = computed(() => getYAxisTickLabels(props.maxValue))
 
-const chartContainer = ref(null)
 const chartWidth = 800
 const chartHeight = 200
 const padding = { top: 10, right: 10, bottom: 10, left: 10 }
 
 const seriesData = computed(() => {
   if (props.data.length === 0) return []
-  
+
   const effectiveWidth = chartWidth - padding.left - padding.right
   const effectiveHeight = chartHeight - padding.top - padding.bottom
-  
+
   return props.series.map(s => {
     const points = props.data.map((d, i) => {
-      const x = padding.left + (props.data.length > 1 
-        ? (i / (props.data.length - 1)) * effectiveWidth 
+      const x = padding.left + (props.data.length > 1
+        ? (i / (props.data.length - 1)) * effectiveWidth
         : effectiveWidth / 2)
       const value = d[s.key] || 0
-      const y = padding.top + effectiveHeight - (props.maxValue > 0 
-        ? (value / props.maxValue) * effectiveHeight 
+      const y = padding.top + effectiveHeight - (props.maxValue > 0
+        ? (value / props.maxValue) * effectiveHeight
         : 0)
       return { x, y, value, date: d.date }
     })
-    
+
     const total = props.data.reduce((sum, d) => sum + (d[s.key] || 0), 0)
-    
+
     return {
       key: s.key,
       label: s.label,
@@ -148,7 +149,6 @@ const xLabels = computed(() => {
   if (props.data.length <= 7) {
     return props.data.map(d => formatDateLabel(d.date))
   }
-  // Show fewer labels for longer datasets
   const step = Math.ceil(props.data.length / 6)
   return props.data
     .filter((_, i) => i % step === 0 || i === props.data.length - 1)
@@ -163,7 +163,7 @@ function formatDateLabel(dateStr) {
 function getLinePath(points) {
   if (points.length === 0) return ''
   if (points.length === 1) return `M ${points[0].x} ${points[0].y}`
-  
+
   return points.reduce((path, point, i) => {
     if (i === 0) return `M ${point.x} ${point.y}`
     return `${path} L ${point.x} ${point.y}`
@@ -172,12 +172,12 @@ function getLinePath(points) {
 
 function getAreaPath(points) {
   if (points.length === 0) return ''
-  
+
   const linePath = getLinePath(points)
   const firstX = points[0].x
   const lastX = points[points.length - 1].x
   const bottomY = chartHeight - padding.bottom
-  
+
   return `${linePath} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`
 }
 </script>
@@ -188,19 +188,46 @@ function getAreaPath(points) {
   flex-direction: column;
   height: 100%;
   gap: 0.75rem;
+  position: relative;
 }
 
-.chart-y-axis {
+.y-axis-column {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 28px;
   display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.25rem;
+  z-index: 1;
+}
+
+.y-axis-unit {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  align-self: center;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  max-height: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+:global(.dark) .y-axis-unit {
+  color: #94a3b8;
+}
+
+.chart-y-axis {
+  display: flex;
   flex-direction: column;
   justify-content: space-between;
-  min-width: 36px;
+  min-width: 28px;
   text-align: right;
-  padding-right: 0.5rem;
+  padding-right: 0.25rem;
 }
 
 .y-label {
@@ -218,14 +245,14 @@ function getAreaPath(points) {
   position: relative;
   display: flex;
   flex-direction: column;
-  padding-left: 44px;
+  padding-left: 56px;
   min-height: 200px;
 }
 
 .grid-lines {
   position: absolute;
   top: 0;
-  left: 44px;
+  left: 56px;
   right: 0;
   bottom: 28px;
   display: flex;
@@ -359,10 +386,13 @@ function getAreaPath(points) {
   .chart-legend {
     gap: 0.5rem;
   }
-  
+
   .legend-item {
     font-size: 0.6875rem;
   }
+
+  .y-axis-unit {
+    display: none;
+  }
 }
 </style>
-

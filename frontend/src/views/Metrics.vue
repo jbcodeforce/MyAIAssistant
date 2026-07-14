@@ -96,7 +96,7 @@
           </div>
           <div class="card-content">
             <span class="card-value">{{ metricsStore.totalOrganizationsCreated }}</span>
-            <span class="card-label">Orgs ({{ selectedDays }}d)</span>
+            <span class="card-label">Orgs (YTD)</span>
           </div>
         </div>
 
@@ -235,7 +235,12 @@
                 <div class="chart-card">
           <h3 class="chart-title">Weekly Todo Time Allocation (Current Week)</h3>
           <div class="bar-chart-container" v-if="weeklyTodoChartData.length > 0">
-            <BarChart :data="weeklyTodoChartData" :maxValue="maxWeeklyTodoValue" :barColor="'#8b5cf6'" />
+            <BarChart
+              :data="weeklyTodoChartData"
+              :maxValue="maxWeeklyTodoValue"
+              :barColor="'#8b5cf6'"
+              yAxisLabel="Minutes"
+            />
           </div>
           <div v-else class="empty-chart">
             <p>No time allocated to weekly todos this week</p>
@@ -246,10 +251,11 @@
         <div class="chart-card wide">
           <h3 class="chart-title">Task Status Over Time</h3>
           <div class="line-chart-container" v-if="metricsStore.taskStatusDataPoints.length > 0">
-            <LineChart 
-              :data="metricsStore.taskStatusDataPoints" 
+            <LineChart
+              :data="metricsStore.taskStatusDataPoints"
               :series="taskStatusSeries"
-              :maxValue="maxTaskStatusValue" 
+              :maxValue="maxTaskStatusValue"
+              yAxisLabel="Tasks"
             />
           </div>
           <div v-else class="empty-chart">
@@ -261,7 +267,12 @@
         <div class="chart-card">
           <h3 class="chart-title">Organizations Created by Month</h3>
           <div class="bar-chart-container" v-if="metricsStore.organizationsMonthlyChartDataPoints.length > 0">
-            <BarChart :data="organizationsChartData" :maxValue="maxOrganizationsValue" :barColor="'#f97316'" />
+            <BarChart
+              :data="organizationsChartData"
+              :maxValue="maxOrganizationsValue"
+              :barColor="'#f97316'"
+              yAxisLabel="Organizations"
+            />
           </div>
           <div v-else class="empty-chart">
             <p>No organizations created in this period</p>
@@ -273,7 +284,12 @@
           <h3 class="chart-title">Meetings by Month</h3>
           <p v-if="meetingsLastEvaluatedLabel" class="chart-subtitle">{{ meetingsLastEvaluatedLabel }}</p>
           <div class="bar-chart-container" v-if="metricsStore.meetingsMonthlyChartDataPoints.length > 0">
-            <BarChart :data="meetingsChartData" :maxValue="maxMeetingsValue" :barColor="'#06b6d4'" />
+            <BarChart
+              :data="meetingsChartData"
+              :maxValue="maxMeetingsValue"
+              :barColor="'#06b6d4'"
+              yAxisLabel="Meetings"
+            />
           </div>
           <div v-else class="empty-chart">
             <p>No meetings in this period</p>
@@ -298,7 +314,7 @@ const metricsStore = useMetricsStore()
 const selectedPeriod = ref('daily')
 const selectedDays = ref(30)
 
-const meetingsYtdDays = computed(() => {
+const ytdDays = computed(() => {
   const now = new Date()
   const start = new Date(now.getFullYear(), 0, 1)
   const msPerDay = 24 * 60 * 60 * 1000
@@ -438,7 +454,7 @@ async function loadMetrics() {
     await metricsStore.fetchDashboardMetrics(
       selectedPeriod.value,
       selectedDays.value,
-      meetingsYtdDays.value
+      ytdDays.value
     )
   } catch (err) {
     console.error('Failed to load metrics:', err)
@@ -450,7 +466,7 @@ async function refreshMeetings() {
     await metricsStore.refreshMeetingMetrics(
       selectedPeriod.value,
       selectedDays.value,
-      meetingsYtdDays.value
+      ytdDays.value
     )
   } catch (err) {
     console.error('Failed to refresh meeting metrics:', err)

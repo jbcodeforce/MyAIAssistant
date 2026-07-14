@@ -1,9 +1,12 @@
 <template>
   <div class="bar-chart">
-    <div class="chart-y-axis">
-      <span class="y-label">{{ yTicks.top }}</span>
-      <span class="y-label">{{ yTicks.middle }}</span>
-      <span class="y-label">{{ yTicks.bottom }}</span>
+    <div class="y-axis-column">
+      <span v-if="yAxisLabel" class="y-axis-unit" :title="yAxisLabel">{{ yAxisLabel }}</span>
+      <div class="chart-y-axis">
+        <span class="y-label">{{ yTicks.top }}</span>
+        <span class="y-label">{{ yTicks.middle }}</span>
+        <span class="y-label">{{ yTicks.bottom }}</span>
+      </div>
     </div>
     <div class="chart-area">
       <div class="grid-lines">
@@ -49,6 +52,10 @@ const props = defineProps({
   barColor: {
     type: String,
     default: null
+  },
+  yAxisLabel: {
+    type: String,
+    default: ''
   }
 })
 
@@ -88,12 +95,36 @@ function truncateLabel(label) {
   gap: 0.5rem;
 }
 
+.y-axis-column {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.y-axis-unit {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  align-self: center;
+  margin-bottom: 50px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #6b7280;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+:global(.dark) .y-axis-unit {
+  color: #94a3b8;
+}
+
 .chart-y-axis {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   padding-bottom: 50px;
-  min-width: 36px;
+  min-width: 28px;
   text-align: right;
 }
 
@@ -158,7 +189,6 @@ function truncateLabel(label) {
   height: 100%;
 }
 
-/* More space for fewer bars */
 .bars-container:has(.bar-wrapper:nth-child(-n+5)) {
   gap: 12px;
   padding-bottom: 60px;
@@ -245,14 +275,12 @@ function truncateLabel(label) {
   color: #9ca3af;
 }
 
-/* Better spacing for fewer bars */
 .bars-container:has(.bar-wrapper:nth-child(-n+5)) .bar-label {
   font-size: 0.75rem;
   bottom: -6px;
   max-width: 160px;
 }
 
-/* Hide labels when there are many bars */
 .bars-container:has(.bar-wrapper:nth-child(n+15)) .bar-label {
   display: none;
 }
@@ -273,6 +301,9 @@ function truncateLabel(label) {
   .bars-container {
     padding-bottom: 8px;
   }
+
+  .y-axis-unit {
+    display: none;
+  }
 }
 </style>
-
