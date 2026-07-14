@@ -7,7 +7,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.database import get_db
 from app.db import crud as db_crud
-from app.db.models import Project, Todo, Organization, Meeting, Asset, WeeklyTodo, WeeklyTodoAllocation
+from app.db.models import (
+    Project,
+    Todo,
+    Organization,
+    Asset,
+    WeeklyTodo,
+    WeeklyTodoAllocation,
+    MeetingHeadingEvent,
+)
 from app.api.schemas.metrics import (
     StatusCount,
     ProjectMetrics,
@@ -17,11 +25,16 @@ from app.api.schemas.metrics import (
     TaskCompletionOverTime,
     TimeSeriesDataPoint,
     TimeSeriesMetrics,
+    MeetingMetricsRefreshResult,
     StatusTimeSeriesDataPoint,
     TaskStatusOverTime,
     WeeklyTodoDataPoint,
     WeeklyTodoMetrics,
-    DashboardMetrics
+    DashboardMetrics,
+)
+from app.services.meeting_heading_metrics import (
+    get_meeting_metrics_meta,
+    scan_and_persist_meeting_headings,
 )
 
 router = APIRouter(prefix="/metrics", tags=["metrics"])
@@ -310,64 +323,61 @@ async def get_meetings_over_time(
     period: str = "daily",
     days: int = 30
 ) -> TimeSeriesMetrics:
-    """Get meetings created over time."""
-    # Add 1 day buffer to end_date to handle UTC vs local timezone differences
+    """Get meetings over time from scanned dated markdown headings."""
     end_date = datetime.now() + timedelta(days=1)
     start_date = datetime.now() - timedelta(days=days)
-    
-    query = select(
-        func.date(Meeting.created_at).label("created_date"),
-        func.count(Meeting.id).label("count")
-    ).where(
-        Meeting.created_at >= start_date,
-        Meeting.created_at <= end_date
-    ).group_by(
-        func.date(Meeting.created_at)
-    ).order_by(
-        func.date(Meeting.created_at)
+    start_day = start_date.date()
+    end_day = end_date.date()
+
+    query = (
+        select(
+            MeetingHeadingEvent.meeting_date.label("meeting_date"),
+            func.count(MeetingHeadingEvent.id).label("count"),
+        )
+        .where(
+            MeetingHeadingEvent.meeting_date >= start_day,
+            MeetingHeadingEvent.meeting_date <= end_day,
+        )
+        .group_by(MeetingHeadingEvent.meeting_date)
+        .order_by(MeetingHeadingEvent.meeting_date)
     )
-    
+
     result = await db.execute(query)
     rows = result.all()
-    
-    data_points = []
+
+    data_points: list[TimeSeriesDataPoint] = []
     total = 0
-    
+
     for row in rows:
-        # Handle both date objects and strings (SQLite returns strings)
-        if row.created_date:
-            if hasattr(row.created_date, 'strftime'):
-                date_str = row.created_date.strftime("%Y-%m-%d")
+        if row.meeting_date:
+            if hasattr(row.meeting_date, "strftime"):
+                date_str = row.meeting_date.strftime("%Y-%m-%d")
             else:
-                date_str = str(row.created_date)[:10]
+                date_str = str(row.meeting_date)[:10]
         else:
             continue
         data_points.append(TimeSeriesDataPoint(date=date_str, count=row.count))
         total += row.count
-    
-    # Weekly aggregation
+
     if period == "weekly":
-        weekly_data = {}
+        weekly_data: dict[str, int] = {}
         for dp in data_points:
-            date = datetime.strptime(dp.date, "%Y-%m-%d")
-            week_start = date - timedelta(days=date.weekday())
+            dt = datetime.strptime(dp.date, "%Y-%m-%d")
+            week_start = dt - timedelta(days=dt.weekday())
             week_key = week_start.strftime("%Y-%m-%d")
             weekly_data[week_key] = weekly_data.get(week_key, 0) + dp.count
-        
+
         data_points = [
-            TimeSeriesDataPoint(date=k, count=v) 
+            TimeSeriesDataPoint(date=k, count=v)
             for k, v in sorted(weekly_data.items())
         ]
-    
-    # Monthly aggregation: include every calendar month from the lookback start
-    # through the API window end (zeros for months with no meetings).
+
     elif period == "monthly":
         monthly_data: dict[str, int] = {}
         for dp in data_points:
-            month_key = dp.date[:7]  # YYYY-MM
+            month_key = dp.date[:7]
             monthly_data[month_key] = monthly_data.get(month_key, 0) + dp.count
 
-        start_day = start_date.date()
         range_end_day = end_date.date()
         y, m = start_day.year, start_day.month
         last_y, last_m = range_end_day.year, range_end_day.month
@@ -382,13 +392,16 @@ async def get_meetings_over_time(
                 m = 1
                 y += 1
         data_points = filled
-    
+
+    meta = await get_meeting_metrics_meta(db)
+
     return TimeSeriesMetrics(
         period=period,
         start_date=start_date.strftime("%Y-%m-%d"),
         end_date=end_date.strftime("%Y-%m-%d"),
         data_points=data_points,
-        total=total
+        total=total,
+        last_evaluated_at=meta.last_evaluated_at if meta else None,
     )
 
 
@@ -596,15 +609,27 @@ async def get_meetings_created_metrics(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Get meeting creation metrics over time.
-    
-    Returns the number of meetings created per day, week, or month
-    within the specified time range.
+    Get meeting metrics over time from dated ##/### Meeting headings in notes.
+
+    Counts are based on the last scan of org strategy and meeting markdown files.
     """
     if period not in ["daily", "weekly", "monthly"]:
         period = "daily"
     
     return await get_meetings_over_time(db, period, days)
+
+
+@router.post("/meetings/refresh", response_model=MeetingMetricsRefreshResult)
+async def refresh_meeting_heading_metrics(db: AsyncSession = Depends(get_db)):
+    """
+    Rescan organization strategy and meeting markdown for dated Meeting headings.
+    """
+    meta = await scan_and_persist_meeting_headings(db)
+    return MeetingMetricsRefreshResult(
+        last_evaluated_at=meta.last_evaluated_at,
+        files_scanned=meta.files_scanned,
+        meetings_found=meta.meetings_found,
+    )
 
 
 @router.get("/tasks/status-over-time", response_model=TaskStatusOverTime)

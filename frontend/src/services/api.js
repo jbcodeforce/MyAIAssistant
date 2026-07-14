@@ -812,6 +812,13 @@ export const metricsApi = {
   },
 
   /**
+   * Rescan markdown for dated Meeting headings and refresh persisted metrics
+   */
+  refreshMeetings() {
+    return api.post('/metrics/meetings/refresh')
+  },
+
+  /**
    * Get task status over time (Open, Started, Completed, Cancelled)
    * @param {string} period - 'daily', 'weekly', or 'monthly'
    * @param {number} days - Number of days to look back (1-365)

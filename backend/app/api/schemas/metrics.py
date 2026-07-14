@@ -107,6 +107,10 @@ class TimeSeriesMetrics(BaseModel):
         description="List of data points"
     )
     total: int = Field(..., description="Total count in the period")
+    last_evaluated_at: Optional[datetime] = Field(
+        None,
+        description="When meeting headings were last scanned (meetings series only)",
+    )
     
     model_config = ConfigDict(
         json_schema_extra={
@@ -124,6 +128,13 @@ class TimeSeriesMetrics(BaseModel):
             ]
         }
     )
+
+
+class MeetingMetricsRefreshResult(BaseModel):
+    """Result of rescanning meeting headings from markdown."""
+    last_evaluated_at: datetime = Field(..., description="Scan completion time")
+    files_scanned: int = Field(..., description="Markdown files read")
+    meetings_found: int = Field(..., description="Dated Meeting headings kept after de-dupe")
 
 
 class StatusTimeSeriesDataPoint(BaseModel):
@@ -230,7 +241,10 @@ class DashboardMetrics(BaseModel):
     tasks_completion: TaskCompletionOverTime = Field(..., description="Task completion over time")
     task_status_over_time: TaskStatusOverTime = Field(..., description="Task status changes over time")
     organizations_created: TimeSeriesMetrics = Field(..., description="Organizations created over time")
-    meetings_created: TimeSeriesMetrics = Field(..., description="Meetings created over time")
+    meetings_created: TimeSeriesMetrics = Field(
+        ...,
+        description="Meetings over time from dated markdown headings",
+    )
     weekly_todos: WeeklyTodoMetrics = Field(..., description="Weekly todo time allocations")
     
     model_config = ConfigDict(

@@ -29,3 +29,48 @@ From the organization view it is possible to do a read-only access, edit, or del
 ![](./images/org_mgt.png)
 
 As an organization may have zero to n projects, it is possible to navigate from an organization to a project.
+
+## Meeting notes in organization markdown
+
+Organization strategy notes (and customer-style `index.md` files) can contain multiple dated meeting sections. Metrics counts headings such as:
+
+```markdown
+## Meeting 01/07
+### Meeting 3/17
+### Meeting Workshop 2/11/2026
+```
+
+Section titles without a date (`## Meeting notes`, `## Meetings`) are ignored. Headings that look like meetings but have no parseable date are **dirty** (for example `### Meeting 02/1026`).
+
+### Audit a notes folder for dirty headings
+
+Prefer the report script when cleaning data (per-organization summary and dirty line list):
+
+```bash
+cd backend
+
+# Summary + dirty details
+uv run python scripts/report_org_meetings.py /path/to/docs/notes
+
+# Customer-style tree ({org}/index.md)
+uv run python scripts/report_org_meetings.py /path/to/customers --dirty-only
+
+# One org, include dated headings
+uv run python scripts/report_org_meetings.py /path/to/notes --org acme -v
+```
+
+Exit code `1` means dirty headings remain. Fix those lines (use a real `M/D` or `M/D/YYYY` date), then re-run.
+
+Alternatively, the integration audit walks the same files and fails on dirty headings (`-s` prints the full list):
+
+```bash
+cd backend
+
+MEETING_METRICS_AUDIT_ROOT=/path/to/docs/notes \
+  uv run pytest tests/it/test_meeting_heading_audit.py -m integration -s -v
+
+MEETING_METRICS_AUDIT_ROOT=/path/to/customers \
+  uv run pytest tests/it/test_meeting_heading_audit.py -m integration -s -v
+```
+
+See [Meeting notes implementation](../implementation/meetings.md#meeting-metrics-from-markdown-headings) for scanning rules and de-duplication.

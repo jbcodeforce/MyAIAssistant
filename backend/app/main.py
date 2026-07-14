@@ -1,10 +1,11 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings, get_config_info, setup_logging
-from app.db.database import init_db
+from app.db.database import get_session_maker, init_db
 from app.middleware.request_logging import RequestLoggingMiddleware
 from app.api.todos import router as todos_router
 from app.api.knowledge import router as knowledge_router
@@ -22,12 +23,21 @@ from app.api.tags import router as tags_router
 from app.api.weekly_todos import router as weekly_todos_router
 from app.api.notes_files import router as notes_files_router
 from app.api.myai_agents import router as myai_agents_router
+from app.services.meeting_heading_metrics import scan_and_persist_meeting_headings
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup: Initialize database
+    # Startup: Initialize database, then refresh meeting-heading metrics
     await init_db()
+    try:
+        session_maker = get_session_maker()
+        async with session_maker() as session:
+            await scan_and_persist_meeting_headings(session)
+    except Exception:
+        logger.exception("Meeting heading metrics scan failed on startup")
     yield
     # Shutdown: cleanup if needed
 

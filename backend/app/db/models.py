@@ -1,7 +1,7 @@
-from datetime import datetime
+from datetime import date, datetime
 from typing import Optional, TypedDict
 
-from sqlalchemy import String, Text, DateTime, Integer, Float, ForeignKey, func, JSON, UniqueConstraint, Index, text
+from sqlalchemy import String, Text, DateTime, Date, Integer, Float, ForeignKey, func, JSON, UniqueConstraint, Index, text
 from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
@@ -293,6 +293,54 @@ class Meeting(Base):
 
     def __repr__(self) -> str:
         return f"Meeting(id={self.id!r}, meeting_id={self.meeting_id!r}, file_ref={self.file_ref!r})"
+
+
+class MeetingHeadingEvent(Base):
+    """Extracted dated Meeting heading from org strategy or meeting markdown."""
+
+    __tablename__ = "meeting_heading_events"
+    __table_args__ = (
+        UniqueConstraint(
+            "org_id",
+            "meeting_date",
+            "source_path",
+            "heading_line",
+            name="uq_meeting_heading_event",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("organizations.id"), nullable=True
+    )
+    meeting_date: Mapped[date] = mapped_column(Date, nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False)  # strategy | meeting_file
+    source_path: Mapped[str] = mapped_column(String(2048), nullable=False)
+    heading_text: Mapped[str] = mapped_column(String(1024), nullable=False)
+    heading_line: Mapped[int] = mapped_column(Integer, nullable=False)
+
+    def __repr__(self) -> str:
+        return (
+            f"MeetingHeadingEvent(id={self.id!r}, org_id={self.org_id!r}, "
+            f"meeting_date={self.meeting_date!r}, source={self.source!r})"
+        )
+
+
+class MeetingMetricsMeta(Base):
+    """Singleton metadata for the last meeting-heading metrics scan."""
+
+    __tablename__ = "meeting_metrics_meta"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    last_evaluated_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    files_scanned: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    meetings_found: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    def __repr__(self) -> str:
+        return (
+            f"MeetingMetricsMeta(id={self.id!r}, last_evaluated_at={self.last_evaluated_at!r}, "
+            f"meetings_found={self.meetings_found!r})"
+        )
 
 
 class Asset(Base):

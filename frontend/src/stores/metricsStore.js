@@ -15,8 +15,10 @@ export const useMetricsStore = defineStore('metrics', () => {
   const meetingsCreated = ref(null)
   /** Monthly time series for the meetings chart only (one bar per month). */
   const meetingsCreatedMonthlyChart = ref(null)
+  const meetingsLastEvaluatedAt = ref(null)
   const weeklyTodoMetrics = ref(null)
   const loading = ref(false)
+  const refreshingMeetings = ref(false)
   const error = ref(null)
 
   // Getters
@@ -88,16 +90,22 @@ export const useMetricsStore = defineStore('metrics', () => {
   })
 
   // Actions
-  async function fetchDashboardMetrics(period = 'daily', days = 30) {
+  async function fetchDashboardMetrics(period = 'daily', days = 30, meetingsDays) {
     loading.value = true
     error.value = null
     try {
-      const [dashboardResponse, orgMonthlyResponse, meetingsMonthlyResponse] =
-        await Promise.all([
-          metricsApi.getDashboard(period, days),
-          metricsApi.getOrganizationsCreated('monthly', days),
-          metricsApi.getMeetingsCreated('monthly', days)
-        ])
+      const meetingsWindow = meetingsDays ?? days
+      const [
+        dashboardResponse,
+        orgMonthlyResponse,
+        meetingsMonthlyResponse,
+        meetingsPeriodResponse
+      ] = await Promise.all([
+        metricsApi.getDashboard(period, days),
+        metricsApi.getOrganizationsCreated('monthly', days),
+        metricsApi.getMeetingsCreated('monthly', meetingsWindow),
+        metricsApi.getMeetingsCreated(period, meetingsWindow)
+      ])
       const data = dashboardResponse.data
       projectMetrics.value = data.projects
       taskMetrics.value = data.tasks
@@ -106,8 +114,12 @@ export const useMetricsStore = defineStore('metrics', () => {
       taskStatusOverTime.value = data.task_status_over_time
       organizationsCreated.value = data.organizations_created
       organizationsCreatedMonthlyChart.value = orgMonthlyResponse.data
-      meetingsCreated.value = data.meetings_created
+      meetingsCreated.value = meetingsPeriodResponse.data
       meetingsCreatedMonthlyChart.value = meetingsMonthlyResponse.data
+      meetingsLastEvaluatedAt.value =
+        meetingsPeriodResponse.data?.last_evaluated_at ||
+        meetingsMonthlyResponse.data?.last_evaluated_at ||
+        null
       weeklyTodoMetrics.value = data.weekly_todos
       return data
     } catch (err) {
@@ -115,6 +127,20 @@ export const useMetricsStore = defineStore('metrics', () => {
       throw err
     } finally {
       loading.value = false
+    }
+  }
+
+  async function refreshMeetingMetrics(period = 'daily', days = 30, meetingsDays) {
+    refreshingMeetings.value = true
+    error.value = null
+    try {
+      await metricsApi.refreshMeetings()
+      return await fetchDashboardMetrics(period, days, meetingsDays)
+    } catch (err) {
+      error.value = err.response?.data?.detail || 'Failed to refresh meeting metrics'
+      throw err
+    } finally {
+      refreshingMeetings.value = false
     }
   }
 
@@ -178,8 +204,10 @@ export const useMetricsStore = defineStore('metrics', () => {
     organizationsCreatedMonthlyChart,
     meetingsCreated,
     meetingsCreatedMonthlyChart,
+    meetingsLastEvaluatedAt,
     weeklyTodoMetrics,
     loading,
+    refreshingMeetings,
     error,
     // Getters
     totalProjects,
@@ -203,6 +231,7 @@ export const useMetricsStore = defineStore('metrics', () => {
     totalWeeklyTodoMinutes,
     // Actions
     fetchDashboardMetrics,
+    refreshMeetingMetrics,
     fetchProjectMetrics,
     fetchTaskMetrics,
     fetchTaskCompletion,

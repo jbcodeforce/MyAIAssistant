@@ -63,15 +63,20 @@ Organization **Strategy / Notes**: the database stores **`description_path`** (p
 
 ## API Endpoints
 
-[See app/api/metrics.py](https://github.com/jbcodeforce/MyAIAssistant/blob/main/backend/app/api/metrics.py)
+Meeting references (`app/api/meeting_refs.py`):
 
 * POST /api/meeting-refs/
 * List Meeting Notes: GET /api/meeting-refs/?org_id=1&project_id=5
 * Get Meeting Note: GET /api/meeting-refs/{id}
 * Get Meeting Content: GET /api/meeting-refs/{id}/content
 * Update Meeting Note: PUT /api/meeting-refs/{id}
-* Delete Meeting Note: DELETE /api/meeting-refs/{id}   -> Deletes both the database record and the associated markdown file.
+* Delete Meeting Note: DELETE /api/meeting-refs/{id} — deletes the database record and the markdown file
 * Search by Meeting ID: GET /api/meeting-refs/search/by-meeting-id?meeting_id=mtg-2026-01-05-kickoff
+
+Meeting metrics (see [Meeting metrics from markdown headings](#meeting-metrics-from-markdown-headings)):
+
+* GET /api/metrics/meetings/created?period=monthly&days=90 — time series from scanned headings
+* POST /api/metrics/meetings/refresh — rescan notes without restarting the app
 
 ## File Storage Structure
 
@@ -94,6 +99,82 @@ Meeting files and org strategy notes live under `notes_root` (default `{workspac
             └── {date}-{meeting-id}.md
 ```
 
+## Meeting metrics from markdown headings
+
+Dashboard “Meetings over time” counts **dated Meeting headings** in markdown, not `Meeting.created_at` insert time. Multiple meetings may live in one file (common in org strategy notes).
+
+### Sources scanned
+
+1. Each organization’s `description_path` file (usually `{org}/notes/strategy.md`)
+2. Each meeting reference’s `file_ref` under `notes_root`
+
+### Heading rules
+
+Match `##` or `###` headings whose title starts with `Meeting` and includes a parseable date:
+
+```markdown
+## Meeting 01/07
+### Meeting 3/17
+### Meeting Workshop 2/11/2026
+```
+
+Supported date forms: `M/D`, `M/D/YY`, `M/D/YYYY` (zero-padded allowed). Bare `M/D` uses the current calendar year, or the previous year if that date would fall more than 30 days in the future.
+
+Ignored (not counted):
+
+* Undated section titles such as `## Meeting notes` or `## Meetings`
+* Headings with no parseable date (treated as dirty for the audit test)
+
+### De-duplication
+
+* Every dated heading in a strategy file counts (including two headings on the same day)
+* For meeting files, a heading is skipped if strategy already has the same `(org_id, meeting_date)`
+
+### Persistence and refresh
+
+Implementation: `app/services/meeting_heading_metrics.py`.
+
+| Table | Role |
+|-------|------|
+| `meeting_heading_events` | One row per kept dated heading (`org_id`, `meeting_date`, `source`, `source_path`, `heading_text`, `heading_line`) |
+| `meeting_metrics_meta` | Singleton: `last_evaluated_at`, `files_scanned`, `meetings_found` |
+
+Scan runs:
+
+* On app startup (after `init_db`; failures are logged and do not block boot)
+* On `POST /api/metrics/meetings/refresh` (Metrics UI “Refresh meetings” button)
+
+API responses for meeting time series include `last_evaluated_at`.
+
+### Frontend
+
+Metrics dashboard (`Metrics.vue`):
+
+* Summary card: meeting count for the selected day window
+* Chart title: “Meetings by Month”
+* Shows last evaluated timestamp
+* Refresh meetings: calls refresh then reloads the dashboard
+
+### Auditing a notes root
+
+CLI report (preferred for cleaning — per-org table, exit 1 when dirty):
+
+```bash
+cd backend
+uv run python scripts/report_org_meetings.py /path/to/docs/notes
+uv run python scripts/report_org_meetings.py /path/to/customers --dirty-only
+```
+
+Integration test (same filesystem rules; fails on dirty headings):
+
+```bash
+cd backend
+MEETING_METRICS_AUDIT_ROOT=/path/to/docs/notes \
+  uv run pytest tests/it/test_meeting_heading_audit.py -m integration -s -v
+```
+
+Unit coverage for parsing and de-dupe: `tests/ut/test_meeting_heading_metrics.py`.
+
 ## Frontend View
 
 The Meetings view provides:
@@ -104,7 +185,6 @@ The Meetings view provides:
 - View modal for reading meeting content
 - Edit modal for updating content and associations
 - Delete confirmation
-
 
 ## Best Practices
 
@@ -127,7 +207,7 @@ Use a consistent naming convention for meeting IDs:
 ### Content Structure
 
 - Use consistent heading structure
+- For multi-meeting strategy notes, use dated headings (`## Meeting MM/DD` or `## Meeting MM/DD/YYYY`) so metrics can count them
 - Include attendees for context
 - Document action items with task checkboxes
 - Add timestamps for key decisions
-

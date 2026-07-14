@@ -19,6 +19,14 @@
           <option :value="180">Last 6 months</option>
           <option :value="365">Last year</option>
         </select>
+        <button
+          type="button"
+          class="btn-refresh-meetings"
+          :disabled="loading || refreshingMeetings"
+          @click="refreshMeetings"
+        >
+          {{ refreshingMeetings ? 'Scanning…' : 'Refresh meetings' }}
+        </button>
       </div>
     </div>
 
@@ -109,7 +117,8 @@
           </div>
           <div class="card-content">
             <span class="card-value">{{ metricsStore.totalMeetingsCreated }}</span>
-            <span class="card-label">Meetings ({{ selectedDays }}d)</span>
+            <span class="card-label">Meetings (YTD)</span>
+            <span v-if="meetingsLastEvaluatedLabel" class="card-meta">{{ meetingsLastEvaluatedLabel }}</span>
           </div>
         </div>
 
@@ -259,9 +268,10 @@
           </div>
         </div>
 
-        <!-- Meetings created: one bar per month (same date range as dashboard) -->
+        <!-- Meetings by month from dated markdown headings -->
         <div class="chart-card">
-          <h3 class="chart-title">Meetings Created by Month</h3>
+          <h3 class="chart-title">Meetings by Month</h3>
+          <p v-if="meetingsLastEvaluatedLabel" class="chart-subtitle">{{ meetingsLastEvaluatedLabel }}</p>
           <div class="bar-chart-container" v-if="metricsStore.meetingsMonthlyChartDataPoints.length > 0">
             <BarChart :data="meetingsChartData" :maxValue="maxMeetingsValue" :barColor="'#06b6d4'" />
           </div>
@@ -288,8 +298,24 @@ const metricsStore = useMetricsStore()
 const selectedPeriod = ref('daily')
 const selectedDays = ref(30)
 
+const meetingsYtdDays = computed(() => {
+  const now = new Date()
+  const start = new Date(now.getFullYear(), 0, 1)
+  const msPerDay = 24 * 60 * 60 * 1000
+  return Math.max(1, Math.round((now.getTime() - start.getTime()) / msPerDay))
+})
+
 const loading = computed(() => metricsStore.loading)
+const refreshingMeetings = computed(() => metricsStore.refreshingMeetings)
 const error = computed(() => metricsStore.error)
+
+const meetingsLastEvaluatedLabel = computed(() => {
+  const raw = metricsStore.meetingsLastEvaluatedAt
+  if (!raw) return ''
+  const d = new Date(raw)
+  if (Number.isNaN(d.getTime())) return ''
+  return `Last evaluated ${d.toLocaleString()}`
+})
 
 const projectColors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ef4444']
 const taskColors = ['#6366f1', '#22c55e', '#eab308', '#ef4444']
@@ -409,9 +435,25 @@ function formatMonthLabel(dateStr) {
 
 async function loadMetrics() {
   try {
-    await metricsStore.fetchDashboardMetrics(selectedPeriod.value, selectedDays.value)
+    await metricsStore.fetchDashboardMetrics(
+      selectedPeriod.value,
+      selectedDays.value,
+      meetingsYtdDays.value
+    )
   } catch (err) {
     console.error('Failed to load metrics:', err)
+  }
+}
+
+async function refreshMeetings() {
+  try {
+    await metricsStore.refreshMeetingMetrics(
+      selectedPeriod.value,
+      selectedDays.value,
+      meetingsYtdDays.value
+    )
+  } catch (err) {
+    console.error('Failed to refresh meeting metrics:', err)
   }
 }
 
@@ -461,6 +503,8 @@ onMounted(() => {
 .header-controls {
   display: flex;
   gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .period-select,
@@ -473,6 +517,33 @@ onMounted(() => {
   font-size: 0.875rem;
   cursor: pointer;
   transition: all 0.2s;
+}
+
+.btn-refresh-meetings {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: white;
+  color: #374151;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-refresh-meetings:hover:not(:disabled) {
+  border-color: #06b6d4;
+  color: #0e7490;
+}
+
+.btn-refresh-meetings:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+:global(.dark) .btn-refresh-meetings {
+  background: #1e293b;
+  border-color: #334155;
+  color: #e2e8f0;
 }
 
 :global(.dark) .period-select,
@@ -681,6 +752,17 @@ onMounted(() => {
   color: #94a3b8;
 }
 
+.card-meta {
+  display: block;
+  font-size: 0.7rem;
+  color: #9ca3af;
+  margin-top: 0.35rem;
+}
+
+:global(.dark) .card-meta {
+  color: #64748b;
+}
+
 /* Charts Grid */
 .charts-grid {
   display: grid;
@@ -719,6 +801,20 @@ onMounted(() => {
 
 :global(.dark) .chart-title {
   color: #f1f5f9;
+}
+
+.chart-card:has(.chart-subtitle) .chart-title {
+  margin-bottom: 0.35rem;
+}
+
+.chart-subtitle {
+  margin: 0 0 1.25rem 0;
+  font-size: 0.75rem;
+  color: #9ca3af;
+}
+
+:global(.dark) .chart-subtitle {
+  color: #64748b;
 }
 
 .donut-chart-container {
