@@ -1,5 +1,7 @@
 """Unit tests for meeting_ref CRUD operations."""
 
+from datetime import datetime, timedelta, timezone
+
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -440,6 +442,60 @@ class TestUpdateMeetingRef:
         assert updated is not None
         assert updated.project_id is None  # Not changed
         assert updated.attendees == "Original"  # Not changed
+
+    @pytest.mark.asyncio
+    async def test_update_meeting_ref_touch_bumps_updated_at(
+        self, db_session: AsyncSession
+    ):
+        """touch=True with no metadata flags still bumps updated_at (content-only save)."""
+        meeting_ref = await crud.create_meeting_ref(
+            db=db_session,
+            meeting_id="mtg-touch-updated-at",
+            file_ref="general/meetings/general/mtg-touch-updated-at.md",
+        )
+        old_updated_at = datetime.now(timezone.utc) - timedelta(days=1)
+        meeting_ref.updated_at = old_updated_at.replace(tzinfo=None)
+        await db_session.commit()
+        await db_session.refresh(meeting_ref)
+        before = meeting_ref.updated_at
+
+        updated = await crud.update_meeting_ref(
+            db=db_session,
+            meeting_ref_id=meeting_ref.id,
+            touch=True,
+        )
+
+        assert updated is not None
+        assert updated.updated_at > before
+
+    @pytest.mark.asyncio
+    async def test_update_meeting_ref_same_metadata_with_touch_bumps_updated_at(
+        self, db_session: AsyncSession
+    ):
+        """Identical metadata reassignment with touch=True still bumps updated_at."""
+        meeting_ref = await crud.create_meeting_ref(
+            db=db_session,
+            meeting_id="mtg-same-meta-touch",
+            file_ref="general/meetings/general/mtg-same-meta-touch.md",
+            attendees="Alice, Bob",
+        )
+        old_updated_at = datetime.now(timezone.utc) - timedelta(days=1)
+        meeting_ref.updated_at = old_updated_at.replace(tzinfo=None)
+        await db_session.commit()
+        await db_session.refresh(meeting_ref)
+        before = meeting_ref.updated_at
+
+        updated = await crud.update_meeting_ref(
+            db=db_session,
+            meeting_ref_id=meeting_ref.id,
+            attendees="Alice, Bob",
+            update_attendees=True,
+            touch=True,
+        )
+
+        assert updated is not None
+        assert updated.attendees == "Alice, Bob"
+        assert updated.updated_at > before
     
     @pytest.mark.asyncio
     async def test_update_meeting_ref_not_found(self, db_session: AsyncSession):

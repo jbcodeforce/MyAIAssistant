@@ -99,7 +99,7 @@
                 {{ formatDate(item.created_at) }}
               </td>
               <td class="col-date">
-                {{ formatDate(item.updated_at) }}
+                {{ formatDateTime(item.updated_at) }}
               </td>
               <td class="col-actions">
                 <button class="btn-icon" @click="openViewModal(item)" title="View Content">
@@ -473,6 +473,17 @@ function formatDate(dateString) {
     year: 'numeric',
     month: 'short',
     day: 'numeric'
+  })
+}
+
+function formatDateTime(dateString) {
+  const date = new Date(dateString)
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit'
   })
 }
 

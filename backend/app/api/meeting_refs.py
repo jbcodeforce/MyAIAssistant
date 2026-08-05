@@ -192,6 +192,8 @@ async def update_meeting_ref(
     
     # Update database record (project_id, org_id, attendees, steps)
     update_data = meeting_ref_update.model_dump(exclude_unset=True, exclude={"content"})
+    content_saved = meeting_ref_update.content is not None
+    metadata_present = bool(update_data)
     
     meeting_ref = await crud.update_meeting_ref(
         db=db,
@@ -210,6 +212,7 @@ async def update_meeting_ref(
         update_attendees="attendees" in update_data,
         update_past_steps="past_steps" in update_data,
         update_next_steps="next_steps" in update_data,
+        touch=content_saved or metadata_present,
     )
     
     return meeting_ref

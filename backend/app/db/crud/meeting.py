@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 from sqlalchemy import select, func
@@ -86,6 +87,7 @@ async def update_meeting_ref(
     update_attendees: bool = False,
     update_past_steps: bool = False,
     update_next_steps: bool = False,
+    touch: bool = False,
 ) -> Optional[Meeting]:
     """Update an existing meeting reference.
     
@@ -101,6 +103,7 @@ async def update_meeting_ref(
         update_attendees: Whether to update attendees (allows setting to None)
         update_past_steps: Whether to update past_steps (allows setting to None)
         update_next_steps: Whether to update next_steps (allows setting to None)
+        touch: Force bump updated_at (e.g. content-only save with unchanged metadata)
     """
     db_meeting_ref = await get_meeting_ref(db, meeting_ref_id)
     if not db_meeting_ref:
@@ -116,6 +119,20 @@ async def update_meeting_ref(
         db_meeting_ref.past_steps = past_steps
     if update_next_steps:
         db_meeting_ref.next_steps = next_steps
+
+    should_touch = touch or any(
+        (
+            update_project_id,
+            update_org_id,
+            update_attendees,
+            update_past_steps,
+            update_next_steps,
+        )
+    )
+    if should_touch:
+        # Explicit assignment forces an UPDATE even when metadata values are unchanged
+        # (content lives on disk, so ORM onupdate would otherwise never fire).
+        db_meeting_ref.updated_at = datetime.now(timezone.utc).replace(tzinfo=None)
     
     await db.commit()
     await db.refresh(db_meeting_ref)
