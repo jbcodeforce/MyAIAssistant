@@ -310,7 +310,11 @@ const extracting = ref(false)
 const extractionResult = ref(null)
 
 // Computed
-const organizations = computed(() => store.organizations)
+const organizations = computed(() =>
+  [...store.organizations].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  )
+)
 const projects = computed(() => store.projects)
 
 const filteredProjects = computed(() => {

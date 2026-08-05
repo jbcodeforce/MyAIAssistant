@@ -1,0 +1,15 @@
+{
+  "cursorpyright.analysis.exclude": [
+    "**/.venv",
+    "**/venv",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/__pycache__",
+    "**/frontend",
+    "**/data",
+    "**/.git"
+  ],
+  "cursorpyright.analysis.typeCheckingMode": "off",
+  "cursorpyright.nodeMaxOldSpaceSize": 8192
+}
