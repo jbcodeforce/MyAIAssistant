@@ -257,6 +257,74 @@ export const projectsApi = {
   }
 }
 
+/**
+ * Parse a native AgentOS SSE stream, calling handlers for each event type.
+ * Handles partial chunks by buffering until a blank-line message boundary (\n\n).
+ * @param {Response} response - fetch Response with a readable body
+ * @param {{ onChunk: Function, onDone: Function, onError: Function }} handlers
+ */
+async function parseSseStream(response, { onChunk, onDone, onError }) {
+  if (!response.ok) {
+    const errBody = await response.text()
+    let detail = response.statusText
+    try {
+      const j = JSON.parse(errBody)
+      if (j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
+    } catch (_) {}
+    onError(new Error(detail))
+    return
+  }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let doneCalled = false
+
+  function processMessage(message) {
+    let eventType = null
+    let dataLines = []
+    for (const line of message.split('\n')) {
+      if (line.startsWith('event:')) {
+        eventType = line.slice(6).trim()
+      } else if (line.startsWith('data:')) {
+        dataLines.push(line.slice(5).trim())
+      }
+    }
+    if (!eventType && !dataLines.length) return
+    let parsed = {}
+    if (dataLines.length) {
+      try { parsed = JSON.parse(dataLines.join('\n')) } catch (_) {}
+    }
+    if (eventType === 'RunContent') {
+      if (parsed.content) onChunk(parsed.content)
+    } else if (eventType === 'RunCompleted') {
+      doneCalled = true
+      onDone([])
+    } else if (eventType === 'RunError') {
+      doneCalled = true
+      onError(new Error(parsed.error || 'Stream error'))
+    }
+    // RunStarted and unknown events are silently ignored
+  }
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+      const parts = buffer.split('\n\n')
+      buffer = parts.pop() // keep the incomplete trailing segment
+      for (const part of parts) {
+        if (part.trim()) processMessage(part)
+      }
+    }
+    // flush any remaining buffered data
+    if (buffer.trim()) processMessage(buffer)
+    if (!doneCalled) onDone([])
+  } catch (err) {
+    if (!doneCalled) onError(err)
+  }
+}
+
 export const chatApi = {
   /**
    * Send a message to chat about a specific todo task. When agent_service_url is set, 
@@ -297,7 +365,7 @@ export const chatApi = {
     if (agentUrl) {
       const data = await agentFetch(agentUrl, '', {
         method: 'POST',
-        body: JSON.stringify({ message, conversation_history: conversationHistory })
+        body: JSON.stringify({ message, conversation_history: conversationHistory, stream: false })
       })
       return { data }
     }
@@ -323,79 +391,29 @@ export const chatApi = {
   },
 
   /**
-   * Stream generic chat response. When agentUrl (exposed_url) is set, POST to agentUrl/stream; else uses agent_service or backend.
+   * Stream generic chat response. When agentUrl (exposed_url) is set, POST to agentUrl with stream:true in body; else uses agent_service or backend.
    * @param {string} [agentName='MainAgent'] - Agent name (passed in body when using agent service)
    * @param {string} [agentUrl] - Optional exposed_url of the selected agent (takes precedence)
    */
   async genericChatStream(message, conversationHistory = [], onChunk, onDone, onError, agentName = 'MainAgent', agentUrl = null) {
-    let url
-    let body
     try {
       const userCtx = await getUserContext()
+      let url, body
       if (agentUrl) {
-        const streamUrl = agentUrl.replace(/\/$/, '') + '/stream'
-        url = streamUrl
-        body = { message, conversation_history: conversationHistory, agent_name: agentName, ...userCtx }
+        url = `${agentUrl.replace(/\/$/, '')}/agents/${encodeURIComponent(agentName)}/runs`
+        body = { message, conversation_history: conversationHistory, stream: true, ...userCtx }
       } else {
         const base = await getAgentServiceUrl()
-        if (base) {
-          url = `${base.replace(/\/$/, '')}/chat/generic/stream`
-          body = { message, conversation_history: conversationHistory, agent_name: agentName, ...userCtx }
-        } else {
-          url = `${api.defaults.baseURL || ''}/chat/generic/stream`
-          body = { message, conversation_history: conversationHistory, n_results: 5 }
-        }
+        const baseUrl = base ? base.replace(/\/$/, '') : (api.defaults.baseURL || '').replace(/\/$/, '')
+        url = `${baseUrl}/agents/${encodeURIComponent(agentName)}/runs`
+        body = { message, conversation_history: conversationHistory, stream: true, ...userCtx }
       }
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      if (!response.ok) {
-        const errBody = await response.text()
-        let detail = response.statusText
-        try {
-          const j = JSON.parse(errBody)
-          if (j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
-        } catch (_) {}
-        onError(new Error(detail))
-        return
-      }
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed) continue
-          try {
-            const obj = JSON.parse(trimmed)
-            if (obj.content != null) onChunk(obj.content)
-            if (obj.done) {
-              onDone(obj.context_used || [])
-              return
-            }
-          } catch (e) {
-            // skip malformed line
-          }
-        }
-      }
-      if (buffer.trim()) {
-        try {
-          const obj = JSON.parse(buffer.trim())
-          if (obj.content != null) onChunk(obj.content)
-          if (obj.done) {
-            onDone(obj.context_used || [])
-            return
-          }
-        } catch (_) {}
-      }
-      onDone([])
+      await parseSseStream(response, { onChunk, onDone, onError })
     } catch (err) {
       onError(err)
     }
@@ -428,79 +446,29 @@ export const chatApi = {
   },
 
   /**
-   * Stream knowledge-base / Assistant chat. When agentUrl is set, POST to agentUrl/stream; else uses agent_service or backend.
+   * Stream knowledge-base / Assistant chat. When agentUrl is set, POST to agentUrl with stream:true in body; else uses agent_service or backend.
    * @param {string} [agentName='MainAgent'] - Agent name (in body when using agent service)
    * @param {string} [agentUrl] - Optional exposed_url of the selected agent (takes precedence)
    */
   async kbChatStream(message, conversationHistory = [], onChunk, onDone, onError, agentName = 'MainAgent', agentUrl = null) {
-    let url
-    let body
     try {
       const userCtx = await getUserContext()
+      let url, body
       if (agentUrl) {
-        const streamUrl = agentUrl.replace(/\/$/, '') + '/stream'
-        url = streamUrl
-        body = { message, conversation_history: conversationHistory, force_intent: 'knowledge_search', agent_name: agentName, ...userCtx }
+        url = `${agentUrl.replace(/\/$/, '')}/agents/${encodeURIComponent(agentName)}/runs`
+        body = { message, conversation_history: conversationHistory, stream: true, force_intent: 'knowledge_search', ...userCtx }
       } else {
         const base = await getAgentServiceUrl()
-        if (base) {
-          url = `${base.replace(/\/$/, '')}/chat/generic/stream`
-          body = { message, conversation_history: conversationHistory, force_intent: 'knowledge_search', agent_name: agentName, ...userCtx }
-        } else {
-          url = `${api.defaults.baseURL || ''}/chat/generic/stream`
-          body = { message, conversation_history: conversationHistory, n_results: 5, force_intent: 'knowledge_search' }
-        }
+        const baseUrl = base ? base.replace(/\/$/, '') : (api.defaults.baseURL || '').replace(/\/$/, '')
+        url = `${baseUrl}/agents/${encodeURIComponent(agentName)}/runs`
+        body = { message, conversation_history: conversationHistory, stream: true, force_intent: 'knowledge_search', ...userCtx }
       }
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
-      if (!response.ok) {
-        const errBody = await response.text()
-        let detail = response.statusText
-        try {
-          const j = JSON.parse(errBody)
-          if (j.detail) detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail)
-        } catch (_) {}
-        onError(new Error(detail))
-        return
-      }
-      const reader = response.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      while (true) {
-        const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-        const lines = buffer.split('\n')
-        buffer = lines.pop() || ''
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed) continue
-          try {
-            const obj = JSON.parse(trimmed)
-            if (obj.content != null) onChunk(obj.content)
-            if (obj.done) {
-              onDone(obj.context_used || [])
-              return
-            }
-          } catch (e) {
-            // skip malformed line
-          }
-        }
-      }
-      if (buffer.trim()) {
-        try {
-          const obj = JSON.parse(buffer.trim())
-          if (obj.content != null) onChunk(obj.content)
-          if (obj.done) {
-            onDone(obj.context_used || [])
-            return
-          }
-        } catch (_) {}
-      }
-      onDone([])
+      await parseSseStream(response, { onChunk, onDone, onError })
     } catch (err) {
       onError(err)
     }

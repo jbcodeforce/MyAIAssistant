@@ -32,7 +32,7 @@ from agno.os import AgentOS
 
 logger.info("Building chat agent (may connect to LLM/Ollama and Knowledge/Chroma)...")
 from agent_service.agents.agent_factory import get_or_create_agent_factory
-from agent_service.routes import chat_router, health_router, rag_router, extract_router, tag_router, myai_agent_api_router
+from agent_service.routes import agents_json_adapter_router, chat_router, health_router, rag_router, extract_router, tag_router, myai_agent_api_router
 from agent_service.ai_db import get_ai_db, create_knowledge
 
 # prepare agno config file path
@@ -76,7 +76,8 @@ app.add_middleware(
 
 logger.info("Mounting compatibility routes...")
 
-# My own routes
+# My own routes — JSON adapter MUST be first so it intercepts /agents/{name}/runs before AgentOS
+app.include_router(agents_json_adapter_router)
 app.include_router(health_router)
 app.include_router(chat_router)
 app.include_router(rag_router)

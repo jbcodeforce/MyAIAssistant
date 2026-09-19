@@ -4,7 +4,9 @@ import pytest
 from agno.agent import Agent
 from agent_service.agents.agent_factory import get_or_create_agent_factory, reset_agent_factory
 import os
-from agent_service.agents.base_ai_agent import AIAgent
+from agent_service.agents.base_ai_agent import AIAgent, _build_model
+from agent_service.agents.agent_config import AgentConfig
+from unittest.mock import patch
 os.environ["AGENT_SERVICE_URL"] = "http://localhost:8100"
 
 
@@ -54,3 +56,47 @@ async def test_create_main_agent():
 
 
 
+
+
+# ---------------------------------------------------------------------------
+# _build_model() unit tests
+# ---------------------------------------------------------------------------
+
+def _make_config(**kwargs) -> AgentConfig:
+    """Return an AgentConfig with sensible defaults, overridable via kwargs."""
+    defaults = dict(
+        name="TestAgent",
+        model="default-model",
+        temperature=0.5,
+        max_tokens=512,
+    )
+    defaults.update(kwargs)
+    return AgentConfig(**defaults)
+
+
+def test_build_model_uses_config_model():
+    """model from config is passed as OpenAILike id."""
+    config = _make_config(model="test-model")
+    with patch("agent_service.agents.base_ai_agent.get_llm_base_url", return_value="http://localhost:11434/v1"), \
+         patch("agent_service.agents.base_ai_agent.get_llm_api_key", return_value="no-key"):
+        m = _build_model(config)
+    assert m.id == "test-model"
+
+
+def test_build_model_uses_config_temperature():
+    """temperature from config is forwarded to OpenAILike."""
+    config = _make_config(temperature=0.7)
+    with patch("agent_service.agents.base_ai_agent.get_llm_base_url", return_value="http://localhost:11434/v1"), \
+         patch("agent_service.agents.base_ai_agent.get_llm_api_key", return_value="no-key"):
+        m = _build_model(config)
+    assert m.temperature == 0.7
+
+
+def test_build_model_falls_back_to_env_model():
+    """When config.model is falsy, get_llm_model() env fallback is used."""
+    config = _make_config(model="")
+    with patch("agent_service.agents.base_ai_agent.get_llm_base_url", return_value="http://localhost:11434/v1"), \
+         patch("agent_service.agents.base_ai_agent.get_llm_api_key", return_value="no-key"), \
+         patch("agent_service.agents.base_ai_agent.get_llm_model", return_value="env-model"):
+        m = _build_model(config)
+    assert m.id == "env-model"

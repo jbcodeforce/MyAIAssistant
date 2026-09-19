@@ -48,15 +48,19 @@ def  _load_system_prompt(config):
     else:
         return "You are a helpful assistant."
 
-def _build_model():
+def _build_model(config: "AgentConfig"):
     base_url = get_llm_base_url()
-    model = get_llm_model()
-    return OpenAILike(
+    model = config.model or get_llm_model()
+    temperature = config.temperature if config.temperature is not None else 0.2
+    kwargs = dict(
         id=model,
         base_url=base_url,
-        temperature=0.2,
+        temperature=temperature,
         api_key=get_llm_api_key(),
     )
+    if config.max_tokens is not None:
+        kwargs["max_tokens"] = config.max_tokens
+    return OpenAILike(**kwargs)
 
 class AIAgent:
      
@@ -78,7 +82,7 @@ class AIAgent:
         agent_kwargs = dict[str, str | List | OpenAILike | SqliteDb | Knowledge | bool | int | MemoryManager] (
             id=self._config.name,
             name=self._config.name,
-            model=_build_model(),
+            model=_build_model(self._config),
             instructions=self._system_prompt,
             db=get_ai_db(),
             knowledge=self._knowledge,

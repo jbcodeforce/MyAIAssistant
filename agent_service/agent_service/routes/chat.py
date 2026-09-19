@@ -1,11 +1,9 @@
 """Chat compatibility routes: same request/response shape as backend for proxy."""
 
-import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from agent_service.agents.chat import get_chat_agent
-from agent_service.agents.agent_factory import get_or_create_agent_factory
 
 router = APIRouter(prefix="/chat", tags=["chat"])
 
@@ -140,33 +138,3 @@ async def chat_generic(body: ChatGenericRequest):
         raise HTTPException(status_code=500, detail=f"Chat error: {e!s}")
 
 
-def _get_agent_for_request(body: ChatGenericRequest):
-    """Return agent by agent_name when set, otherwise the default chat agent."""
-    if body.agent_name and body.agent_name.strip():
-        factory = get_or_create_agent_factory()
-        return factory.get_or_create_agent(body.agent_name.strip())
-    return get_chat_agent()
-
-
-@router.post("/generic/stream")
-async def chat_generic_stream(body: ChatGenericRequest):
-    """Stream generic chat as NDJSON. True streaming from agno agent (stream=True)."""
-
-    from fastapi.responses import StreamingResponse
-
-    async def generate():
-        try:
-            agent = _get_agent_for_request(body)
-            user_message = _format_message(body)
-            response_stream = agent.arun(user_message, stream=True)
-            async for event in response_stream:
-                if hasattr(event, "content") and event.content:
-                    yield json.dumps({"content": event.content}) + "\n"
-            yield json.dumps({"done": True, "context_used": []}) + "\n"
-        except Exception as e:
-            yield json.dumps({"content": f"Error: {e}", "done": True}) + "\n"
-
-    return StreamingResponse(
-        generate(),
-        media_type="application/x-ndjson",
-    )

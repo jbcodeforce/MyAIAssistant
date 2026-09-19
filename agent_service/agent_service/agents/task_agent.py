@@ -37,12 +37,15 @@ class TaskAgent:
         self._config = config
         self._system_prompt = _load_system_prompt(self._config)
         self._knowledge = create_knowledge(self._config.knowledge_name, self._config.knowledge_name)
-        _model =  OpenAILike(
-                id=self._config.model,
-                base_url=get_llm_base_url(),
-                temperature=self._config.temperature,
-                api_key=get_llm_api_key(),
+        _model_kwargs = dict(
+            id=self._config.model,
+            base_url=get_llm_base_url(),
+            temperature=self._config.temperature,
+            api_key=get_llm_api_key(),
         )
+        if self._config.max_tokens is not None:
+            _model_kwargs["max_tokens"] = self._config.max_tokens
+        _model = OpenAILike(**_model_kwargs)
         #tools = _resolve_tools(getattr(self._config, "tools", None))
         self._agent = Agent(
             id=self._config.name,
