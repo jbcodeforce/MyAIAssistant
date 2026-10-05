@@ -1,6 +1,6 @@
-# AGENT.md
+# AGENTS.md
 
-Guidance for AI coding assistants (Cursor, Claude Code, etc.) working in this repository.
+Guidance for AI coding assistants working in this repository. This is the single source of truth; it follows the [AGENTS.md](https://agents.md) convention and is read natively by Pi (`pi.dev`). Claude Code reads it via a sibling `CLAUDE.md` symlink. Module-specific guidance lives in nested `AGENTS.md` files (see [Module-specific instructions](#module-specific-instructions)); the assistant loads the closest one to the files being edited.
 
 ## What this is
 
@@ -14,7 +14,7 @@ The product goal is to connect **tasks**, **customer/org context**, and **knowle
 | Backend | FastAPI + SQLAlchemy async (port 8000) |
 | Agent microservice | Agno AgentOS (port 8100) |
 | CLI | `ai_assist_cli` (Typer + Agno tools) |
-| MCP | `mcp_todos` (todo CRUD for Cursor) |
+| MCP | `mcp_todos` (todo CRUD over MCP) |
 | Database | SQLite (default) or PostgreSQL per workspace |
 | Vector store | LanceDB (agent_service) |
 
@@ -28,7 +28,7 @@ MyAIAssistant/
 ├── frontend/          # Vue SPA; calls backend and (when configured) agent_service directly
 ├── agent_service/     # Agno + AgentOS microservice — all AI features
 ├── ai_assist_cli/     # Workspace CLI; Agno agents for notes, org reports, etc.
-├── mcp_todos/         # MCP server exposing todo APIs to Cursor
+├── mcp_todos/         # MCP server exposing todo APIs over MCP
 ├── workspaces/        # Isolated deployment configs (DB, Chroma, ports)
 │   └── km-db/         # Example workspace (km_assistant DB, port 8001)
 ├── docs/              # MkDocs source
@@ -58,12 +58,6 @@ Verify which DB the running backend uses: `GET http://localhost:8000/debug/confi
 
 ## Commands
 
-### Full stack (Docker)
-
-```bash
-docker compose up -d
-# UI: http://localhost:80   Backend: :8000   Agent service: :8100
-```
 
 ### Local development
 
@@ -119,6 +113,8 @@ When `agent_service_url` is set in backend config, the frontend reads it from `G
 | Agents | `/api/myai/agents` | Proxy list from agent_service |
 
 Business logic belongs in services/CRUD, not route handlers. Follow async SQLAlchemy 2.0 patterns throughout.
+
+**Step ↔ task cross-reference.** Organizations and meetings store `past_steps` / `next_steps` as arrays of `{ what, who, todo_id }` (see `frontend/src/utils/meetingSteps.js`). An optional `todo_id` links a step to a todo, connecting org/meeting context to the Eisenhower task board. The shared `MeetingStepsEditor` component has two `taskLinkMode`s: `'select'` (default — link an existing todo via dropdown; used by meeting views) and `'create'` (org edit page — a next step offers "Create Task", which persists a todo via `POST /api/todos` and writes the returned id back onto the step; a linked step shows a navigation button to `/organizations/:id/todos?highlight=<todo_id>`).
 
 ## AI implementation — agent_service
 
@@ -219,20 +215,48 @@ Important backend keys: `database_url`, `agent_service_url`, `notes_root`, `llm_
 - **Ollama on host**: Docker Compose reaches it via `host.docker.internal:11434`, not a containerized Ollama service.
 - **Embedding dimensions**: Changing embedder model may require re-indexing or wiping LanceDB (`VS_DB_URL`).
 
-## Cursor rules in this repo
+## Conventions
 
-Module-specific rules live in `.cursor/rules/`:
+These apply across the whole repository.
 
-| Rule | Scope |
-| ---- | ----- |
-| `backend.mdc` | FastAPI, SQLAlchemy, agent_service proxy |
-| `frontend.mdc` | Vue 3, Pinia, API client |
-| `ai_assist_cli.mdc` | CLI commands and workspace services |
-| `tdd.mdc` | Test-driven development expectations |
-| `build.mdc` | Checkpoint commits, verification commands |
-| `writing.mdc` | Markdown style (no emojis, concise technical tone) |
+### Test-driven development
 
-Prefer those rules when editing files they glob-match.
+Start by writing a unit test under `backend/tests/ut/` before writing any function in app services. Mirror the same test-first practice per component (`agent_service/tests/ut`, `ai_assist_cli` tests).
+
+### Build and version control
+
+- Create a `git` checkpoint commit before significant changes (refactors, new features, model changes, dependency updates):
+  ```bash
+  git add -A
+  git commit -m "checkpoint: before <description of upcoming changes>"
+  ```
+- Commit only when explicitly asked; follow Conventional Commits (`feat:`, `fix:`, `chore:`, ...). Never force-push, never bypass hooks, never skip GPG signing.
+- Verify the build after changes:
+  ```bash
+  cd backend && uv sync && uv run pytest
+  cd frontend && npm install && npm run build
+  cd agent_service && uv sync && uv run pytest tests/ut
+  ```
+- Pre-commit checklist: tests pass, linting passes, build completes, changes committed with a descriptive message.
+
+### Markdown writing
+
+- No emojis or decorative unicode.
+- Concise, direct sentences; technical tone. Avoid marketing language, superlatives, and exclamation marks (except in code examples or warnings).
+- Avoid words like "amazing", "awesome", "revolutionary" and filler like "simply", "easily", "just".
+- State facts, specifications, and concrete commands; focus on "what" and "how".
+
+## Module-specific instructions
+
+Path-scoped guidance lives in nested `AGENTS.md` files. Claude Code and Pi load the closest file to the code being edited; prefer it when working in that tree.
+
+| Path | File | Scope |
+| ---- | ---- | ----- |
+| `backend/` | `backend/AGENTS.md` | FastAPI, SQLAlchemy async, agent_service proxy |
+| `frontend/` | `frontend/AGENTS.md` | Vue 3, Pinia, API client, styling |
+| `ai_assist_cli/` | `ai_assist_cli/AGENTS.md` | Typer CLI, workspace and global-home services |
+
+Each nested `AGENTS.md` has a sibling `CLAUDE.md` symlink so Claude Code loads it too. When adding module rules, edit the nested `AGENTS.md`, not the symlink.
 
 ## Key reference files
 

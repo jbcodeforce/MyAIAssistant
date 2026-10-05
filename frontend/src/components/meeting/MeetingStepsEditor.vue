@@ -46,14 +46,27 @@
             <div class="step-fields">
               <input type="text" v-model="step.what" placeholder="What was done?" class="step-what-input" />
               <input type="text" v-model="step.who" placeholder="By whom?" class="step-who-input" />
-              <div v-if="showTaskLinking" class="step-task-selector">
-                <label>Linked Task (optional):</label>
-                <select v-model="step.todo_id">
-                  <option :value="null">No task linked</option>
-                  <option v-for="todo in projectTodos" :key="todo.id" :value="todo.id">
-                    {{ todo.title }}
-                  </option>
-                </select>
+              <div v-if="showTaskLinking" class="step-task-linking">
+                <div v-if="taskLinkMode === 'select'" class="step-task-selector">
+                  <label>Linked Task (optional):</label>
+                  <select v-model="step.todo_id">
+                    <option :value="null">No task linked</option>
+                    <option v-for="todo in projectTodos" :key="todo.id" :value="todo.id">
+                      {{ todo.title }}
+                    </option>
+                  </select>
+                </div>
+                <router-link
+                  v-else-if="step.todo_id && taskTodosLink(step.todo_id)"
+                  :to="taskTodosLink(step.todo_id)"
+                  class="step-task-link-btn"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                    <circle cx="12" cy="12" r="3"/>
+                  </svg>
+                  View Task
+                </router-link>
               </div>
             </div>
             <button type="button" class="step-remove-btn" @click="removeStep('past', index)" title="Remove step">
@@ -112,14 +125,41 @@
             <div class="step-fields">
               <input type="text" v-model="step.what" placeholder="What needs to be done?" class="step-what-input" />
               <input type="text" v-model="step.who" placeholder="By whom?" class="step-who-input" />
-              <div v-if="showTaskLinking" class="step-task-selector">
-                <label>Linked Task (optional):</label>
-                <select v-model="step.todo_id">
-                  <option :value="null">No task linked</option>
-                  <option v-for="todo in projectTodos" :key="todo.id" :value="todo.id">
-                    {{ todo.title }}
-                  </option>
-                </select>
+              <div v-if="showTaskLinking" class="step-task-linking">
+                <div v-if="taskLinkMode === 'select'" class="step-task-selector">
+                  <label>Linked Task (optional):</label>
+                  <select v-model="step.todo_id">
+                    <option :value="null">No task linked</option>
+                    <option v-for="todo in projectTodos" :key="todo.id" :value="todo.id">
+                      {{ todo.title }}
+                    </option>
+                  </select>
+                </div>
+                <template v-else>
+                  <button
+                    v-if="hasTaskContext && !step.todo_id"
+                    type="button"
+                    class="step-create-task-btn"
+                    @click="emit('create-task', step, index)"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 5v14"/>
+                      <path d="M5 12h14"/>
+                    </svg>
+                    Create Task
+                  </button>
+                  <router-link
+                    v-else-if="step.todo_id && taskTodosLink(step.todo_id)"
+                    :to="taskTodosLink(step.todo_id)"
+                    class="step-task-link-btn"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/>
+                      <circle cx="12" cy="12" r="3"/>
+                    </svg>
+                    View Task
+                  </router-link>
+                </template>
               </div>
             </div>
             <button type="button" class="step-remove-btn" @click="removeStep('next', index)" title="Remove step">
@@ -142,7 +182,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 
 const props = defineProps({
   pastSteps: {
@@ -160,10 +200,37 @@ const props = defineProps({
   showTaskLinking: {
     type: Boolean,
     default: true
+  },
+  // 'select': link an existing todo via dropdown (default, used by meeting views).
+  // 'create': show a Create Task button and a navigation button to the linked task.
+  taskLinkMode: {
+    type: String,
+    default: 'select'
+  },
+  projectId: {
+    type: [Number, String],
+    default: null
+  },
+  organizationId: {
+    type: [Number, String],
+    default: null
   }
 })
 
-const emit = defineEmits(['update:pastSteps', 'update:nextSteps'])
+const emit = defineEmits(['update:pastSteps', 'update:nextSteps', 'create-task'])
+
+const hasTaskContext = computed(() => !!(props.projectId || props.organizationId))
+
+function taskTodosLink(todoId) {
+  if (!todoId) return null
+  if (props.projectId) {
+    return { path: `/projects/${props.projectId}/todos`, query: { highlight: todoId } }
+  }
+  if (props.organizationId) {
+    return { path: `/organizations/${props.organizationId}/todos`, query: { highlight: todoId } }
+  }
+  return null
+}
 
 const isDragging = ref(false)
 const dragSource = ref({ list: null, index: null })
@@ -478,6 +545,65 @@ function handleDrop(event, targetList) {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.step-task-linking {
+  margin-top: 0.5rem;
+}
+
+.step-create-task-btn,
+.step-task-link-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.625rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+
+.step-create-task-btn {
+  border: 1px dashed #10b981;
+  background: transparent;
+  color: #059669;
+}
+
+.step-create-task-btn:hover {
+  background: #ecfdf5;
+  border-color: #059669;
+}
+
+:global(.dark) .step-create-task-btn {
+  border-color: #10b981;
+  color: #34d399;
+}
+
+:global(.dark) .step-create-task-btn:hover {
+  background: rgba(16, 185, 129, 0.12);
+}
+
+.step-task-link-btn {
+  border: 1px solid #3b82f6;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.step-task-link-btn:hover {
+  background: #dbeafe;
+  border-color: #2563eb;
+}
+
+:global(.dark) .step-task-link-btn {
+  border-color: #3b82f6;
+  background: rgba(59, 130, 246, 0.12);
+  color: #93c5fd;
+}
+
+:global(.dark) .step-task-link-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
 }
 
 .step-remove-btn {

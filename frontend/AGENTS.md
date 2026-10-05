@@ -1,11 +1,6 @@
----
-alwaysApply: false
-description: Frontend Vue.js context - Vue 3 Composition API, Pinia, Vue Router, and Vite
-globs:
-  - frontend/**
----
-
 # MyAIAssistant Frontend
+
+Scope: `frontend/**`. Cross-cutting conventions (TDD, build/version control, Markdown style) live in the root `AGENTS.md`.
 
 A Vue 3 single-page application providing task management with an Eisenhower matrix view, knowledge base management, and AI-powered chat features.
 
@@ -38,36 +33,18 @@ frontend/
 │   │       └── main.css    # Global styles
 │   ├── components/
 │   │   ├── chat/           # AI chat modals
-│   │   │   ├── ChatModal.vue
-│   │   │   └── RagChatModal.vue
-│   │   ├── common/         # Reusable UI components
-│   │   │   ├── Header.vue
-│   │   │   ├── Modal.vue
-│   │   │   ├── RichTextEditor.vue
-│   │   │   ├── Sidebar.vue
-│   │   │   └── TopBar.vue
-│   │   └── todo/           # Todo-specific components
-│   │       ├── StatusIndicator.vue
-│   │       ├── TaskPlanModal.vue
-│   │       ├── TodoCanvas.vue
-│   │       ├── TodoCard.vue
-│   │       └── TodoForm.vue
+│   │   ├── common/         # Reusable UI components (Modal, Sidebar, TopBar, RichTextEditor)
+│   │   ├── meeting/        # Meeting/step editors (MeetingStepsEditor, MeetingStepsView)
+│   │   ├── metrics/        # Chart components
+│   │   └── todo/           # Todo-specific components (TodoCard, TodoForm, TodoCanvas, ...)
+│   ├── composables/        # Reusable composition functions
 │   ├── router/
 │   │   └── index.js        # Route definitions
 │   ├── services/
 │   │   └── api.js          # Axios API client and endpoints
-│   ├── stores/
-│   │   ├── knowledgeStore.js
-│   │   ├── todoStore.js
-│   │   └── uiStore.js
-│   └── views/              # Page-level components
-│       ├── ArchivedTodos.vue
-│       ├── Customers.vue
-│       ├── Dashboard.vue
-│       ├── Documentation.vue
-│       ├── Knowledge.vue
-│       ├── Projects.vue
-│       └── Unclassified.vue
+│   ├── stores/             # Pinia stores (todoStore, knowledgeStore, uiStore, ...)
+│   ├── utils/              # Helpers (meetingSteps.js, markdownNotes.js, ...)
+│   └── views/              # Page-level components (route targets)
 └── dist/                   # Production build output
 ```
 

@@ -223,9 +223,11 @@
       <MeetingStepsEditor
         :past-steps="formData.past_steps"
         :next-steps="formData.next_steps"
-        :project-todos="orgTodos"
+        task-link-mode="create"
+        :organization-id="organization?.id"
         @update:past-steps="formData.past_steps = $event"
         @update:next-steps="formData.next_steps = $event"
+        @create-task="createTaskFromStep"
       />
     </form>
 
@@ -248,7 +250,7 @@
 <script setup>
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
-import { organizationsApi, uploadNotesImage } from '@/services/api'
+import { organizationsApi, todosApi, uploadNotesImage } from '@/services/api'
 import {
   insertMarkdownAtCursor,
   renderMarkdownForNotesWithDocLinks,
@@ -295,7 +297,6 @@ const teamInput = ref(null)
 const descriptionInput = ref(null)
 const productsInput = ref(null)
 
-const orgTodos = ref([])
 const showCreateTaskModal = ref(false)
 const taskFromStep = ref(null)
 
@@ -414,20 +415,6 @@ function fillFormFromOrg(org) {
   }
 }
 
-async function loadOrgTodos() {
-  if (!organization.value?.id) {
-    orgTodos.value = []
-    return
-  }
-  try {
-    const res = await organizationsApi.getTodos(organization.value.id, { limit: 500 })
-    orgTodos.value = res.data.todos || []
-  } catch (err) {
-    console.error('Failed to load organization todos:', err)
-    orgTodos.value = []
-  }
-}
-
 function createTaskFromStep(step, index) {
   if (!organization.value?.id) return
   taskFromStep.value = {
@@ -446,16 +433,22 @@ function closeTaskModal() {
   taskFromStep.value = null
 }
 
-function handleTaskCreated(newTodo) {
+async function handleTaskCreated(todoData) {
   if (!taskFromStep.value) return
   const { index } = taskFromStep.value
-  const next = [...formData.value.next_steps]
-  if (next[index]) {
-    next[index] = { ...next[index], todo_id: newTodo.id }
-    formData.value.next_steps = next
+  try {
+    const { data: createdTodo } = await todosApi.create(todoData)
+    const next = [...formData.value.next_steps]
+    if (next[index]) {
+      next[index] = { ...next[index], todo_id: createdTodo.id }
+      formData.value.next_steps = next
+    }
+    saveNow()
+    closeTaskModal()
+  } catch (err) {
+    lastSaveError.value = err.response?.data?.detail || 'Failed to create task'
+    console.error('Failed to create task from step:', err)
   }
-  saveNow()
-  closeTaskModal()
 }
 
 onMounted(async () => {
@@ -483,7 +476,6 @@ async function loadOrganization() {
     const response = await organizationsApi.get(id)
     organization.value = response.data
     fillFormFromOrg(response.data)
-    await loadOrgTodos()
     initialLoadDone.value = true
   } catch (err) {
     if (err.response?.status === 404) {

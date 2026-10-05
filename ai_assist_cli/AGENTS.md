@@ -1,11 +1,6 @@
----
-alwaysApply: false
-description: AI Assist CLI - Typer-based command-line tool for workspace and agent management
-globs:
-  - ai_assist_cli/**
----
-
 # AI Assist CLI
+
+Scope: `ai_assist_cli/**`. Cross-cutting conventions (TDD, build/version control, Markdown style) live in the root `AGENTS.md`.
 
 A command-line tool built with Typer for managing AI Assistant workspaces, global resources, and agent configurations.
 
@@ -116,11 +111,11 @@ def status(
     """Show workspace status and directory summary."""
     workspace_path = (path or Path.cwd()).resolve()
     manager = WorkspaceManager(workspace_path)
-    
+
     if not manager.is_initialized():
         console.print(f"[red]No workspace found at {workspace_path}[/red]")
         raise typer.Exit(1)
-    
+
     # ... render output with Rich
 ```
 
@@ -131,17 +126,17 @@ Business logic in `services/` directory:
 ```python
 class WorkspaceManager:
     """Manages AI Assistant workspace structure."""
-    
+
     GLOBAL_HOME = Path.home() / ".ai_assist"
     WORKSPACE_MARKER = ".ai_assist_workspace"
-    
+
     def __init__(self, path: Path):
         self.path = path.resolve()
-    
+
     def is_initialized(self) -> bool:
         """Check if workspace is initialized (marker file exists)."""
         return (self.path / self.WORKSPACE_MARKER).exists()
-    
+
     def get_workspace_name(self) -> str | None:
         """Read workspace name from marker file (JSON with 'name' key)."""
         ...

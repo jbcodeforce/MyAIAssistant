@@ -1,11 +1,6 @@
----
-alwaysApply: false
-description: Backend API context - FastAPI, SQLAlchemy async, ChromaDB RAG, and LLM integration
-globs:
-  - backend/**
----
-
 # MyAIAssistant Backend
+
+Scope: `backend/**`. Cross-cutting conventions (TDD, build/version control, Markdown style) live in the root `AGENTS.md`.
 
 A FastAPI backend providing REST APIs for task management, knowledge base operations, RAG-based semantic search, and LLM-powered chat with agent routing.
 
@@ -215,7 +210,7 @@ curl http://localhost:8000/debug/config
 2. **Validate with Pydantic** - never trust raw input
 3. **Use dependency injection** for services and DB sessions
 4. **Handle errors explicitly** - raise HTTPException with appropriate status codes
-5. **Write tests first** - follow TDD pattern per `tdd.mdc` rule
+5. **Write tests first** - follow the TDD convention in the root `AGENTS.md`
 6. **Keep routes thin** - business logic in services, not route handlers
 7. **Use type hints everywhere** - enables IDE support and validation
 8. **Log important operations** - use the logging module, not print

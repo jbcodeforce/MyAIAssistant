@@ -97,9 +97,9 @@ MyAIAssistant/
 └── docker-compose.yml
 ```
 
-## MCP server (Cursor / agents)
+## MCP server (agents)
 
-The `mcp_todos` package exposes todo create/search/update/delete as MCP tools so agents (e.g. Cursor) can manage todos in the backend.
+The `mcp_todos` package exposes todo create/search/update/delete as MCP tools so agents (e.g. Claude Code, Pi) can manage todos in the backend.
 
 **Run the MCP server** (backend must be running, e.g. `http://localhost:8000`):
 
@@ -111,16 +111,15 @@ cd mcp_todos && uv sync && uv run python -m mcp_todos
 
 - **MYAI_BACKEND_URL**: Backend base URL. Default: `http://localhost:8000`. Set this if the backend runs on another host or port.
 
-**Cursor MCP configuration**
+**MCP client configuration**
 
-Add an MCP server in Cursor (Settings > MCP) with:
+Register the stdio server with your agent (portable definition, absolute path):
 
-- Command: `uv`
-- Args: `run`, `python`, `-m`, `mcp_todos`
-- Cwd: path to `MyAIAssistant/mcp_todos`
-- Env (optional): `MYAI_BACKEND_URL` if not using the default
+```bash
+claude mcp add myai-todos -- uv run --directory /path/to/MyAIAssistant/mcp_todos python -m mcp_todos
+```
 
-See [mcp_todos/README.md](mcp_todos/README.md) for details and example `.cursor/mcp.json`.
+For Pi or a JSON-based client, add the equivalent `mcpServers.myai-todos` entry. See [mcp_todos/README.md](mcp_todos/README.md) for the full definition and troubleshooting.
 
 ## License
 
